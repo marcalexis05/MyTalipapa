@@ -13,7 +13,7 @@ const VerifyEmail = () => {
       return;
     }
     // Call backend verification endpoint
-    fetch(`${process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000'}/api/verify?token=${token}`)
+    fetch(`/api/verify?token=${token}`)
       .then(async (res) => {
         const data = await res.json();
         if (res.ok) {

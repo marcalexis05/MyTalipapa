@@ -254,7 +254,7 @@ export default function Register() {
   async function fetchStalls() {
     setLoadingStalls(true); setError(null)
     try {
-      const response = await fetch('http://localhost:5000/api/contractor/stalls?unmanaged=true')
+      const response = await fetch('/api/contractor/stalls?unmanaged=true')
       if (!response.ok) throw new Error('Failed to fetch stalls')
       setStalls(await response.json())
     } catch (err) {
@@ -299,7 +299,7 @@ export default function Register() {
 
     setLoading(true)
     try {
-      const response = await fetch('http://localhost:5000/api/register', {
+      const response = await fetch('/api/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -325,7 +325,7 @@ export default function Register() {
   async function handleSubmitContractorApplication() {
     setError(null); setLoading(true)
     try {
-      const response = await fetch('http://localhost:5000/api/contractor/register-application', {
+      const response = await fetch('/api/contractor/register-application', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -85,7 +85,7 @@ export default function ContractorStalls() {
 
   useEffect(() => {
     if (!userEmail) return;
-    fetch(`http://localhost:5000/api/contractor/stalls?email=${userEmail}`)
+    fetch(`/api/contractor/stalls?email=${userEmail}`)
       .then(res => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();

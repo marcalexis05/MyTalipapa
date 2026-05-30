@@ -164,12 +164,12 @@ export default function ForgotPassword() {
     if (!accountName.trim()) { setError('Please enter your account name or email address.'); return }
     setLoading(true); setError(null)
     try {
-      const idResponse = await fetch('http://localhost:5000/api/identify-account', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accountName }) })
+      const idResponse = await fetch('/api/identify-account', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accountName }) })
       const idResult = await idResponse.json()
       if (!idResponse.ok) { setError(idResult.error || 'Account not found.'); setLoading(false); return }
       const verifiedUserId = idResult.userId
       setUserId(verifiedUserId); setMaskedEmail(idResult.maskedEmail)
-      const sendOtpResponse = await fetch('http://localhost:5000/api/forgot-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: verifiedUserId, method: 'email' }) })
+      const sendOtpResponse = await fetch('/api/forgot-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: verifiedUserId, method: 'email' }) })
       const sendOtpResult = await sendOtpResponse.json()
       if (!sendOtpResponse.ok) { setError(sendOtpResult.error || 'Failed to send verification code.'); setLoading(false); return }
       setTimer(300); goToStep(2)
@@ -183,7 +183,7 @@ export default function ForgotPassword() {
   async function handleResendOtp() {
     setLoading(true); setError(null)
     try {
-      const response = await fetch('http://localhost:5000/api/forgot-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId, method: 'email' }) })
+      const response = await fetch('/api/forgot-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId, method: 'email' }) })
       const result = await response.json()
       if (!response.ok) { setError(result.error || 'Failed to resend verification code.'); setLoading(false); return }
       setTimer(300); setOtp('')
@@ -199,7 +199,7 @@ export default function ForgotPassword() {
     if (otp.length !== 6) { setError('Please enter a valid 6-digit verification code.'); return }
     setLoading(true); setError(null)
     try {
-      const response = await fetch('http://localhost:5000/api/verify-otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId, otp }) })
+      const response = await fetch('/api/verify-otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId, otp }) })
       const result = await response.json()
       if (!response.ok) { setError(result.error || 'Invalid or expired verification code.'); setLoading(false); return }
       goToStep(3)
@@ -219,7 +219,7 @@ export default function ForgotPassword() {
     if (password !== confirmPassword) { setError('Passwords do not match.'); return }
     setLoading(true); setError(null)
     try {
-      const response = await fetch('http://localhost:5000/api/reset-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId, otp, password }) })
+      const response = await fetch('/api/reset-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId, otp, password }) })
       const result = await response.json()
       if (!response.ok) { setError(result.error || 'Failed to reset password.'); setLoading(false); return }
       goToStep(4)

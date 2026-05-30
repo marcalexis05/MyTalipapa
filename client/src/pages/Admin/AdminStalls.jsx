@@ -80,7 +80,7 @@ export default function AdminStalls() {
   const [activeZone, setActiveZone] = useState('all');
 
   useEffect(() => {
-    fetch('http://localhost:5000/api/admin/stalls')
+    fetch('/api/admin/stalls')
       .then(res => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();

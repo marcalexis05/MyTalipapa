@@ -5,7 +5,7 @@ import './App.css'
 import App from './App.jsx'
 
 window.addEventListener('error', (event) => {
-  fetch('http://localhost:5000/api/log-error', {
+  fetch('/api/log-error', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -19,7 +19,7 @@ window.addEventListener('error', (event) => {
 });
 
 window.addEventListener('unhandledrejection', (event) => {
-  fetch('http://localhost:5000/api/log-error', {
+  fetch('/api/log-error', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
