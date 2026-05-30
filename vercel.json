@@ -1,10 +1,12 @@
 {
   "version": 2,
-  "outputDirectory": "client/dist",
   "builds": [
     {
-      "src": "package.json",
-      "use": "@vercel/static-build"
+      "src": "client/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
     },
     {
       "src": "server/api/index.js",
@@ -17,7 +19,10 @@
       "dest": "/server/api/index.js"
     },
     {
-      "src": "/((?!api/).*)",
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
       "dest": "/index.html"
     }
   ]
