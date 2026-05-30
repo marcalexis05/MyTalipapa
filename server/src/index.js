@@ -24,9 +24,7 @@ app.use(express.urlencoded({ limit: '10mb', extended: true }));
 const PORT = process.env.PORT || 5001;
 
 // Connect to MongoDB
-const mongoUri = process.env.NODE_ENV === 'production'
-  ? process.env.MONGODB_URI
-  : process.env.MONGODB_URI_DEV;
+const mongoUri = process.env.MONGODB_URI || process.env.MONGODB_URI_DEV;
 
 mongoose
   .connect(mongoUri)
