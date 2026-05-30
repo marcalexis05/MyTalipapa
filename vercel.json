@@ -7,8 +7,7 @@
       "src": "client/package.json",
       "use": "@vercel/static-build",
       "config": {
-        "distDir": "client/dist",
-        // Vite outputs built files to client/dist; point Vercel to that directory
+        "distDir": "client/dist"
       }
     },
     {
@@ -26,7 +25,7 @@
     },
     {
       "src": "/(.*)",
-      "dest": "/index.html"
+      "dest": "/client/dist/index.html"
     }
   ]
 }
