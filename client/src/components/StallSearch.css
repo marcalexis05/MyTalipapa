@@ -1,0 +1,250 @@
+/* StallSearch.css */
+
+.stall-search-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 16px;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+}
+
+/* Search input styling */
+.search-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.search-icon-span {
+  position: absolute;
+  left: 12px;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+}
+
+.search-text-input {
+  width: 100%;
+  padding: 10px 36px 10px 38px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 13px;
+  color: #1e293b;
+  outline: none;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.search-text-input:focus {
+  border-color: #1a5c2a;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(26, 92, 42, 0.08);
+}
+
+.clear-search-btn {
+  position: absolute;
+  right: 12px;
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+}
+
+.clear-search-btn:hover {
+  color: #64748b;
+}
+
+/* Filters styling */
+.filters-row {
+  display: flex;
+  gap: 8px;
+}
+
+.filter-select-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.filter-select-wrapper label {
+  font-size: 9px;
+  font-weight: 850;
+  text-transform: uppercase;
+  color: #64748b;
+  letter-spacing: 0.05em;
+}
+
+.filter-select-wrapper select {
+  width: 100%;
+  padding: 8px 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 12px;
+  color: #334155;
+  font-weight: 600;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.filter-select-wrapper select:focus {
+  border-color: #1a5c2a;
+}
+
+/* Search results list */
+.search-results-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+}
+
+.results-header {
+  font-size: 10px;
+  font-weight: 750;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.scrollable-results {
+  max-height: 310px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-right: 2px;
+}
+
+/* Custom Scrollbar for results */
+.scrollable-results::-webkit-scrollbar {
+  width: 4px;
+}
+.scrollable-results::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollable-results::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+.scrollable-results::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Stall Result Item */
+.stall-result-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  background: #ffffff;
+  border: 1px solid #f1f5f9;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.stall-result-item:hover {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+  transform: translateY(-1px);
+}
+
+.result-item-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.result-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+/* Category Specific Avatar Colors */
+.stall-result-item.available .result-avatar {
+  background: rgba(34, 197, 94, 0.1);
+  color: #166534;
+}
+.stall-result-item.occupied .result-avatar {
+  background: rgba(239, 68, 68, 0.1);
+  color: #991b1b;
+}
+
+.result-info {
+  min-width: 0;
+}
+
+.result-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 1px;
+}
+
+.result-subtitle {
+  font-size: 10px;
+  color: #64748b;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.inline-icon {
+  flex-shrink: 0;
+  color: #94a3b8;
+}
+
+/* Status Pill */
+.status-pill {
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2.5px 8px;
+  border-radius: 999px;
+}
+
+.status-pill.available {
+  background: #edf5ed;
+  color: #1a5c2a;
+}
+
+.status-pill.occupied {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.status-pill.pending {
+  background: #fffbeb;
+  color: #b45309;
+}
+
+.empty-results {
+  padding: 24px 0;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 500;
+}
