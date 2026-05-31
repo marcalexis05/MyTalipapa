@@ -1,19 +1,31 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 
 const VerifyEmail = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [status, setStatus] = useState('Verifying...');
+  
+  // Use a ref to ensure we only execute the API call once per mount cycle
+  const hasFetched = useRef(false);
 
   useEffect(() => {
     const token = searchParams.get('token');
+    
     if (!token) {
       setStatus('Invalid verification link.');
       return;
     }
-    // Call backend verification endpoint
-    fetch(`/api/verify?token=${token}`)
+
+    // Prevents StrictMode double-firing in development
+    if (hasFetched.current) return;
+    hasFetched.current = true;
+
+    // Use AbortController to cancel the request if component unmounts mid-flight
+    const controller = new AbortController();
+    const { signal } = controller;
+
+    fetch(`/api/verify?token=${token}`, { signal })
       .then(async (res) => {
         const data = await res.json();
         if (res.ok) {
@@ -24,7 +36,17 @@ const VerifyEmail = () => {
           setStatus(data.error || 'Verification failed.');
         }
       })
-      .catch(() => setStatus('Network error during verification.'));
+      .catch((err) => {
+        // Don't update state if the error was a deliberate fetch cancellation
+        if (err.name !== 'AbortError') {
+          setStatus('Network error during verification.');
+        }
+      });
+
+    // Cleanup function
+    return () => {
+      controller.abort();
+    };
   }, [searchParams, navigate]);
 
   return (
