@@ -163,7 +163,7 @@ const markAllSeen = async () => {
     });
   }
   setMoveOutRequests(prev => prev.map(r => ({ ...r, read: true })));
-  setNewMoveOutCount(0);
+  setNewMoveOutCount(prev => Math.max(0, prev - 1));
   setBannerDismissed(true);
 };
 
@@ -828,20 +828,22 @@ const markAllSeen = async () => {
                   <span>Contact the renter for more info about the request.</span>
                 </div>
 
-                {/* Mark as Read button */}
-                <button
-                  type="button"
-                  className={`moveout-markread-btn ${selectedMoveOut.read ? 'moveout-markread-btn--done' : ''}`}
-                  onClick={handleMarkAsRead}
-                  disabled={markingRead || selectedMoveOut.read}
-                >
-                  {selectedMoveOut.read
-                    ? '✓ Marked as Read'
-                    : markingRead
-                      ? 'Marking…'
-                      : '✔ Mark as Read'}
-                </button>
-
+                  {/* Mark as Read button */}
+                  {!selectedMoveOut.read && (
+                    <button
+                      type="button"
+                      className="moveout-markread-btn"
+                      onClick={handleMarkAsRead}
+                      disabled={markingRead}
+                    >
+                      {markingRead ? 'Marking…' : '✔ Mark as Read'}
+                    </button>
+                  )}
+                  {selectedMoveOut.read && (
+                    <div className="moveout-markread-btn moveout-markread-btn--done">
+                      ✓ Marked as Read
+                    </div>
+                  )}
                 {/* Close button */}
                 <button
                   type="button"
