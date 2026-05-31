@@ -7,6 +7,7 @@ const UserSchema = new mongoose.Schema(
     contact_number: { type: String, required: true },
     role: { type: String, enum: ['renter', 'contractor', 'admin'], required: true },
     passwordHash: { type: String, required: true },
+    mustChangePassword: { type: Boolean, default: false },
     status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'approved' },
     agreed: { type: Boolean, default: false },
     profilePicture: { type: String, default: null },

@@ -139,6 +139,8 @@ router.post('/contractor/register-application', async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
 
+    const wasRejected = status === 'rejected';
+
     let application;
     let userRecord;
 
@@ -171,6 +173,7 @@ router.post('/contractor/register-application', async (req, res) => {
         appExists.status = 'pending';
         appExists.rejectionReason = undefined;
         appExists.appliedAt = new Date();
+        appExists.isResubmitted = wasRejected;
         await appExists.save();
         application = appExists;
       } else {
@@ -182,6 +185,7 @@ router.post('/contractor/register-application', async (req, res) => {
           passwordHash,
           selectedStalls,
           status: 'pending',
+          isResubmitted: wasRejected,
         });
       }
     } else {
@@ -193,6 +197,7 @@ router.post('/contractor/register-application', async (req, res) => {
         passwordHash,
         selectedStalls,
         status: 'pending',
+        isResubmitted: false,
       });
 
       userRecord = await User.create({
@@ -268,8 +273,8 @@ router.post('/login', async (req, res) => {
     }
 
     console.log(`[Login attempt] User role: ${user.role}, User status: ${user.status}`);
-    // Check role matches
-    if (user.role !== role) {
+    // Check role matches only if role is provided
+    if (role && user.role !== role) {
       return res.status(403).json({ error: `This account is not registered as a ${role}.` });
     }
 
@@ -293,13 +298,9 @@ router.post('/login', async (req, res) => {
       }
     }
 
-    if (!isMatch) {
-      return res.status(401).json({ error: 'Invalid email or password.' });
-    }
-
-    // Allow legacy users (no verification token) to login without email verification
-    if (!user.isVerified && user.verificationToken) {
-      return res.status(403).json({ error: 'Please verify your email before logging in.' });
+    // After password verification, enforce password change if required
+    if (isMatch && user.mustChangePassword) {
+      return res.status(403).json({ error: 'Password must be changed before proceeding.', mustChangePassword: true });
     }
   
 

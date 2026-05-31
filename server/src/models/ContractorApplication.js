@@ -11,6 +11,7 @@ const ContractorApplicationSchema = new mongoose.Schema(
     status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
     rejectionReason: { type: String },
     appliedAt: { type: Date, default: Date.now },
+    isResubmitted: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

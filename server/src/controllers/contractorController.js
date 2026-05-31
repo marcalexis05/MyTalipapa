@@ -442,6 +442,7 @@ exports.updateContractorApplicationStatus = async (req, res) => {
       if (userExists) {
         userExists.status = 'approved';
         userExists.passwordHash = app.passwordHash; // Sync the password hash in case they resubmitted with a new password
+        userExists.mustChangePassword = app.isResubmitted ? true : false;
         await userExists.save();
       } else {
         await User.create({
@@ -452,6 +453,7 @@ exports.updateContractorApplicationStatus = async (req, res) => {
           passwordHash: app.passwordHash,
           status: 'approved',
           agreed: true,
+          mustChangePassword: app.isResubmitted ? true : false,
         });
       }
 
