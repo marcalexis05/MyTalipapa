@@ -44,34 +44,36 @@ async function sendEmailOtp(email, otp) {
       },
     });
 
+// Ensure CLIENT_URL points to your frontend app (e.g., http://localhost:5173 or your production Vercel URL)
 const verificationUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/verify-email?token=${otp}`;
 
-    const mailOptions = {
-      from: process.env.EMAIL_FROM || '"MyTalipapa Recovery" <no-reply@mytalipapa.com>',
-      to: email,
-      subject: 'MyTalipapa - Email Verification',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 12px; background-color: #fcfbf9;">
-          <div style="text-align: center; margin-bottom: 20px;">
-            <span style="font-size: 40px;">🏪</span>
-            <h2 style="color: #1a5c2a; margin-top: 10px;">MyTalipapa</h2>
-          </div>
-          <h3 style="color: #374151;">Email Verification</h3>
-          <p style="color: #4b5563; line-height: 1.6;">
-            Please click the button below to verify your email address. This link will expire in 24 hours.
-          </p>
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${verificationUrl}" style="display: inline-block; padding: 12px 24px; font-size: 18px; color: #fff; background-color: #1a5c2a; border-radius: 8px; text-decoration: none;">
-              Verify Email
-            </a>
-          </div>
-          <p style="color: #9ca3af; font-size: 12px; line-height: 1.4; border-top: 1px solid #e5e7eb; padding-top: 15px;">
-            If you did not request this, please ignore this email.
-          </p>
-        </div>
-      `,
-    };
+const mailOptions = {
+  from: process.env.EMAIL_FROM || '"MyTalipapa Recovery" <no-reply@mytalipapa.com>',
+  to: email,
+  subject: 'MyTalipapa - Email Verification',
+  html: `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 12px; background-color: #fcfbf9;">
+      <div style="text-align: center; margin-bottom: 20px;">
+        <span style="font-size: 40px;">🏪</span>
+        <h2 style="color: #1a5c2a; margin-top: 10px;">MyTalipapa</h2>
+      </div>
+      <h3 style="color: #374151;">Email Verification</h3>
+      <p style="color: #4b5563; line-height: 1.6;">
+        Please click the button below to verify your email address. This link will expire in 24 hours.
+      </p>
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${verificationUrl}" style="display: inline-block; padding: 12px 24px; font-size: 18px; color: #fff; background-color: #1a5c2a; border-radius: 8px; text-decoration: none; font-weight: bold;">
+          Verify Email
+        </a>
+      </div>
+      <p style="color: #9ca3af; font-size: 12px; line-height: 1.4; border-top: 1px solid #e5e7eb; padding-top: 15px;">
+        If you did not request this, please ignore this email.
+      </p>
+    </div>
+  `,
+};
 
+// Pass mailOptions to your nodemailer transport transporter instance here...
     await transporter.sendMail(mailOptions);
     return { success: true, mocked: false };
   } catch (error) {
