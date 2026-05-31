@@ -154,7 +154,6 @@ export default function ArFinder({ onBack }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchDirections, setSearchDirections] = useState("");
 
-  // ── Custom mobile stall picker state ──
   const [showStallPicker, setShowStallPicker] = useState(false);
   const [stallPickerSearch, setStallPickerSearch] = useState("");
 
@@ -518,11 +517,9 @@ export default function ArFinder({ onBack }) {
   const MAP_EXPANDED_H = 220;
   const MAP_HEADER_H = 44;
 
-  // Filtered stalls for picker
   const filteredStallsForPicker = (selectedCategory === "all" ? stallsList : stallsList.filter(s => s.category === selectedCategory))
     .filter(s => !stallPickerSearch.trim() || s.label.toLowerCase().includes(stallPickerSearch.toLowerCase()) || s.zone.toLowerCase().includes(stallPickerSearch.toLowerCase()));
 
-  // Short label for the stall button on mobile
   const getShortStallLabel = (stall) => {
     if (!stall) return "Select Stall";
     const emoji = CATEGORY_EMOJI[stall.category] || "";
@@ -671,7 +668,6 @@ export default function ArFinder({ onBack }) {
         .ctrl-btn.primary { background: #1a5c2a; color: #fff; border-color: #1a5c2a; }
         .ctrl-btn.primary:hover { background: #154a22; }
 
-        /* Desktop stall-select pill */
         .stall-select {
           display: flex; align-items: center;
           background: rgba(255,255,255,0.12);
@@ -691,7 +687,6 @@ export default function ArFinder({ onBack }) {
           text-transform: uppercase; letter-spacing: 0.07em; white-space: nowrap;
         }
 
-        /* ── MOBILE SELECTS BAR ── */
         .header-selects-bar {
           display: flex;
           align-items: center;
@@ -700,10 +695,9 @@ export default function ArFinder({ onBack }) {
           background: rgba(10,15,10,0.95);
           border-bottom: 1px solid rgba(255,255,255,0.08);
           flex-shrink: 0;
-          overflow: hidden; /* no horizontal scroll; items are fixed width */
+          overflow: hidden;
         }
 
-        /* Small pill used in the mobile selects bar */
         .mobile-select-pill {
           display: flex; align-items: center; gap: 4px;
           background: rgba(255,255,255,0.10);
@@ -724,7 +718,6 @@ export default function ArFinder({ onBack }) {
         }
         .mobile-select-pill select option { color: #1e293b; background: #fff; }
 
-        /* Stall picker button */
         .stall-picker-btn {
           display: flex; align-items: center; justify-content: space-between;
           gap: 5px; flex: 1; min-width: 0;
@@ -748,7 +741,6 @@ export default function ArFinder({ onBack }) {
           max-width: 120px;
         }
 
-        /* ── STALL PICKER BOTTOM SHEET ── */
         .stall-picker-backdrop {
           position: fixed; inset: 0; background: rgba(0,0,0,0.6);
           z-index: 200; display: flex; align-items: flex-end;
@@ -881,7 +873,6 @@ export default function ArFinder({ onBack }) {
           <ArrowLeft size={16} />
         </button>
 
-        {/* Desktop: selects in header */}
         {!isMobile && (
           <div style={{ display: "flex", gap: 6, alignItems: "center", flex: 1, minWidth: 0 }}>
             <div className="stall-select">
@@ -980,7 +971,6 @@ export default function ArFinder({ onBack }) {
       {/* ── MOBILE SELECTS BAR ── */}
       {isMobile && (
         <div className="header-selects-bar">
-          {/* START select — native is fine, short list */}
           <div className="mobile-select-pill">
             <label>START:</label>
             <select value={selectedStartId} onChange={e => {
@@ -997,7 +987,6 @@ export default function ArFinder({ onBack }) {
             </select>
           </div>
 
-          {/* SEC select — native is fine, only 4 options */}
           <div className="mobile-select-pill">
             <label>SEC:</label>
             <select value={selectedCategory} onChange={e => {
@@ -1014,7 +1003,6 @@ export default function ArFinder({ onBack }) {
             </select>
           </div>
 
-          {/* STALL — custom button → bottom sheet (fixes the overflow bug) */}
           <button className="stall-picker-btn" onClick={() => { setStallPickerSearch(""); setShowStallPicker(true); }}>
             <div className="spb-label-wrap">
               <span className="spb-caption">STALL:</span>
@@ -1116,7 +1104,8 @@ export default function ArFinder({ onBack }) {
                 animation: "pulse 1.5s ease-in-out infinite",
               }}>
                 <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(232,98,26,0.95)", border: "2.5px solid #fff", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 16px rgba(232,98,26,0.5)" }}>
-                  <Navigation size={20} color="#fff" style={{ transform: `rotate(${targetBearing - heading}deg)` }} />
+                  {/* ── FIXED: arrow now points toward next waypoint on the path, not the final stall ── */}
+                  <Navigation size={20} color="#fff" style={{ transform: `rotate(${nextBearing - heading}deg)`, transition: 'transform 0.2s ease-out' }} />
                 </div>
                 <div style={{ marginTop: 6, background: "rgba(255,255,255,0.97)", border: "1px solid #e2e8f0", borderRadius: 10, padding: "4px 10px", textAlign: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.1)", maxWidth: 160 }}>
                   <div style={{ fontSize: 11, fontWeight: 800, color: "#1e293b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{currentStall.label}</div>
@@ -1313,7 +1302,6 @@ export default function ArFinder({ onBack }) {
               </button>
             </div>
 
-            {/* Search */}
             <div className="stall-picker-search-wrap">
               <div style={{ position: "relative" }}>
                 <Search size={13} color="rgba(255,255,255,0.4)" style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
@@ -1328,7 +1316,6 @@ export default function ArFinder({ onBack }) {
               </div>
             </div>
 
-            {/* List */}
             <div className="stall-picker-list">
               {filteredStallsForPicker.length === 0 ? (
                 <div className="stall-empty-state">No stalls match "{stallPickerSearch}"</div>
