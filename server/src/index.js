@@ -24,15 +24,32 @@ app.use(express.urlencoded({ limit: '10mb', extended: true }));
 const PORT = process.env.PORT || 5001;
 
 
-const mongoUri = process.env.MONGODB_URI || process.env.MONGODB_URI_DEV;
+const primaryUri = process.env.MONGODB_URI || process.env.MONGODB_URI_DEV;
+const fallbackUri = process.env.MONGODB_URI_DEV;
 
-mongoose
-  .connect(mongoUri)
-  .then(() => console.log('MongoDB connected'))
-  .catch(err => {
-    console.error('MongoDB connection error:', err);
-    process.exit(1);
-  });
+async function connectDB() {
+  try {
+    console.log('Connecting to MongoDB...');
+    await mongoose.connect(primaryUri);
+    console.log('MongoDB connected');
+  } catch (err) {
+    console.error('Primary MongoDB connection error:', err.message || err);
+    if (fallbackUri && fallbackUri !== primaryUri) {
+      try {
+        console.log('Attempting fallback MongoDB connection...');
+        await mongoose.connect(fallbackUri);
+        console.log('MongoDB connected via fallback URI');
+      } catch (fallbackErr) {
+        console.error('Fallback MongoDB connection error:', fallbackErr.message || fallbackErr);
+        process.exit(1);
+      }
+    } else {
+      process.exit(1);
+    }
+  }
+}
+
+connectDB();
 
 app.use('/api', authRoutes);
 app.use('/api/contractor', contractorRoutes);
