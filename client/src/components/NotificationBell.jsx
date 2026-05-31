@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { Bell, X, ExternalLink } from 'lucide-react';
+// import { Bell, X } from 'lucide-react';
+import { Bell, X } from 'lucide-react';
 import { getToken } from '../utils/auth';
 
 export default function NotificationBell() {
@@ -198,17 +199,10 @@ export default function NotificationBell() {
             </div>
 
             {/* Footer */}
-            <div className="px-[18px] pb-[18px] flex gap-2">
-              <button
-                onClick={handleModalNavigate}
-                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-[#1a5c2a] hover:bg-[#154d23] text-white text-[12px] font-semibold rounded-[10px] transition-colors border-none cursor-pointer"
-              >
-                <ExternalLink size={13} />
-                View details
-              </button>
+            <div className="px-[18px] pb-[18px]">
               <button
                 onClick={closeModal}
-                className="flex-1 py-2.5 bg-gray-50 border border-gray-200 hover:bg-gray-100 text-gray-700 text-[12px] font-semibold rounded-[10px] transition-colors cursor-pointer"
+                className="w-full py-2.5 bg-gray-50 border border-gray-200 hover:bg-gray-100 text-gray-700 text-[12px] font-semibold rounded-[10px] transition-colors cursor-pointer"
               >
                 Close
               </button>
