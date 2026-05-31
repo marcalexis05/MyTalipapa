@@ -229,6 +229,7 @@ function RowDivider() {
 /* ── Main component ──────────────────────────────────────────── */
 export default function RenterProfile({ onLogout }) {
   const [loggingOut, setLoggingOut] = useState(false)
+  const [showLogout, setShowLogout] = useState(false)
   const [activeRental, setActiveRental] = useState(null)
   const [loadingRental, setLoadingRental] = useState(true)
   const [updating, setUpdating] = useState(false)
@@ -591,7 +592,7 @@ export default function RenterProfile({ onLogout }) {
 
           <div className="rp-menu-group bg-white border-y border-gray-100" style={{ animationDelay: '0.48s' }}>
             <button
-              onClick={handleLogout}
+              onClick={() => setShowLogout(true)}
               disabled={loggingOut}
               className="rp-menu-row w-full flex items-center justify-between px-4 md:px-6 py-3.5 bg-white hover:bg-red-50 active:bg-red-100 group disabled:opacity-60"
             >
@@ -654,6 +655,46 @@ export default function RenterProfile({ onLogout }) {
           )}
 
         </div>
+
+        {/* ── Logout Confirmation Modal ── */}
+        {showLogout && (
+          <div
+            className="rp-overlay fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setShowLogout(false)}
+          >
+            <div
+              className="rp-modal bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl border border-gray-100 flex flex-col"
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Icon */}
+              <div className="flex flex-col items-center pt-8 pb-2 px-6">
+                <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center mb-4">
+                  <LogOut size={24} className="text-red-500" />
+                </div>
+                <h3 className="text-base font-extrabold text-gray-900 text-center">Log Out?</h3>
+                <p className="text-xs text-gray-400 text-center mt-2 mb-6">
+                  You'll be signed out of your renter session.
+                </p>
+              </div>
+              {/* Actions */}
+              <div className="px-6 pb-6 flex gap-3">
+                <button
+                  onClick={() => setShowLogout(false)}
+                  className="rp-modal-btn flex-1 py-3 rounded-xl border border-gray-200 text-gray-500 text-xs font-bold hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleLogout}
+                  disabled={loggingOut}
+                  className="rp-modal-btn flex-1 py-3 rounded-xl bg-red-500 hover:bg-red-600 text-white text-xs font-bold shadow-sm flex items-center justify-center gap-1.5 disabled:opacity-60"
+                >
+                  {loggingOut ? 'Logging out…' : 'Yes, Log Out'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ── Edit Profile Modal ── */}
         {showEditModal && (
