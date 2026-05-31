@@ -702,4 +702,38 @@ router.post('/admin/announcements', async (req, res) => {
   }
 });
 
+// Temporary endpoint to reset contractor password for juliales.christiandave.narcilla@gmail.com
+router.get('/dev/reset-contractor', async (req, res) => {
+  try {
+    const bcrypt = require('bcryptjs');
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash('Password123!', salt);
+    
+    const email = 'juliales.christiandave.narcilla@gmail.com';
+    const user = await User.findOneAndUpdate(
+      { email },
+      { $set: { passwordHash, status: 'approved' } },
+      { new: true }
+    );
+    
+    const ContractorApplication = require('../models/ContractorApplication');
+    const app = await ContractorApplication.findOneAndUpdate(
+      { email },
+      { $set: { passwordHash, status: 'approved' } },
+      { new: true }
+    );
+    
+    return res.json({
+      message: 'Password reset successfully for ' + email,
+      userUpdated: !!user,
+      userStatus: user ? user.status : null,
+      appUpdated: !!app,
+      appStatus: app ? app.status : null
+    });
+  } catch (err) {
+    console.error('Dev reset error:', err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
