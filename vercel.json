@@ -22,7 +22,9 @@
     { "src": "/windows/(.*)", "dest": "/client/windows/$1" },
     { "src": "/bg.png", "dest": "/client/bg.png" },
     { "src": "/logo.png", "dest": "/client/logo.png" },
+    { "src": "/manifest.json", "dest": "/client/manifest.json" },
+    { "src": "/favicon.ico", "dest": "/client/favicon.ico" },
     { "handle": "filesystem" },
     { "src": "/(.*)", "dest": "/client/index.html" }
-  ]
+]
 }
