@@ -20,8 +20,10 @@ router.get('/verify', async (req, res) => {
     console.log('[/verify] Normalized token:', normalizedToken);
     const user = await User.findOne({ verificationToken: normalizedToken });
     if (!user) {
+      console.log('[/verify] No user found for token');
       return res.status(400).json({ error: 'Invalid verification token.' });
     }
+    console.log('[/verify] Found user ID:', user._id, 'Stored token:', user.verificationToken);
     if (user.verificationTokenExpires && user.verificationTokenExpires < new Date()) {
       return res.status(400).json({ error: 'Verification token has expired.' });
     }
