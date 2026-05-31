@@ -23,6 +23,10 @@
       "dest": "/client/assets/$1"
     },
     {
+      "src": "/export360/(.*)",
+      "dest": "/client/export360/$1"
+    },
+    {
       "handle": "filesystem"
     },
     {
