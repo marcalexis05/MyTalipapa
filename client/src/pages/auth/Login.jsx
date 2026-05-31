@@ -132,15 +132,24 @@ export default function Login() {
         return
       }
 
-      localStorage.setItem('authToken', result.token)
-      localStorage.setItem('user', JSON.stringify(result.user))
+      // Store token and user info
+      localStorage.setItem('authToken', result.token);
+      localStorage.setItem('user', JSON.stringify(result.user));
 
+      // If renter, ensure email is verified
+      if (result.user && result.user.role === 'renter' && !result.user.isVerified) {
+        setError('Please verify your email before logging in.');
+        setLoading(false);
+        return;
+      }
+
+      // Redirect based on role
       if (result.user && result.user.role === 'renter') {
-        window.location.href = '/renter/dashboard'
+        window.location.href = '/renter/dashboard';
       } else if (result.user && result.user.role === 'admin') {
-        window.location.href = '/admin/dashboard'
+        window.location.href = '/admin/dashboard';
       } else {
-        window.location.href = '/contractor/dashboard'
+        window.location.href = '/contractor/dashboard';
       }
 
     } catch (err) {

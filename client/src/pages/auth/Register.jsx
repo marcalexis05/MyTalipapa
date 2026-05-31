@@ -266,7 +266,7 @@ export default function Register() {
 
   const totalMonthlyRate = useMemo(() =>
     selectedStalls.reduce((sum, stallNum) => {
-      const stall = stalls.find(s => s.stallNumber === stallNum)
+      const stall = stalls.find(s => s.location === stallNum)
       return sum + (stall?.monthlyRate || 0)
     }, 0), [selectedStalls, stalls])
 
@@ -278,7 +278,7 @@ export default function Register() {
   const filteredStalls = useMemo(() =>
     stalls.filter(stall => {
       const matchesSearch =
-        stall.stallNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        stall.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
         stall.section.toLowerCase().includes(searchQuery.toLowerCase())
       const matchesZone = selectedZone === 'All' || stall.section.toLowerCase() === selectedZone.toLowerCase()
       return matchesSearch && matchesZone
@@ -575,7 +575,7 @@ export default function Register() {
                         <div className="space-y-3 mb-6">
                           <div className="input-field flex items-center gap-2 px-4 py-3 rounded-xl border border-gray-200 bg-gray-50">
                             <Search size={16} className="text-gray-400 shrink-0" />
-                            <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search stall number or zone..." className="flex-1 bg-transparent text-sm focus:outline-none" />
+                            <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search stall location or zone..." className="flex-1 bg-transparent text-sm focus:outline-none" />
                           </div>
                           <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
                             {zones.map(zone => (
@@ -596,15 +596,15 @@ export default function Register() {
                         ) : (
                           <div className="grid grid-cols-2 gap-3 max-h-[300px] overflow-y-auto pr-1 mb-20 scrollbar-thin">
                             {filteredStalls.map(stall => {
-                              const isSelected = selectedStalls.includes(stall.stallNumber)
+                              const isSelected = selectedStalls.includes(stall.location)
                               const isAvailable = stall.status === 'available'
                               return (
                                 <button key={stall._id} type="button" disabled={!isAvailable}
                                   data-selected={isSelected ? 'true' : 'false'}
-                                  onClick={() => { if (isSelected) setSelectedStalls(selectedStalls.filter(s => s !== stall.stallNumber)); else setSelectedStalls([...selectedStalls, stall.stallNumber]) }}
+                                  onClick={() => { if (isSelected) setSelectedStalls(selectedStalls.filter(s => s !== stall.location)); else setSelectedStalls([...selectedStalls, stall.location]) }}
                                   className={`stall-card flex flex-col text-left p-3.5 rounded-2xl border-2 relative ${isSelected ? 'border-green-700 bg-green-50/50' : isAvailable ? 'border-gray-200 bg-white hover:border-gray-300' : 'border-gray-100 bg-gray-50 opacity-60 cursor-not-allowed'}`}>
                                   <div className="flex justify-between items-start mb-2">
-                                    <span className="font-extrabold text-sm text-gray-800">#{stall.stallNumber}</span>
+                                    <span className="font-extrabold text-sm text-gray-800">#{stall.location}</span>
                                     <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded-md ${isAvailable ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-500'}`}>{stall.status.toUpperCase()}</span>
                                   </div>
                                   <div className="text-[10px] text-gray-400 font-semibold mb-3 uppercase tracking-wider">{stall.section}</div>
@@ -669,12 +669,12 @@ export default function Register() {
                           </div>
                           <div className="space-y-2 max-h-[140px] overflow-y-auto pr-1 scrollbar-thin">
                             {selectedStalls.map(stallNum => {
-                              const stall = stalls.find(s => s.stallNumber === stallNum)
+                              const stall = stalls.find(s => s.location === stallNum)
                               if (!stall) return null
                               return (
                                 <div key={stall._id} className="flex items-center justify-between p-3 bg-white border border-gray-150 rounded-xl">
                                   <div className="flex items-center gap-2.5">
-                                    <div className="w-8 h-8 bg-green-50 text-green-800 border border-green-100 rounded-lg flex items-center justify-center font-extrabold text-xs">#{stall.stallNumber}</div>
+                                    <div className="w-8 h-8 bg-green-50 text-green-800 border border-green-100 rounded-lg flex items-center justify-center font-extrabold text-xs">#{stall.location}</div>
                                     <div className="flex flex-col text-left">
                                       <span className="font-bold text-xs text-gray-800">{stall.section}</span>
                                       <span className="text-[9px] text-gray-400">{stall.size} sqm</span>

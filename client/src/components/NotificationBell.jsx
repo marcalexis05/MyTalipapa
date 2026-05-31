@@ -119,9 +119,8 @@ export default function NotificationBell() {
                   <div
                     key={n._id}
                     onClick={() => handleNotifClick(n)}
-                    className={`px-4 py-3 text-left transition-all cursor-pointer ${
-                      n.read ? 'bg-white hover:bg-gray-50' : 'bg-green-50/30 hover:bg-green-50/55'
-                    }`}
+                    className={`px-4 py-3 text-left transition-all cursor-pointer ${n.read ? 'bg-white hover:bg-gray-50' : 'bg-green-50/30 hover:bg-green-50/55'
+                      }`}
                   >
                     <div className="flex justify-between items-start gap-2 mb-1">
                       <span className={`text-xs font-bold ${n.read ? 'text-gray-700' : 'text-[#1a5c2a]'}`}>
