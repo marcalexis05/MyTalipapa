@@ -72,9 +72,8 @@ export default function NotificationBell() {
 
   const handleModalNavigate = () => {
     closeModal();
-    // Navigate to the notification's link if it exists, otherwise default to records
-    const targetRoute = selectedNotif?.link || '/records';
-    navigate(targetRoute);
+    // Always navigate to records, regardless of the link in notification
+    navigate('/contractor/records');
   };
 
   return (

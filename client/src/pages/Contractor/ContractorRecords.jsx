@@ -86,6 +86,40 @@ const STATUS_CONFIG = {
 const SORT_OPTIONS = ["Recent", "Name A-Z", "Status", "Stall #"];
 const SEEN_KEY = 'seenMoveOuts_v1';
 
+// Helper function to parse move out request message and extract details
+const parseMoveOutDetails = (message) => {
+  const details = {
+    stallNumber: '',
+    stallType: '',
+    contactNumber: '',
+    reason: '',
+    rawMessage: message
+  };
+
+  if (!message) return details;
+
+  // Extract stall number and type: "Tenant at Stall #51 (Meat)"
+  const stallMatch = message.match(/Stall #(\d+)\s*\(([^)]+)\)/);
+  if (stallMatch) {
+    details.stallNumber = stallMatch[1];
+    details.stallType = stallMatch[2];
+  }
+
+  // Extract contact number: "Renter Contact: 09763198643"
+  const contactMatch = message.match(/Renter Contact:\s*([\d\s\-]+)/);
+  if (contactMatch) {
+    details.contactNumber = contactMatch[1].trim();
+  }
+
+  // Extract reason: "Reason: ayaw ko na" or "Reason I saw your..."
+  const reasonMatch = message.match(/Reason[:\s]+([^.]+)/);
+  if (reasonMatch) {
+    details.reason = reasonMatch[1].trim();
+  }
+
+  return details;
+};
+
 export default function ContractorRecords() {
   const [activeNav, setActiveNav] = useState('nav-records');
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -106,6 +140,7 @@ export default function ContractorRecords() {
   const [showMoveOut, setShowMoveOut] = useState(false);
   const [newMoveOutCount, setNewMoveOutCount] = useState(0);
   const [bannerDismissed, setBannerDismissed] = useState(false);
+  const [selectedMoveOut, setSelectedMoveOut] = useState(null);
   const prevMoveOutIds = useRef([]);
 
   const user = getUser();
@@ -121,6 +156,30 @@ export default function ContractorRecords() {
     localStorage.setItem(SEEN_KEY, JSON.stringify(ids));
     setNewMoveOutCount(0);
     setBannerDismissed(true);
+  };
+
+  // Mark single move out as read
+  const markMoveOutAsRead = async (id) => {
+    if (!id) return;
+    const token = localStorage.getItem('authToken');
+    if (!token) return;
+    try {
+      const res = await fetch(`/api/contractor/notifications/${id}/read`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        // Update local state to mark as read
+        setMoveOutRequests(prev => prev.map(r => r._id === id ? { ...r, read: true } : r));
+        // Update seen tracking
+        const seenIds = getSeenIds();
+        if (!seenIds.includes(id)) {
+          localStorage.setItem(SEEN_KEY, JSON.stringify([...seenIds, id]));
+        }
+      }
+    } catch (err) {
+      console.error('Failed to mark move out as read:', err);
+    }
   };
 
   // ── Fetch contractor profile ─────────────────────────────────
@@ -207,6 +266,7 @@ export default function ContractorRecords() {
   const handleNav = (item) => { setActiveNav(item.id); navigate(item.path); };
   const handleLogout = () => navigate('/login');
   const closeRenterModal = () => { setSelectedRenter(null); setShowPaymentForm(false); };
+  const closeMoveOutModal = () => { setSelectedMoveOut(null); };
 
   const handleRequestArchiveAccess = async () => {
     const token = localStorage.getItem('authToken');
@@ -255,6 +315,13 @@ export default function ContractorRecords() {
       setShowPaymentForm(false);
     } catch (err) { console.error(err); alert('Error recording payment: ' + err.message); }
     finally { setRecordingPayment(false); }
+  };
+
+  const handleMoveOutClick = async (req) => {
+    setSelectedMoveOut(req);
+    if (!req.read) {
+      await markMoveOutAsRead(req._id);
+    }
   };
 
   const totalRenters = RENTERS.length;
@@ -515,7 +582,8 @@ export default function ContractorRecords() {
                       return (
                         <div
                           key={req._id || idx}
-                          className={`moveout-request-card ${isNew ? 'moveout-request-card--new' : ''}`}
+                          onClick={() => handleMoveOutClick(req)}
+                          className={`moveout-request-card ${isNew ? 'moveout-request-card--new' : ''} cursor-pointer`}
                         >
                           <div className="moveout-request-icon-wrap">
                             <span className="text-base">🚪</span>
@@ -644,6 +712,76 @@ export default function ContractorRecords() {
             </button>
           ))}
         </nav>
+
+        {/* Move Out Detail Modal */}
+        {selectedMoveOut && (
+          <div className="logout-overlay" onClick={closeMoveOutModal}>
+            <div className="rec-modal" onClick={e => e.stopPropagation()}>
+              <div className="moveout-modal-header">
+                <div className="moveout-modal-icon-wrap">
+                  <span className="text-2xl">🚪</span>
+                </div>
+                <div>
+                  <h2 className="moveout-modal-title">{selectedMoveOut.title || 'Move Out Request'}</h2>
+                  <p className="moveout-modal-time">
+                    {new Date(selectedMoveOut.createdAt).toLocaleDateString('en-US', {
+                      weekday: 'short', month: 'short', day: 'numeric',
+                      hour: '2-digit', minute: '2-digit'
+                    })}
+                  </p>
+                </div>
+              </div>
+
+              <div className="moveout-modal-content">
+                {(() => {
+                  const details = parseMoveOutDetails(selectedMoveOut.message);
+                  return (
+                    <div className="moveout-details-grid">
+                      <div className="moveout-detail-item">
+                        <span className="moveout-detail-label">STALL NUMBER</span>
+                        <span className="moveout-detail-value">#{details.stallNumber}</span>
+                      </div>
+                      <div className="moveout-detail-item">
+                        <span className="moveout-detail-label">STALL TYPE</span>
+                        <span className="moveout-detail-value">{details.stallType || 'N/A'}</span>
+                      </div>
+                      <div className="moveout-detail-item" style={{ gridColumn: '1 / -1' }}>
+                        <span className="moveout-detail-label">RENTER CONTACT</span>
+                        <span className="moveout-detail-value moveout-contact-value">{details.contactNumber}</span>
+                      </div>
+                      <div className="moveout-detail-item" style={{ gridColumn: '1 / -1' }}>
+                        <span className="moveout-detail-label">REASON FOR MOVE OUT</span>
+                        <p className="moveout-reason-text">{details.reason}</p>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              <div className="moveout-modal-actions">
+                <button 
+                  type="button" 
+                  className="moveout-call-btn"
+                  onClick={() => {
+                    const details = parseMoveOutDetails(selectedMoveOut.message);
+                    if (details.contactNumber) {
+                      window.location.href = `tel:${details.contactNumber}`;
+                    }
+                  }}
+                >
+                  📞 Call Renter
+                </button>
+                <button 
+                  type="button" 
+                  className="moveout-modal-close-btn"
+                  onClick={closeMoveOutModal}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Renter History Modal */}
         {selectedRenter && (
@@ -882,6 +1020,119 @@ export default function ContractorRecords() {
             padding: 2px 6px; border-radius: 999px;
             background: #f97316; color: #fff;
             flex-shrink: 0;
+          }
+
+          /* ── Move out detail modal ─────────────────────────── */
+          .moveout-modal-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid #f3f4f6;
+          }
+          .moveout-modal-icon-wrap {
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            background: #fff7ed;
+            border: 2px solid #fed7aa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+          }
+          .moveout-modal-title {
+            font-size: 17px;
+            font-weight: 800;
+            color: #1f2937;
+            margin: 0 0 2px;
+          }
+          .moveout-modal-time {
+            font-size: 12px;
+            color: #9ca3af;
+            margin: 0;
+            font-weight: 500;
+          }
+          .moveout-modal-content {
+            padding: 14px 0;
+          }
+          .moveout-details-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+          }
+          .moveout-detail-item {
+            background: #f9fafb;
+            border-radius: 12px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            border: 1px solid #f3f4f6;
+          }
+          .moveout-detail-label {
+            font-size: 10px;
+            font-weight: 700;
+            color: #9ca3af;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+          }
+          .moveout-detail-value {
+            font-size: 14px;
+            font-weight: 800;
+            color: #1f2937;
+          }
+          .moveout-contact-value {
+            font-family: 'Courier New', monospace;
+            letter-spacing: 0.5px;
+            color: #1a5c2a;
+          }
+          .moveout-reason-text {
+            font-size: 13px;
+            color: #6b7280;
+            line-height: 1.6;
+            margin: 0;
+          }
+          .moveout-modal-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 14px;
+            padding-top: 14px;
+            border-top: 1px solid #f3f4f6;
+          }
+          .moveout-call-btn {
+            width: 100%;
+            padding: 12px;
+            background: #1a5c2a;
+            hover:background: #154d23;
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 700;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+            transition: background 0.2s;
+          }
+          .moveout-call-btn:hover {
+            background: #154d23;
+          }
+          .moveout-modal-close-btn {
+            width: 100%;
+            padding: 10px;
+            background: #f3f4f6;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 700;
+            color: #6b7280;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+            transition: background 0.2s;
+          }
+          .moveout-modal-close-btn:hover {
+            background: #e5e7eb;
           }
 
           /* ── Filter pills ──────────────────────────────────── */
