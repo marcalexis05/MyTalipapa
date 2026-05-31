@@ -86,7 +86,6 @@ const STATUS_CONFIG = {
 const SORT_OPTIONS = ["Recent", "Name A-Z", "Status", "Stall #"];
 const SEEN_KEY = 'seenMoveOuts_v1';
 
-// Helper function to parse move out request message and extract details
 const parseMoveOutDetails = (message) => {
   const details = {
     stallNumber: '',
@@ -98,20 +97,17 @@ const parseMoveOutDetails = (message) => {
 
   if (!message) return details;
 
-  // Extract stall number and type: "Tenant at Stall #51 (Meat)"
   const stallMatch = message.match(/Stall #(\d+)\s*\(([^)]+)\)/);
   if (stallMatch) {
     details.stallNumber = stallMatch[1];
     details.stallType = stallMatch[2];
   }
 
-  // Extract contact number: "Renter Contact: 09763198643"
   const contactMatch = message.match(/Renter Contact:\s*([\d\s\-]+)/);
   if (contactMatch) {
     details.contactNumber = contactMatch[1].trim();
   }
 
-  // Extract reason: "Reason: ayaw ko na" or "Reason I saw your..."
   const reasonMatch = message.match(/Reason[:\s]+([^.]+)/);
   if (reasonMatch) {
     details.reason = reasonMatch[1].trim();
@@ -154,18 +150,19 @@ export default function ContractorRecords() {
     try { return JSON.parse(localStorage.getItem(SEEN_KEY) || '[]'); }
     catch { return []; }
   };
-const markAllSeen = async () => {
-  const token = localStorage.getItem('authToken');
-  if (token) {
-    await fetch('/api/contractor/notifications/read-all', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-  }
-  setMoveOutRequests(prev => prev.map(r => ({ ...r, read: true })));
-  setNewMoveOutCount(prev => Math.max(0, prev - 1));
-  setBannerDismissed(true);
-};
+
+  const markAllSeen = async () => {
+    const token = localStorage.getItem('authToken');
+    if (token) {
+      await fetch('/api/contractor/notifications/read-all', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+    }
+    setMoveOutRequests(prev => prev.map(r => ({ ...r, read: true })));
+    setNewMoveOutCount(0);
+    setBannerDismissed(true);
+  };
 
   // Mark single move out as read
   const markMoveOutAsRead = async (id) => {
@@ -179,6 +176,7 @@ const markAllSeen = async () => {
       });
       if (res.ok) {
         setMoveOutRequests(prev => prev.map(r => r._id === id ? { ...r, read: true } : r));
+        setNewMoveOutCount(prev => Math.max(0, prev - 1));
         const seenIds = getSeenIds();
         if (!seenIds.includes(id)) {
           localStorage.setItem(SEEN_KEY, JSON.stringify([...seenIds, id]));
@@ -246,7 +244,7 @@ const markAllSeen = async () => {
 
         const currentIds = moves.map(r => r._id || r.message);
         const hasNew = currentIds.some(id => !prevMoveOutIds.current.includes(id));
-        if (hasNew && unseen.length > 0) setBannerDismissed(false);
+        if (hasNew && unread.length > 0) setBannerDismissed(false);
         prevMoveOutIds.current = currentIds;
 
         setError(null);
@@ -341,7 +339,6 @@ const markAllSeen = async () => {
       await markMoveOutAsRead(req._id);
     }
 
-    // Fetch renter email by stall number
     const details = parseMoveOutDetails(req.message);
     if (details.stallNumber) {
       setLoadingEmail(true);
@@ -579,9 +576,9 @@ const markAllSeen = async () => {
                 <div className="text-left">
                   <div className="flex items-center gap-2">
                     <h3 className="text-xs font-bold text-gray-800 uppercase tracking-wide">Move Out Requests</h3>
-                    {moveOutRequests.length > 0 && (
+                    {newMoveOutCount > 0 && (
                       <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-orange-500 text-white text-[9px] font-bold">
-                        {moveOutRequests.length}
+                        {newMoveOutCount}
                       </span>
                     )}
                   </div>
@@ -769,7 +766,6 @@ const markAllSeen = async () => {
                     })}
                   </p>
                 </div>
-                {/* Read badge */}
                 {selectedMoveOut.read && (
                   <span className="moveout-read-badge">✓ Read</span>
                 )}
@@ -800,10 +796,7 @@ const markAllSeen = async () => {
                         {loadingEmail ? (
                           <span className="moveout-email-loading">Fetching email…</span>
                         ) : renterEmail ? (
-                          <a
-                            href={`mailto:${renterEmail}`}
-                            className="moveout-detail-value moveout-email-value"
-                          >
+                          <a href={`mailto:${renterEmail}`} className="moveout-detail-value moveout-email-value">
                             ✉️ {renterEmail}
                           </a>
                         ) : (
@@ -822,29 +815,27 @@ const markAllSeen = async () => {
 
               {/* Actions */}
               <div className="moveout-modal-actions">
-                {/* Info message */}
                 <div className="moveout-contact-info-msg">
                   <span className="moveout-contact-info-icon">ℹ️</span>
                   <span>Contact the renter for more info about the request.</span>
                 </div>
 
-                  {/* Mark as Read button */}
-                  {!selectedMoveOut.read && (
-                    <button
-                      type="button"
-                      className="moveout-markread-btn"
-                      onClick={handleMarkAsRead}
-                      disabled={markingRead}
-                    >
-                      {markingRead ? 'Marking…' : '✔ Mark as Read'}
-                    </button>
-                  )}
-                  {selectedMoveOut.read && (
-                    <div className="moveout-markread-btn moveout-markread-btn--done">
-                      ✓ Marked as Read
-                    </div>
-                  )}
-                {/* Close button */}
+                {/* Mark as Read — button when unread, label when read */}
+                {!selectedMoveOut.read ? (
+                  <button
+                    type="button"
+                    className="moveout-markread-btn"
+                    onClick={handleMarkAsRead}
+                    disabled={markingRead}
+                  >
+                    {markingRead ? 'Marking…' : '✔ Mark as Read'}
+                  </button>
+                ) : (
+                  <div className="moveout-markread-btn moveout-markread-btn--done">
+                    ✓ Marked as Read
+                  </div>
+                )}
+
                 <button
                   type="button"
                   className="moveout-modal-close-btn"
@@ -988,13 +979,10 @@ const markAllSeen = async () => {
         )}
 
         <style>{`
-          /* ── Base ──────────────────────────────────────────── */
           .rec-main { padding-bottom: 80px; }
           .rec-title-block { margin-bottom: 2px; }
           .rec-page-title { font-size: 20px; font-weight: 800; color: var(--color-text); margin: 0 0 4px; letter-spacing: -0.3px; }
           .rec-page-sub { font-size: 12px; color: var(--color-text-muted); margin: 0; font-weight: 500; }
-
-          /* ── Search ────────────────────────────────────────── */
           .rec-search-wrap { position: relative; display: flex; align-items: center; }
           .rec-search-icon { position: absolute; left: 14px; color: var(--color-text-faint); pointer-events: none; flex-shrink: 0; }
           .rec-search-input { width: 100%; padding: 12px 40px 12px 40px; border: 1.5px solid var(--color-border); border-radius: var(--r-lg); background: var(--color-surface); font-size: 13px; font-weight: 500; font-family: 'Inter', sans-serif; color: var(--color-text); box-shadow: var(--shadow-xs); outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
@@ -1002,8 +990,6 @@ const markAllSeen = async () => {
           .rec-search-input::placeholder { color: var(--color-text-faint); }
           .rec-search-clear { position: absolute; right: 12px; background: none; border: none; cursor: pointer; color: var(--color-text-faint); display: flex; align-items: center; padding: 4px; border-radius: 50%; transition: color 0.2s, background 0.2s; }
           .rec-search-clear:hover { color: var(--color-text); background: #f3f4f6; }
-
-          /* ── Stats ─────────────────────────────────────────── */
           .rec-stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
           .rec-stat-card { border-radius: var(--r-lg); padding: 16px 14px; display: flex; flex-direction: column; gap: 8px; }
           .rec-stat-green { background: var(--color-brand-green); color: #fff; }
@@ -1012,154 +998,57 @@ const markAllSeen = async () => {
           .rec-stat-label { font-size: 10px; font-weight: 800; letter-spacing: 0.5px; opacity: 0.9; }
           .rec-stat-icon { font-size: 16px; }
           .rec-stat-value { font-size: 32px; font-weight: 900; line-height: 1; letter-spacing: -0.5px; }
-
-          /* ── Move-out banner ───────────────────────────────── */
-          .moveout-banner {
-            display: flex; align-items: center; justify-content: space-between; gap: 10px;
-            padding: 10px 14px; margin-bottom: 10px; border-radius: 14px;
-            border: 1.5px solid #fed7aa;
-            background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
-            animation: banner-slide-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
-          }
-          @keyframes banner-slide-in {
-            from { opacity: 0; transform: translateY(-8px) scale(0.98); }
-            to   { opacity: 1; transform: translateY(0) scale(1); }
-          }
+          .moveout-banner { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px; margin-bottom: 10px; border-radius: 14px; border: 1.5px solid #fed7aa; background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%); animation: banner-slide-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); }
+          @keyframes banner-slide-in { from { opacity: 0; transform: translateY(-8px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
           .moveout-banner-left { display: flex; align-items: center; gap: 8px; }
-          .moveout-banner-pulse {
-            position: relative; display: inline-block;
-            width: 8px; height: 8px; border-radius: 50%; background: #f97316; flex-shrink: 0;
-          }
-          .moveout-banner-pulse::after {
-            content: ''; position: absolute; inset: -3px; border-radius: 50%;
-            background: #f97316; opacity: 0.3;
-            animation: pulse-ring 1.4s ease-out infinite;
-          }
-          @keyframes pulse-ring {
-            0%   { transform: scale(0.8); opacity: 0.5; }
-            100% { transform: scale(2);   opacity: 0; }
-          }
+          .moveout-banner-pulse { position: relative; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #f97316; flex-shrink: 0; }
+          .moveout-banner-pulse::after { content: ''; position: absolute; inset: -3px; border-radius: 50%; background: #f97316; opacity: 0.3; animation: pulse-ring 1.4s ease-out infinite; }
+          @keyframes pulse-ring { 0% { transform: scale(0.8); opacity: 0.5; } 100% { transform: scale(2); opacity: 0; } }
           .moveout-banner-text { font-size: 11px; font-weight: 700; color: #c2410c; }
           .moveout-banner-actions { display: flex; align-items: center; gap: 6px; }
           .moveout-banner-view { font-size: 10px; font-weight: 800; color: #ea580c; text-decoration: underline; text-underline-offset: 2px; background: none; border: none; cursor: pointer; padding: 0; font-family: 'Inter', sans-serif; white-space: nowrap; }
           .moveout-banner-view:hover { color: #9a3412; }
           .moveout-banner-dismiss { display: flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: rgba(249,115,22,0.12); border: none; cursor: pointer; color: #ea580c; padding: 0; transition: background 0.15s; }
           .moveout-banner-dismiss:hover { background: rgba(249,115,22,0.22); }
-
-          /* ── Move-out request cards ────────────────────────── */
-          .moveout-request-card {
-            display: flex; align-items: flex-start; gap: 12px;
-            background: #fff; border-radius: 16px; padding: 14px;
-            border: 1px solid #f3f4f6; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-            transition: box-shadow 0.2s, transform 0.2s;
-          }
+          .moveout-request-card { display: flex; align-items: flex-start; gap: 12px; background: #fff; border-radius: 16px; padding: 14px; border: 1px solid #f3f4f6; box-shadow: 0 1px 3px rgba(0,0,0,0.04); transition: box-shadow 0.2s, transform 0.2s; }
           .moveout-request-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); transform: translateY(-1px); }
           .moveout-request-card--new { border-color: #fed7aa; background: linear-gradient(135deg, #fff7ed 0%, #fff 60%); }
-          .moveout-request-icon-wrap {
-            width: 36px; height: 36px; border-radius: 10px;
-            background: #fff7ed; border: 1px solid #fed7aa;
-            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-          }
+          .moveout-request-icon-wrap { width: 36px; height: 36px; border-radius: 10px; background: #fff7ed; border: 1px solid #fed7aa; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
           .moveout-request-body { flex: 1; min-width: 0; }
           .moveout-request-title { font-size: 12px; font-weight: 800; color: #1f2937; margin: 0; }
           .moveout-request-msg { font-size: 11px; color: #6b7280; line-height: 1.5; margin: 2px 0 4px; }
           .moveout-request-time { font-size: 9px; color: #9ca3af; font-weight: 600; }
-          .moveout-new-badge {
-            font-size: 8px; font-weight: 900; letter-spacing: 0.5px;
-            padding: 2px 6px; border-radius: 999px;
-            background: #f97316; color: #fff; flex-shrink: 0;
-          }
-
-          /* ── Move out detail modal ─────────────────────────── */
-          .moveout-modal-header {
-            display: flex; align-items: flex-start; gap: 14px;
-            padding-bottom: 14px; border-bottom: 1px solid #f3f4f6;
-          }
-          .moveout-modal-icon-wrap {
-            width: 52px; height: 52px; border-radius: 14px;
-            background: #fff7ed; border: 2px solid #fed7aa;
-            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-          }
+          .moveout-new-badge { font-size: 8px; font-weight: 900; letter-spacing: 0.5px; padding: 2px 6px; border-radius: 999px; background: #f97316; color: #fff; flex-shrink: 0; }
+          .moveout-modal-header { display: flex; align-items: flex-start; gap: 14px; padding-bottom: 14px; border-bottom: 1px solid #f3f4f6; }
+          .moveout-modal-icon-wrap { width: 52px; height: 52px; border-radius: 14px; background: #fff7ed; border: 2px solid #fed7aa; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
           .moveout-modal-title { font-size: 17px; font-weight: 800; color: #1f2937; margin: 0 0 2px; }
           .moveout-modal-time { font-size: 12px; color: #9ca3af; margin: 0; font-weight: 500; }
-          .moveout-read-badge {
-            margin-left: auto; flex-shrink: 0; align-self: flex-start;
-            font-size: 10px; font-weight: 700; color: #15803d;
-            background: #dcfce7; border: 1px solid #bbf7d0;
-            padding: 3px 10px; border-radius: 999px;
-          }
+          .moveout-read-badge { margin-left: auto; flex-shrink: 0; align-self: flex-start; font-size: 10px; font-weight: 700; color: #15803d; background: #dcfce7; border: 1px solid #bbf7d0; padding: 3px 10px; border-radius: 999px; }
           .moveout-modal-content { padding: 14px 0; }
           .moveout-details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-          .moveout-detail-item {
-            background: #f9fafb; border-radius: 12px; padding: 12px;
-            display: flex; flex-direction: column; gap: 4px;
-            border: 1px solid #f3f4f6;
-          }
+          .moveout-detail-item { background: #f9fafb; border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 4px; border: 1px solid #f3f4f6; }
           .moveout-detail-label { font-size: 10px; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.4px; }
           .moveout-detail-value { font-size: 14px; font-weight: 800; color: #1f2937; }
           .moveout-contact-value { font-family: 'Courier New', monospace; letter-spacing: 0.5px; color: #1a5c2a; }
-          .moveout-email-value {
-            font-size: 13px; font-weight: 700; color: #1a5c2a;
-            text-decoration: underline; text-underline-offset: 2px;
-            word-break: break-all;
-          }
+          .moveout-email-value { font-size: 13px; font-weight: 700; color: #1a5c2a; text-decoration: underline; text-underline-offset: 2px; word-break: break-all; }
           .moveout-email-value:hover { color: #154d23; }
           .moveout-email-loading { font-size: 12px; color: #9ca3af; font-style: italic; }
           .moveout-email-empty { font-size: 12px; color: #9ca3af; }
           .moveout-reason-text { font-size: 13px; color: #6b7280; line-height: 1.6; margin: 0; }
-
-          /* ── Modal actions ─────────────────────────────────── */
-          .moveout-modal-actions {
-            display: flex; flex-direction: column; gap: 8px;
-            margin-top: 14px; padding-top: 14px; border-top: 1px solid #f3f4f6;
-          }
-
-          /* Info message */
-          .moveout-contact-info-msg {
-            display: flex; align-items: center; gap: 8px;
-            padding: 10px 14px;
-            background: #eff6ff; border: 1px solid #bfdbfe;
-            border-radius: 10px;
-            font-size: 12px; font-weight: 600; color: #1d4ed8; line-height: 1.4;
-          }
+          .moveout-modal-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; padding-top: 14px; border-top: 1px solid #f3f4f6; }
+          .moveout-contact-info-msg { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; font-size: 12px; font-weight: 600; color: #1d4ed8; line-height: 1.4; }
           .moveout-contact-info-icon { font-size: 14px; flex-shrink: 0; }
-
-          /* Mark as read button */
-          .moveout-markread-btn {
-            width: 100%; padding: 12px;
-            background: #1a5c2a; color: #fff;
-            border: none; border-radius: 10px;
-            font-size: 13px; font-weight: 700;
-            font-family: 'Inter', sans-serif;
-            cursor: pointer; transition: background 0.2s;
-          }
+          .moveout-markread-btn { width: 100%; padding: 12px; background: #1a5c2a; color: #fff; border: none; border-radius: 10px; font-size: 13px; font-weight: 700; font-family: 'Inter', sans-serif; cursor: pointer; transition: background 0.2s; text-align: center; }
           .moveout-markread-btn:hover:not(:disabled) { background: #154d23; }
-          .moveout-markread-btn--done {
-            background: #f0fdf4 !important;
-            color: #15803d !important;
-            border: 1.5px solid #bbf7d0 !important;
-            cursor: default !important;
-          }
+          .moveout-markread-btn--done { background: #f0fdf4 !important; color: #15803d !important; border: 1.5px solid #bbf7d0 !important; cursor: default !important; }
           .moveout-markread-btn:disabled { opacity: 0.7; cursor: not-allowed; }
-
-          /* Close button */
-          .moveout-modal-close-btn {
-            width: 100%; padding: 10px;
-            background: #f3f4f6; border: 1px solid #e5e7eb;
-            border-radius: 10px; font-size: 13px; font-weight: 700;
-            color: #6b7280; font-family: 'Inter', sans-serif;
-            cursor: pointer; transition: background 0.2s;
-          }
+          .moveout-modal-close-btn { width: 100%; padding: 10px; background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 10px; font-size: 13px; font-weight: 700; color: #6b7280; font-family: 'Inter', sans-serif; cursor: pointer; transition: background 0.2s; }
           .moveout-modal-close-btn:hover { background: #e5e7eb; }
-
-          /* ── Filter pills ──────────────────────────────────── */
           .rec-filter-pills { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
           .rec-filter-pills::-webkit-scrollbar { display: none; }
           .rec-filter-pill { padding: 6px 14px; border-radius: var(--r-full); border: 1.5px solid var(--color-border); background: var(--color-surface); font-size: 11px; font-weight: 700; color: var(--color-text-muted); cursor: pointer; font-family: 'Inter', sans-serif; white-space: nowrap; transition: all 0.2s; flex-shrink: 0; }
           .rec-filter-pill:hover { border-color: var(--color-brand-green); color: var(--color-brand-green); }
           .rec-pill-active { background: var(--color-brand-green) !important; color: #fff !important; border-color: var(--color-brand-green) !important; }
-
-          /* ── Activity header / sort ────────────────────────── */
           .rec-activity-header { display: flex; align-items: center; justify-content: space-between; }
           .rec-activity-title { font-size: 15px; font-weight: 800; color: var(--color-text); margin: 0; }
           .rec-sort-wrap { position: relative; }
@@ -1170,8 +1059,6 @@ const markAllSeen = async () => {
           .rec-sort-option:last-child { border-bottom: none; }
           .rec-sort-option:hover { background: #f9fafb; }
           .rec-sort-selected { color: var(--color-brand-green) !important; background: var(--color-brand-green-light) !important; }
-
-          /* ── Renter grid & cards ───────────────────────────── */
           .rec-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
           .rec-card { background: var(--color-surface); border-radius: var(--r-lg); padding: 14px 14px 10px; box-shadow: var(--shadow-xs); border: 1px solid var(--color-border-soft); display: flex; flex-direction: column; gap: 10px; transition: box-shadow 0.2s, transform 0.2s; }
           .rec-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
@@ -1188,8 +1075,6 @@ const markAllSeen = async () => {
           .rec-stall-value { font-size: 12px; font-weight: 800; color: var(--color-text); }
           .rec-history-btn { width: 100%; padding: 10px; background: none; border: 1.5px solid var(--color-border); border-radius: var(--r-md); font-size: 13px; font-weight: 700; color: var(--color-text-mid); cursor: pointer; font-family: 'Inter', sans-serif; transition: all 0.2s; text-align: center; }
           .rec-history-btn:hover { border-color: var(--color-brand-green); color: var(--color-brand-green); background: var(--color-brand-green-light); }
-
-          /* ── Renter modal ──────────────────────────────────── */
           .rec-modal { background: var(--color-surface); border-radius: var(--r-xl); padding: 24px 20px 20px; max-width: 400px; width: 100%; display: flex; flex-direction: column; gap: 14px; box-shadow: var(--shadow-lg); animation: slide-up 0.25s cubic-bezier(0.34, 1.56, 0.64, 1); max-height: 85dvh; overflow-y: auto; }
           .rec-modal-header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
           .rec-modal-avatar { width: 52px !important; height: 52px !important; }
@@ -1207,8 +1092,6 @@ const markAllSeen = async () => {
           .rec-history-unpaid { background: #fee2e2; color: #dc2626; }
           .stall-modal-close { width: 100%; padding: 12px; background: var(--color-brand-green); color: #fff; border: none; border-radius: var(--r-md); font-size: 14px; font-weight: 700; font-family: 'Inter', sans-serif; cursor: pointer; transition: background 0.2s; }
           .stall-modal-close:hover { background: var(--color-green-mid); }
-
-          /* ── Payment form ──────────────────────────────────── */
           .pay-form-btn { width: 100%; padding: 10px; background: #1a5c2a; color: #fff; border: none; border-radius: var(--r-md); font-size: 13px; font-weight: 700; font-family: 'Inter', sans-serif; cursor: pointer; transition: background 0.2s; text-align: center; margin-bottom: 8px; }
           .pay-form-btn:hover { background: #154d23; }
           .moveout-btn { width: 100%; padding: 10px; background: #dc2626; color: #fff; border: none; border-radius: var(--r-md); font-size: 13px; font-weight: 700; font-family: 'Inter', sans-serif; cursor: pointer; transition: background 0.2s; text-align: center; margin-bottom: 8px; }
@@ -1225,8 +1108,6 @@ const markAllSeen = async () => {
           .pay-cancel-btn:hover { background: #e5e7eb; }
           .app-detail-label { font-size: 10px; font-weight: 700; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.4px; }
           .app-detail-value { font-size: 13px; font-weight: 700; color: var(--color-text); }
-
-          /* ── Responsive ────────────────────────────────────── */
           @media (min-width: 640px) {
             .rec-page-title { font-size: 24px; }
             .rec-main { padding-bottom: 90px; }
