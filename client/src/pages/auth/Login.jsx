@@ -298,7 +298,7 @@ export default function Login() {
                   <div className="input-field flex items-center gap-2 px-4 py-3 rounded-xl border border-gray-200 bg-gray-50">
                     <Mail size={16} className="text-gray-400" />
                     <input
-                      type={showPassword ? 'text' : 'password'}
+                      type="email"
                       value={email}
                       onChange={e => setEmail(e.target.value)}
                       placeholder={role === 'renter' ? 'vendor@mytalipapa.com' : role === 'admin' ? 'admin@mytalipapa.com' : 'name@contractor.com'}
