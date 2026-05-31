@@ -586,9 +586,30 @@ export default function RenterProfile({ onLogout }) {
             <MenuRow icon={MessageSquare} label="Contact Admin" onClick={openContactModal} />
           </div>
 
+          {/* ── Account / Logout ── */}
+          <SectionLabel style={{ animationDelay: '0.44s' }}>Account</SectionLabel>
+
+          <div className="rp-menu-group bg-white border-y border-gray-100" style={{ animationDelay: '0.48s' }}>
+            <button
+              onClick={handleLogout}
+              disabled={loggingOut}
+              className="rp-menu-row w-full flex items-center justify-between px-4 md:px-6 py-3.5 bg-white hover:bg-red-50 active:bg-red-100 group disabled:opacity-60"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center shrink-0">
+                  <LogOut size={16} className="text-red-500" />
+                </div>
+                <span className="text-sm font-medium text-red-500">
+                  {loggingOut ? 'Logging out…' : 'Log Out'}
+                </span>
+              </div>
+              <ChevronRight size={15} className="text-red-300 group-hover:text-red-400 transition-colors" />
+            </button>
+          </div>
+
           {/* ── Active Rental Info card ── */}
           {activeRental ? (
-            <div className="rp-rental-card mx-4 md:mx-6 mt-5 bg-[#e8621a] rounded-2xl p-4 relative overflow-hidden shadow-sm" style={{ animationDelay: '0.48s' }}>
+            <div className="rp-rental-card mx-4 md:mx-6 mt-5 bg-[#e8621a] rounded-2xl p-4 relative overflow-hidden shadow-sm" style={{ animationDelay: '0.54s' }}>
               <span className="absolute top-3.5 right-3.5 bg-white/25 text-white text-[9px] font-extrabold uppercase tracking-widest px-2.5 py-0.5 rounded-full">
                 {activeRental.status}
               </span>
@@ -604,7 +625,7 @@ export default function RenterProfile({ onLogout }) {
                   <div
                     key={label}
                     className="rp-rental-field bg-white/20 rounded-xl px-3 py-2.5"
-                    style={{ animationDelay: `${0.54 + i * 0.07}s` }}
+                    style={{ animationDelay: `${0.60 + i * 0.07}s` }}
                   >
                     <p className="text-white/70 text-[9px] font-bold uppercase tracking-wider mb-0.5">{label}</p>
                     <p className="text-white font-extrabold text-sm">{value}</p>
@@ -614,14 +635,14 @@ export default function RenterProfile({ onLogout }) {
 
               <div
                 className="rp-rental-field flex items-center gap-1.5 text-white/90 text-[11px] font-semibold"
-                style={{ animationDelay: '0.68s' }}
+                style={{ animationDelay: '0.74s' }}
               >
                 <Calendar size={12} />
                 Next payment due: <span className="font-extrabold">{activeRental.nextDue}</span>
               </div>
             </div>
           ) : !loadingRental && (
-            <div className="rp-no-lease mx-4 md:mx-6 mt-5 bg-white border border-gray-100 rounded-2xl p-5 text-center shadow-sm" style={{ animationDelay: '0.48s' }}>
+            <div className="rp-no-lease mx-4 md:mx-6 mt-5 bg-white border border-gray-100 rounded-2xl p-5 text-center shadow-sm" style={{ animationDelay: '0.54s' }}>
               <div className="rp-no-lease-icon w-12 h-12 bg-[#edf5ed] rounded-full flex items-center justify-center mx-auto mb-3">
                 <ShoppingBag size={20} className="text-[#1a5c2a]" />
               </div>

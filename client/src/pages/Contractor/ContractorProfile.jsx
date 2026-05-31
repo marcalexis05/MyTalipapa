@@ -274,9 +274,27 @@ export default function ContractorProfile() {
                     </span>
                   </button>
                 ))}
+
+                {/* Divider */}
+                <div className="mx-4 border-t border-gray-100" />
+
+                {/* Log Out row */}
+                <button
+                  className="profile-settings-item hover:bg-red-50 active:bg-red-100 transition-colors"
+                  onClick={() => setShowLogout(true)}
+                >
+                  <span className="settings-icon" style={{ color: '#ef4444' }}>
+                    <LogoutIcon />
+                  </span>
+                  <span className="settings-label" style={{ color: '#ef4444' }}>Log Out</span>
+                  <span className="settings-chevron" style={{ color: '#fca5a5' }}>
+                    <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <polyline points="9 18 15 12 9 6" />
+                    </svg>
+                  </span>
+                </button>
               </div>
             </div>
-
 
             <p className="profile-version">Version 2.4.0 (2026)</p>
           </main>
