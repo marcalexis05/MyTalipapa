@@ -18,7 +18,7 @@ app.get('/api/verify', async (req, res) => {
     // 3. Find the user by the verification token/OTP, 
     // update 'isVerified' to true, and clear out the single-use token.
     const updatedUser = await User.findOneAndUpdate(
-      { verificationToken: token }, // Matches the token sent in the query parameter
+      { verificationToken: token },
       { 
         $set: { isVerified: true }, 
         $unset: { verificationToken: "" } // Removes the token field so it can't be reused
