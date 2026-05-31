@@ -122,18 +122,18 @@ router.post('/contractor/register-application', async (req, res) => {
   try {
     const userExists = await User.findOne({ email: email.toLowerCase() });
     const ContractorApplication = require('../models/ContractorApplication');
+    const appExists = await ContractorApplication.findOne({ email: email.toLowerCase() });
 
-    if (userExists) {
-      if (userExists.role !== 'contractor') {
-        return res.status(409).json({ error: 'An account with this email already exists.' });
-      }
-      if (userExists.status === 'pending') {
-        return res.status(409).json({ error: 'A pending application with this email already exists.' });
-      }
-      if (userExists.status === 'approved') {
-        return res.status(409).json({ error: 'An approved contractor account with this email already exists.' });
-      }
-      // If rejected, we allow them to resubmit
+    const status = (userExists && userExists.status) || (appExists && appExists.status);
+
+    if (userExists && userExists.role !== 'contractor') {
+      return res.status(409).json({ error: 'An account with this email already exists.' });
+    }
+    if (status === 'pending') {
+      return res.status(409).json({ error: 'A pending application with this email already exists.' });
+    }
+    if (status === 'approved') {
+      return res.status(409).json({ error: 'An approved contractor account with this email already exists.' });
     }
 
     const salt = await bcrypt.genSalt(10);
@@ -142,28 +142,37 @@ router.post('/contractor/register-application', async (req, res) => {
     let application;
     let userRecord;
 
-    if (userExists && userExists.status === 'rejected') {
-      // Update existing User
-      userExists.full_name = fullName;
-      userExists.contact_number = contactNumber;
-      userExists.passwordHash = passwordHash;
-      userExists.status = 'pending';
-      await userExists.save();
-      userRecord = userExists;
+    if (userExists || appExists) {
+      if (userExists) {
+        userExists.full_name = fullName;
+        userExists.contact_number = contactNumber;
+        userExists.passwordHash = passwordHash;
+        userExists.status = 'pending';
+        await userExists.save();
+        userRecord = userExists;
+      } else {
+        userRecord = await User.create({
+          full_name: fullName,
+          email: email.toLowerCase(),
+          contact_number: contactNumber,
+          role: 'contractor',
+          passwordHash,
+          status: 'pending',
+          agreed: true,
+        });
+      }
 
-      // Update existing ContractorApplication
-      const app = await ContractorApplication.findOne({ email: email.toLowerCase() });
-      if (app) {
-        app.fullName = fullName;
-        app.businessName = businessName;
-        app.contactNumber = contactNumber;
-        app.passwordHash = passwordHash;
-        app.selectedStalls = selectedStalls;
-        app.status = 'pending';
-        app.rejectionReason = undefined; // clear rejection reason
-        app.appliedAt = new Date();
-        await app.save();
-        application = app;
+      if (appExists) {
+        appExists.fullName = fullName;
+        appExists.businessName = businessName;
+        appExists.contactNumber = contactNumber;
+        appExists.passwordHash = passwordHash;
+        appExists.selectedStalls = selectedStalls;
+        appExists.status = 'pending';
+        appExists.rejectionReason = undefined;
+        appExists.appliedAt = new Date();
+        await appExists.save();
+        application = appExists;
       } else {
         application = await ContractorApplication.create({
           fullName,
@@ -176,7 +185,6 @@ router.post('/contractor/register-application', async (req, res) => {
         });
       }
     } else {
-      // Create new application
       application = await ContractorApplication.create({
         fullName,
         businessName,
@@ -187,7 +195,6 @@ router.post('/contractor/register-application', async (req, res) => {
         status: 'pending',
       });
 
-      // Create new User with status 'pending'
       userRecord = await User.create({
         full_name: fullName,
         email: email.toLowerCase(),
