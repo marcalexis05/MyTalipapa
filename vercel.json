@@ -14,7 +14,7 @@
     }
   ],
   "routes": [
-    { "src": "/api/(.*)", "dest": "server/api/index.js" },
+    { "src": "/api/(.*)", "dest": "/server/api/index.js" },
     { "src": "/assets/(.*)", "dest": "/client/assets/$1" },
     { "src": "/export360/(.*)", "dest": "/client/export360/$1" },
     { "src": "/android/(.*)", "dest": "/client/android/$1" },
@@ -26,5 +26,5 @@
     { "src": "/favicon.ico", "dest": "/client/favicon.ico" },
     { "handle": "filesystem" },
     { "src": "/(.*)", "dest": "/client/index.html" }
-  ]
+]
 }
