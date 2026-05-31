@@ -71,10 +71,10 @@ export default function NotificationBell() {
   const closeModal = () => setSelectedNotif(null);
 
   const handleModalNavigate = () => {
-    if (selectedNotif?.link) {
-      closeModal();
-      navigate(selectedNotif.link);
-    }
+    closeModal();
+    // Navigate to the notification's link if it exists, otherwise default to records
+    const targetRoute = selectedNotif?.link || '/records';
+    navigate(targetRoute);
   };
 
   return (
@@ -200,15 +200,13 @@ export default function NotificationBell() {
 
             {/* Footer */}
             <div className="px-[18px] pb-[18px] flex gap-2">
-              {selectedNotif.link && (
-                <button
-                  onClick={handleModalNavigate}
-                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-[#1a5c2a] hover:bg-[#154d23] text-white text-[12px] font-semibold rounded-[10px] transition-colors border-none cursor-pointer"
-                >
-                  <ExternalLink size={13} />
-                  View details
-                </button>
-              )}
+              <button
+                onClick={handleModalNavigate}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-[#1a5c2a] hover:bg-[#154d23] text-white text-[12px] font-semibold rounded-[10px] transition-colors border-none cursor-pointer"
+              >
+                <ExternalLink size={13} />
+                View details
+              </button>
               <button
                 onClick={closeModal}
                 className="flex-1 py-2.5 bg-gray-50 border border-gray-200 hover:bg-gray-100 text-gray-700 text-[12px] font-semibold rounded-[10px] transition-colors cursor-pointer"
