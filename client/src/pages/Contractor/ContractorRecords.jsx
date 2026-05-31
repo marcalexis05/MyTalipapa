@@ -154,12 +154,18 @@ export default function ContractorRecords() {
     try { return JSON.parse(localStorage.getItem(SEEN_KEY) || '[]'); }
     catch { return []; }
   };
-  const markAllSeen = () => {
-    const ids = moveOutRequests.map(r => r._id || r.message);
-    localStorage.setItem(SEEN_KEY, JSON.stringify(ids));
-    setNewMoveOutCount(0);
-    setBannerDismissed(true);
-  };
+const markAllSeen = async () => {
+  const token = localStorage.getItem('authToken');
+  if (token) {
+    await fetch('/api/contractor/notifications/read-all', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+  }
+  setMoveOutRequests(prev => prev.map(r => ({ ...r, read: true })));
+  setNewMoveOutCount(0);
+  setBannerDismissed(true);
+};
 
   // Mark single move out as read
   const markMoveOutAsRead = async (id) => {
@@ -235,9 +241,8 @@ export default function ContractorRecords() {
         const moves = data.filter(n => n.title && n.title.toLowerCase().includes('move out'));
         setMoveOutRequests(moves);
 
-        const seen = getSeenIds();
-        const unseen = moves.filter(r => !seen.includes(r._id || r.message));
-        setNewMoveOutCount(unseen.length);
+        const unread = moves.filter(r => !r.read);
+        setNewMoveOutCount(unread.length);
 
         const currentIds = moves.map(r => r._id || r.message);
         const hasNew = currentIds.some(id => !prevMoveOutIds.current.includes(id));
@@ -610,8 +615,7 @@ export default function ContractorRecords() {
                     </div>
                   ) : (
                     moveOutRequests.map((req, idx) => {
-                      const seen = getSeenIds();
-                      const isNew = !seen.includes(req._id || req.message);
+                      const isNew = !req.read;
                       return (
                         <div
                           key={req._id || idx}
