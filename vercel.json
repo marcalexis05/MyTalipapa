@@ -28,11 +28,11 @@
     },
     {
       "src": "/bg.png",
-      "dest": "/client/public/bg.png"
+      "dest": "/client/bg.png"
     },
     {
       "src": "/logo.png",
-      "dest": "/client/public/logo.png"
+      "dest": "/client/logo.png"
     },
     {
       "handle": "filesystem"
