@@ -6,7 +6,7 @@ const VerifyEmail = () => {
   const navigate = useNavigate();
   const [status, setStatus] = useState('Verifying...');
   
-  // Ref to prevent StrictMode from executing the fetch twice in development
+
   const hasFetched = useRef(false);
 
   useEffect(() => {
