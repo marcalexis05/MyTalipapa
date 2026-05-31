@@ -540,8 +540,8 @@ export default function ContractorRecords() {
                       <span className="rec-stall-label">Stall Location</span>
                       <span className="rec-stall-value">{renter.stall}</span>
                     </div>
-                    <button className="rec-history-btn" onClick={() => setSelectedRenter(renter)}>
-                      View History
+                    <button className="rec-history-btn" onClick={() => navigate(`/renter/stalls/${renter.stall}`)}>
+                      View Stall
                     </button>
                   </div>
                 );

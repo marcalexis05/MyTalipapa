@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ChevronRight, Store } from 'lucide-react'
 import { useCurrentUser, getUser } from '../../utils/auth'
 import marketImage from '../../images/market_live_view.png'
+import tour360Preview from '../../images/tour360_preview.png'
 import ContractorLockScreen from './ContractorLockScreen'
 import ContractorSidebar from '../../components/ContractorSidebar'
 import NotificationBell from '../../components/NotificationBell'
@@ -439,6 +440,7 @@ export default function ContractorDashboard() {
                 onClick={() => navigate('/tour')}
                 style={{ height: '160px' }}
               >
+                <img src={tour360Preview} alt="360 Tour Preview" className="absolute inset-0 w-full h-full object-cover opacity-70" />
                 <div ref={liveViewMountRef} style={{ width: '100%', height: '160px' }} className="absolute inset-0 z-0" />
                 <div className="liveview-overlay absolute inset-0 z-10 pointer-events-none flex flex-col justify-between p-3.5">
                   <span className="live-badge cursor-pointer pointer-events-auto" onClick={(e) => { e.stopPropagation(); navigate('/tour'); }}>
