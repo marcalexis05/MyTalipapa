@@ -9,12 +9,16 @@ const crypto = require('crypto');
 const router = express.Router();
 
 router.get('/verify', async (req, res) => {
-  const { token } = req.query;
-  if (!token) {
+    const rawToken = req.query.token;
+    const token = rawToken ? decodeURIComponent(rawToken).trim() : null;
+    console.log('[/verify] Processed token:', token);
+    if (!token) {
     return res.status(400).json({ error: 'Verification token is required.' });
   }
   try {
-    const user = await User.findOne({ verificationToken: token });
+    const normalizedToken = token ? token.toLowerCase() : null;
+    console.log('[/verify] Normalized token:', normalizedToken);
+    const user = await User.findOne({ verificationToken: normalizedToken });
     if (!user) {
       return res.status(400).json({ error: 'Invalid verification token.' });
     }
