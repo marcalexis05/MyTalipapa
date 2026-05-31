@@ -737,4 +737,66 @@ router.get('/dev/reset-contractor', async (req, res) => {
   }
 });
 
+router.post('/change-first-password', async (req, res) => {
+  const { email, password, newPassword } = req.body;
+  if (!email || !password || !newPassword) {
+    return res.status(400).json({ error: 'All fields are required.' });
+  }
+  if (newPassword.length < 6) {
+    return res.status(400).json({ error: 'Password must be at least 6 characters.' });
+  }
+  const hasLetter = /[a-zA-Z]/.test(newPassword);
+  const hasDigitOrSpecial = /[\d\W]/.test(newPassword);
+  if (!hasLetter || !hasDigitOrSpecial) {
+    return res.status(400).json({ error: 'Password must contain at least one letter and one number or special character.' });
+  }
+  try {
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+    if (!user.mustChangePassword) {
+      return res.status(400).json({ error: 'This account does not require a password change.' });
+    }
+    const isMatch = await bcrypt.compare(password, user.passwordHash);
+    if (!isMatch) {
+      return res.status(401).json({ error: 'Incorrect current password.' });
+    }
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(newPassword, salt);
+    user.passwordHash = passwordHash;
+    user.mustChangePassword = false;
+    await user.save();
+
+    const ContractorApplication = require('../models/ContractorApplication');
+    await ContractorApplication.findOneAndUpdate(
+      { email: email.toLowerCase() },
+      { $set: { passwordHash } }
+    );
+
+    const token = jwt.sign(
+      { id: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    return res.status(200).json({
+      message: 'Password changed successfully.',
+      user: {
+        id: user._id,
+        email: user.email,
+        full_name: user.full_name,
+        role: user.role,
+        status: user.status || 'approved',
+        profilePicture: user.profilePicture || null,
+        contact_number: user.contact_number || '',
+      },
+      token,
+    });
+  } catch (err) {
+    console.error('Change first password error:', err);
+    return res.status(500).json({ error: 'Server error' });
+  }
+});
+
 module.exports = router;
