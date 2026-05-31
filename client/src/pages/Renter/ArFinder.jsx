@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Compass, Info, HelpCircle, Navigation, RotateCw, Check, X, Camera, CameraOff, Map, ChevronDown, ChevronUp, Locate, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, Compass, Info, HelpCircle, Navigation, RotateCw, Check, X, Camera, CameraOff, Map, ChevronDown, ChevronUp, Locate, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import mapImage from "../../images/map.png";
 import { SVG_STALL_COORDS } from "../../utils/coords_dict";
-// Removed unused STALL_POSITIONS import
 
 const getStallZone = (num, category) => {
   const stallId = String(num);
@@ -31,26 +30,20 @@ const getStallCoords = (rawId, category, zone) => {
   const zoneLetter = String(zone || '').replace('Zone ', '').toUpperCase();
   const isBottomZone = ['E', 'F', 'G', 'H'].includes(zoneLetter);
   const yOffset = isBottomZone ? 250 : 0;
-
-  // Try exact rawId (including variants like (u))
   const rawKey = `${category}-${rawId}`;
   if (SVG_STALL_COORDS[rawKey]) {
     return { x: SVG_STALL_COORDS[rawKey].x, y: SVG_STALL_COORDS[rawKey].y + yOffset };
   }
-
-  // Fallback to cleaned number key
   const cleanKey = `${category}-${cleanNum}`;
   if (SVG_STALL_COORDS[cleanKey]) {
     return { x: SVG_STALL_COORDS[cleanKey].x, y: SVG_STALL_COORDS[cleanKey].y + yOffset };
   }
-
-  // Default fallback position
   return { x: 1020, y: 635 + yOffset };
 };
 
 const getCleanDbStallNumber = (rawId) => {
   return String(rawId)
-    .replace(/\(u\d*\)/gi, '') // strip (u), (u2), etc.
+    .replace(/\(u\d*\)/gi, '')
     .replace(/Stall\s*#/gi, '')
     .replace('#', '')
     .trim()
@@ -60,9 +53,7 @@ const getCleanDbStallNumber = (rawId) => {
 
 const getCircleDisplayNumber = (rawId) => {
   const clean = getCleanDbStallNumber(rawId);
-  if (clean.startsWith('nostallnum') || clean.startsWith('empty')) {
-    return '';
-  }
+  if (clean.startsWith('nostallnum') || clean.startsWith('empty')) return '';
   return clean;
 };
 
@@ -89,7 +80,6 @@ const buildAllStalls = () => {
   ];
 
   const list = [];
-
   const processCategory = (category, ids) => {
     ids.forEach((id) => {
       const zone = getStallZone(id, category);
@@ -109,7 +99,6 @@ const buildAllStalls = () => {
   processCategory('meat', meatIds);
   processCategory('fish', fishIds);
   processCategory('veggies', veggieIds);
-
   return list;
 };
 
@@ -155,6 +144,7 @@ const HALLWAY_GROUPS = {
 
 const HALLWAYS = Object.values(HALLWAY_GROUPS).flat();
 
+const CATEGORY_EMOJI = { meat: "🥩", fish: "🐟", veggies: "🥬", all: "🏪" };
 
 export default function ArFinder({ onBack }) {
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -164,6 +154,10 @@ export default function ArFinder({ onBack }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchDirections, setSearchDirections] = useState("");
 
+  // ── Custom mobile stall picker state ──
+  const [showStallPicker, setShowStallPicker] = useState(false);
+  const [stallPickerSearch, setStallPickerSearch] = useState("");
+
   const handleSearchSubmit = async () => {
     if (!searchQuery.trim()) return;
     try {
@@ -171,22 +165,17 @@ export default function ArFinder({ onBack }) {
       const data = await response.json();
       if (data.success && data.stall) {
         const foundStall = data.stall;
-
         const targetClean = getCleanDbStallNumber(foundStall.stallNumber);
-
         const matched = stallsList.find(s => {
           const sec = String(foundStall.section || '').toLowerCase();
           let category = 'meat';
           if (sec.includes('fish') || sec.includes('sea')) category = 'fish';
           else if (sec.includes('veg') || sec.includes('produce')) category = 'veggies';
-
           const sNum = getCleanDbStallNumber(s.rawId);
           const sZone = String(s.zone || '').replace('Zone ', '').toUpperCase();
           const fZone = String(foundStall.zone || '').replace('Zone ', '').toUpperCase();
-
           return sNum === targetClean && s.category === category && sZone === fZone;
         });
-
         if (matched) {
           setSelectedStallId(matched.id);
           setSearchDirections(foundStall.directions || "");
@@ -203,11 +192,9 @@ export default function ArFinder({ onBack }) {
     }
   };
 
-  // Auto-fetch directions when selectedStallId changes
   useEffect(() => {
     const currentStall = stallsList.find(s => s.id === selectedStallId);
     if (!currentStall) return;
-
     const fetchDirections = async () => {
       try {
         const cleanStallNum = getCleanDbStallNumber(currentStall.rawId);
@@ -230,8 +217,6 @@ export default function ArFinder({ onBack }) {
       .then(res => res.json())
       .then(dbStalls => {
         if (!Array.isArray(dbStalls)) return;
-
-        // Map database stalls by category, zone, and cleaned stallNumber
         const dbStallMap = {};
         dbStalls.forEach(dbStall => {
           const key = getCleanDbStallNumber(dbStall.stallNumber || dbStall.id || '');
@@ -239,15 +224,11 @@ export default function ArFinder({ onBack }) {
           let category = 'meat';
           if (sec.includes('fish') || sec.includes('sea')) category = 'fish';
           else if (sec.includes('veg') || sec.includes('produce')) category = 'veggies';
-
           const zoneLetter = String(dbStall.zone || '').replace('Zone ', '').toUpperCase();
-
           if (key && zoneLetter) {
             dbStallMap[`${category}-${zoneLetter}-${key}`] = dbStall;
           }
         });
-
-        // Update STALLS_AR elements with DB data, do NOT filter them out
         const updatedList = STALLS_AR.map(s => {
           const cleanedId = getCleanDbStallNumber(s.rawId);
           const zoneLetter = String(s.zone || '').replace('Zone ', '').toUpperCase();
@@ -268,25 +249,16 @@ export default function ArFinder({ onBack }) {
               dbId: dbStall._id || dbStall.id
             };
           }
-          return s; // Keep the fallback instead of filtering out!
+          return s;
         });
-
         setStallsList(updatedList);
-
-        // Auto-select the first available stall in the updated list if the current selection is not in it
         if (updatedList.length > 0) {
           const exists = updatedList.some(s => s.id === selectedStallId);
-          if (!exists) {
-            setSelectedStallId(updatedList[0].id);
-          }
+          if (!exists) setSelectedStallId(updatedList[0].id);
         }
       })
-      .catch(err => {
-        console.error('Failed to fetch stalls in ArFinder:', err);
-      })
-      .finally(() => {
-        setLoading(false);
-      });
+      .catch(err => console.error('Failed to fetch stalls in ArFinder:', err))
+      .finally(() => setLoading(false));
   }, []);
 
   const currentStall = stallsList.find(s => s.id === selectedStallId) || stallsList[0] || STALLS_AR[0];
@@ -294,11 +266,10 @@ export default function ArFinder({ onBack }) {
   const [userX, setUserX] = useState(1050);
   const [userY, setUserY] = useState(1720);
   const [heading, setHeading] = useState(0);
-
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState(null);
   const [cameraEnabled, setCameraEnabled] = useState(true);
-  const [mapCollapsed, setMapCollapsed] = useState(true); // default collapsed on mobile
+  const [mapCollapsed, setMapCollapsed] = useState(true);
   const [showHelp, setShowHelp] = useState(false);
   const [hasOrientation, setHasOrientation] = useState(false);
   const [showCard, setShowCard] = useState(true);
@@ -310,12 +281,10 @@ export default function ArFinder({ onBack }) {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const containerRef = useRef(null);
-
   const gpsWatchIdRef = useRef(null);
   const gpsAnchorRef = useRef(null);
   const [gpsActive, setGpsActive] = useState(false);
 
-  // Detect mobile
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth <= 640);
     check();
@@ -332,46 +301,28 @@ export default function ArFinder({ onBack }) {
 
   const toggleGps = () => {
     if (gpsActive) {
-      if (gpsWatchIdRef.current !== null) {
-        navigator.geolocation.clearWatch(gpsWatchIdRef.current);
-        gpsWatchIdRef.current = null;
-      }
+      if (gpsWatchIdRef.current !== null) { navigator.geolocation.clearWatch(gpsWatchIdRef.current); gpsWatchIdRef.current = null; }
       gpsAnchorRef.current = null;
       setGpsActive(false);
       setToastMsg("GPS tracking disabled.");
     } else {
-      if (!navigator.geolocation) {
-        alert("Geolocation is not supported by your browser.");
-        return;
-      }
+      if (!navigator.geolocation) { alert("Geolocation is not supported by your browser."); return; }
       setToastMsg("Activating GPS. Please allow location access...");
       gpsAnchorRef.current = null;
       gpsWatchIdRef.current = navigator.geolocation.watchPosition(
         (position) => {
           const { latitude, longitude, accuracy } = position.coords;
-
           if (!gpsAnchorRef.current) {
-            gpsAnchorRef.current = {
-              lat: latitude,
-              lng: longitude,
-              mapX: userX,
-              mapY: userY
-            };
+            gpsAnchorRef.current = { lat: latitude, lng: longitude, mapX: userX, mapY: userY };
             setToastMsg(`GPS active (Accuracy: ${Math.round(accuracy)}m). Anchored.`);
           } else {
             const latDiff = latitude - gpsAnchorRef.current.lat;
             const lngDiff = longitude - gpsAnchorRef.current.lng;
-
             const dyMeters = latDiff * 111139;
             const dxMeters = lngDiff * 111139 * Math.cos(gpsAnchorRef.current.lat * Math.PI / 180);
-
-            const scale = 50; // pixels per meter
-            const dxPixels = dxMeters * scale;
-            const dyPixels = -dyMeters * scale;
-
-            const newX = Math.round(gpsAnchorRef.current.mapX + dxPixels);
-            const newY = Math.round(gpsAnchorRef.current.mapY + dyPixels);
-
+            const scale = 50;
+            const newX = Math.round(gpsAnchorRef.current.mapX + dxMeters * scale);
+            const newY = Math.round(gpsAnchorRef.current.mapY + (-dyMeters * scale));
             setUserX(Math.max(30, Math.min(2270, newX)));
             setUserY(Math.max(30, Math.min(1790, newY)));
           }
@@ -380,10 +331,7 @@ export default function ArFinder({ onBack }) {
         (err) => {
           console.error("GPS error:", err);
           setToastMsg(`GPS tracking failed: ${err.message}`);
-          if (gpsWatchIdRef.current !== null) {
-            navigator.geolocation.clearWatch(gpsWatchIdRef.current);
-            gpsWatchIdRef.current = null;
-          }
+          if (gpsWatchIdRef.current !== null) { navigator.geolocation.clearWatch(gpsWatchIdRef.current); gpsWatchIdRef.current = null; }
           setGpsActive(false);
         },
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
@@ -392,11 +340,7 @@ export default function ArFinder({ onBack }) {
   };
 
   useEffect(() => {
-    return () => {
-      if (gpsWatchIdRef.current !== null) {
-        navigator.geolocation.clearWatch(gpsWatchIdRef.current);
-      }
-    };
+    return () => { if (gpsWatchIdRef.current !== null) navigator.geolocation.clearWatch(gpsWatchIdRef.current); };
   }, []);
 
   const startCamera = async () => {
@@ -460,50 +404,34 @@ export default function ArFinder({ onBack }) {
   const getPathPoints = () => {
     const pts = [{ x: userX, y: userY }];
     const sx = currentStall.x, sy = currentStall.y;
-
     const userCX = X_CORRIDORS.reduce((p, c) => Math.abs(c - userX) < Math.abs(p - userX) ? c : p);
     const stallCX = X_CORRIDORS.reduce((p, c) => Math.abs(c - sx) < Math.abs(p - sx) ? c : p);
-
     if (userCX === stallCX) {
       if (userX !== userCX) pts.push({ x: userCX, y: userY });
       if (userY !== sy) pts.push({ x: userCX, y: sy });
     } else {
-      let bestPY = Y_PATHWAYS[0];
-      let minDist = Infinity;
+      let bestPY = Y_PATHWAYS[0], minDist = Infinity;
       for (const py of Y_PATHWAYS) {
         const dist = Math.abs(userY - py) + Math.abs(userCX - stallCX) + Math.abs(sy - py);
-        if (dist < minDist) {
-          minDist = dist;
-          bestPY = py;
-        }
+        if (dist < minDist) { minDist = dist; bestPY = py; }
       }
-
       if (userX !== userCX) pts.push({ x: userCX, y: userY });
       if (userY !== bestPY) pts.push({ x: userCX, y: bestPY });
       if (userCX !== stallCX) pts.push({ x: stallCX, y: bestPY });
       if (bestPY !== sy) pts.push({ x: stallCX, y: sy });
     }
-
     const last = pts[pts.length - 1];
     if (last.x !== sx || last.y !== sy) pts.push({ x: sx, y: sy });
-
     const cleanPts = [];
     for (const p of pts) {
-      if (cleanPts.length === 0) {
-        cleanPts.push(p);
-      } else {
-        const lastP = cleanPts[cleanPts.length - 1];
-        if (lastP.x !== p.x || lastP.y !== p.y) {
-          cleanPts.push(p);
-        }
-      }
+      if (cleanPts.length === 0) cleanPts.push(p);
+      else { const lastP = cleanPts[cleanPts.length - 1]; if (lastP.x !== p.x || lastP.y !== p.y) cleanPts.push(p); }
     }
     return cleanPts;
   };
 
   const pathPoints = getPathPoints();
 
-  const calcDist = (x1, y1, x2, y2) => Math.round(Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2) * 0.02);
   const getPathDist = (pts) => {
     let d = 0;
     for (let i = 0; i < pts.length - 1; i++)
@@ -513,16 +441,14 @@ export default function ArFinder({ onBack }) {
   const totalDistance = getPathDist(pathPoints);
 
   const getETA = (distInMeters) => {
-    const speed = 1.2; // average walking speed: 1.2 m/s
-    const totalSeconds = Math.round(distInMeters / speed);
-    if (totalSeconds < 60) {
-      return `~${totalSeconds}s`;
-    } else {
-      const mins = Math.floor(totalSeconds / 60);
-      const secs = totalSeconds % 60;
-      return secs > 0 ? `~${mins}m ${secs}s` : `~${mins}m`;
-    }
+    const totalSeconds = Math.round(distInMeters / 1.2);
+    if (totalSeconds < 60) return `~${totalSeconds}s`;
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    return secs > 0 ? `~${mins}m ${secs}s` : `~${mins}m`;
   };
+
+  const calcDist = (x1, y1, x2, y2) => Math.round(Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2) * 0.02);
 
   const getBearing = (x1, y1, x2, y2) => {
     let a = Math.atan2(x2 - x1, y1 - y2) * (180 / Math.PI);
@@ -589,28 +515,33 @@ export default function ArFinder({ onBack }) {
     }
   };
 
-  // Map panel height for mobile: collapsed = 44px header only, expanded = 220px
   const MAP_EXPANDED_H = 220;
   const MAP_HEADER_H = 44;
+
+  // Filtered stalls for picker
+  const filteredStallsForPicker = (selectedCategory === "all" ? stallsList : stallsList.filter(s => s.category === selectedCategory))
+    .filter(s => !stallPickerSearch.trim() || s.label.toLowerCase().includes(stallPickerSearch.toLowerCase()) || s.zone.toLowerCase().includes(stallPickerSearch.toLowerCase()));
+
+  // Short label for the stall button on mobile
+  const getShortStallLabel = (stall) => {
+    if (!stall) return "Select Stall";
+    const emoji = CATEGORY_EMOJI[stall.category] || "";
+    const num = stall.rawId.startsWith("empty") ? "Empty" : stall.rawId.startsWith("nostallnum") ? "Unnumbered" : `#${stall.rawId}`;
+    return `${emoji} ${num} · ${stall.zone}`;
+  };
 
   return (
     <div
       ref={containerRef}
       style={{
-        position: "relative",
-        width: "100%",
-        height: "100%",
-        background: "#0a0f0a",
-        fontFamily: "system-ui, sans-serif",
-        overflow: "hidden",
-        display: "flex",
-        flexDirection: "column",
+        position: "relative", width: "100%", height: "100%",
+        background: "#0a0f0a", fontFamily: "system-ui, sans-serif",
+        overflow: "hidden", display: "flex", flexDirection: "column",
       }}
     >
       <style>{`
         * { box-sizing: border-box; }
 
-        /* ── KEYFRAMES ── */
         @keyframes fadeSlideIn {
           from { opacity: 0; transform: translateX(-50%) translateY(-6px); }
           to   { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -621,6 +552,10 @@ export default function ArFinder({ onBack }) {
         }
         @keyframes fadeIn {
           from { opacity: 0; transform: translateY(-6px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes sheetUp {
+          from { opacity: 0; transform: translateY(100%); }
           to   { opacity: 1; transform: translateY(0); }
         }
         @keyframes scan {
@@ -639,7 +574,6 @@ export default function ArFinder({ onBack }) {
         .animate-scanLine  { position: absolute; animation: scan 3s linear infinite; }
         .animate-spin-slow { animation: spin-slow 12s linear infinite; }
 
-        /* ── LAYOUT: DESKTOP side-by-side, MOBILE stacked ── */
         .ar-body {
           display: flex;
           flex: 1;
@@ -647,7 +581,6 @@ export default function ArFinder({ onBack }) {
           min-height: 0;
         }
 
-        /* AR viewport takes all available space */
         .ar-viewport {
           position: relative;
           flex: 1;
@@ -657,8 +590,6 @@ export default function ArFinder({ onBack }) {
           background: #111;
         }
 
-        /* ── MAP PANEL ── */
-        /* Desktop: right sidebar */
         .ar-map-panel {
           width: 42%;
           min-width: 320px;
@@ -676,11 +607,8 @@ export default function ArFinder({ onBack }) {
           min-width: 40px;
         }
 
-        /* Mobile: bottom sheet that sits BELOW the AR viewport */
         @media (max-width: 640px) {
-          .ar-body {
-            flex-direction: column;
-          }
+          .ar-body { flex-direction: column; }
           .ar-map-panel {
             width: 100% !important;
             min-width: unset;
@@ -688,12 +616,9 @@ export default function ArFinder({ onBack }) {
             border-left: none;
             border-top: 2px solid #e2e8f0;
             flex-shrink: 0;
-            /* height controlled inline via JS */
             transition: height 0.25s ease;
           }
-          .ar-map-panel.collapsed-desktop {
-            width: 100% !important;
-          }
+          .ar-map-panel.collapsed-desktop { width: 100% !important; }
         }
 
         .ar-map-header {
@@ -701,7 +626,7 @@ export default function ArFinder({ onBack }) {
           align-items: center;
           justify-content: space-between;
           padding: 0 12px;
-          height: ${MAP_HEADER_H}px;
+          height: 44px;
           border-bottom: 1px solid #e2e8f0;
           background: #f8fafc;
           flex-shrink: 0;
@@ -709,50 +634,36 @@ export default function ArFinder({ onBack }) {
           user-select: none;
         }
         .ar-map-header-label {
-          font-size: 11px;
-          font-weight: 700;
-          text-transform: uppercase;
-          letter-spacing: 0.07em;
-          color: #64748b;
-          white-space: nowrap;
+          font-size: 11px; font-weight: 700;
+          text-transform: uppercase; letter-spacing: 0.07em;
+          color: #64748b; white-space: nowrap;
         }
 
         .ar-map-body {
-          flex: 1;
-          position: relative;
-          background: #f4f4f5;
-          overflow: hidden;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          min-height: 0;
+          flex: 1; position: relative; background: #f4f4f5;
+          overflow: hidden; display: flex;
+          align-items: center; justify-content: center; min-height: 0;
         }
 
-        /* ── HEADER CONTROLS ── */
         .hud-btn {
-          width: 38px; height: 38px;
-          border-radius: 50%;
+          width: 38px; height: 38px; border-radius: 50%;
           border: 1px solid rgba(255,255,255,0.2);
           background: rgba(255,255,255,0.12);
           backdrop-filter: blur(8px);
           display: flex; align-items: center; justify-content: center;
-          cursor: pointer;
-          color: #fff;
-          transition: background 0.15s, transform 0.1s;
-          flex-shrink: 0;
+          cursor: pointer; color: #fff;
+          transition: background 0.15s, transform 0.1s; flex-shrink: 0;
         }
         .hud-btn:hover { background: rgba(255,255,255,0.22); }
         .hud-btn:active { transform: scale(0.92); }
         .hud-btn.active { background: #1a5c2a; border-color: #1a5c2a; }
 
         .ctrl-btn {
-          width: 36px; height: 36px;
-          border-radius: 10px;
+          width: 36px; height: 36px; border-radius: 10px;
           border: 1px solid rgba(226,232,240,0.6);
           background: rgba(255,255,255,0.92);
           display: flex; align-items: center; justify-content: center;
-          cursor: pointer;
-          color: #334155;
+          cursor: pointer; color: #334155;
           transition: background 0.15s, transform 0.1s;
         }
         .ctrl-btn:hover { background: #fff; }
@@ -760,135 +671,199 @@ export default function ArFinder({ onBack }) {
         .ctrl-btn.primary { background: #1a5c2a; color: #fff; border-color: #1a5c2a; }
         .ctrl-btn.primary:hover { background: #154a22; }
 
-        /* ── STALL SELECTS ── */
+        /* Desktop stall-select pill */
         .stall-select {
-          display: flex;
-          align-items: center;
+          display: flex; align-items: center;
           background: rgba(255,255,255,0.12);
           border: 1px solid rgba(255,255,255,0.2);
-          border-radius: 999px;
-          padding: 5px 10px;
-          gap: 5px;
-          backdrop-filter: blur(8px);
+          border-radius: 999px; padding: 5px 10px;
+          gap: 5px; backdrop-filter: blur(8px);
         }
         .stall-select select {
-          font-size: 11px;
-          font-weight: 700;
-          color: #fff;
-          background: transparent;
-          border: none;
-          outline: none;
-          cursor: pointer;
+          font-size: 11px; font-weight: 700; color: #fff;
+          background: transparent; border: none; outline: none; cursor: pointer;
           max-width: 120px;
         }
         .stall-select select option { color: #1e293b; background: #fff; }
         .stall-select label {
-          font-size: 9px;
-          font-weight: 800;
+          font-size: 9px; font-weight: 800;
           color: rgba(255,255,255,0.7);
-          text-transform: uppercase;
-          letter-spacing: 0.07em;
-          white-space: nowrap;
+          text-transform: uppercase; letter-spacing: 0.07em; white-space: nowrap;
         }
 
-        /* Mobile: stall selects wrap below header in a sub-bar */
+        /* ── MOBILE SELECTS BAR ── */
         .header-selects-bar {
           display: flex;
           align-items: center;
           gap: 6px;
-          flex-wrap: nowrap;
-          overflow-x: auto;
-          -webkit-overflow-scrolling: touch;
-          scrollbar-width: none;
           padding: 6px 10px;
           background: rgba(10,15,10,0.95);
           border-bottom: 1px solid rgba(255,255,255,0.08);
           flex-shrink: 0;
+          overflow: hidden; /* no horizontal scroll; items are fixed width */
         }
-        .header-selects-bar::-webkit-scrollbar { display: none; }
 
-        /* ── TOAST ── */
-        .toast {
-          position: absolute;
-          top: 10px;
-          left: 50%;
-          transform: translateX(-50%);
-          background: rgba(255,255,255,0.97);
-          border: 1px solid #e2e8f0;
+        /* Small pill used in the mobile selects bar */
+        .mobile-select-pill {
+          display: flex; align-items: center; gap: 4px;
+          background: rgba(255,255,255,0.10);
+          border: 1px solid rgba(255,255,255,0.18);
           border-radius: 999px;
-          padding: 7px 14px;
-          font-size: 11px;
-          font-weight: 700;
-          color: #1e293b;
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+          padding: 5px 9px;
+          flex-shrink: 0;
+        }
+        .mobile-select-pill label {
+          font-size: 9px; font-weight: 800;
+          color: rgba(255,255,255,0.65);
+          text-transform: uppercase; letter-spacing: 0.06em;
           white-space: nowrap;
-          z-index: 30;
+        }
+        .mobile-select-pill select {
+          font-size: 11px; font-weight: 700; color: #fff;
+          background: transparent; border: none; outline: none; cursor: pointer;
+        }
+        .mobile-select-pill select option { color: #1e293b; background: #fff; }
+
+        /* Stall picker button */
+        .stall-picker-btn {
+          display: flex; align-items: center; justify-content: space-between;
+          gap: 5px; flex: 1; min-width: 0;
+          background: rgba(232,98,26,0.18);
+          border: 1px solid rgba(232,98,26,0.45);
+          border-radius: 999px;
+          padding: 5px 10px;
+          cursor: pointer;
+          transition: background 0.15s;
+        }
+        .stall-picker-btn:active { background: rgba(232,98,26,0.28); }
+        .stall-picker-btn .spb-label-wrap { display: flex; align-items: center; gap: 4px; min-width: 0; }
+        .stall-picker-btn .spb-caption {
+          font-size: 9px; font-weight: 800;
+          color: rgba(255,255,255,0.65);
+          text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap;
+        }
+        .stall-picker-btn .spb-value {
+          font-size: 11px; font-weight: 700; color: #fff;
+          white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+          max-width: 120px;
+        }
+
+        /* ── STALL PICKER BOTTOM SHEET ── */
+        .stall-picker-backdrop {
+          position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+          z-index: 200; display: flex; align-items: flex-end;
+          animation: fadeIn 0.18s ease;
+        }
+        .stall-picker-sheet {
+          width: 100%; background: #0f1710;
+          border-radius: 20px 20px 0 0;
+          border-top: 1px solid rgba(255,255,255,0.12);
+          max-height: 72vh;
+          display: flex; flex-direction: column;
+          animation: sheetUp 0.22s cubic-bezier(0.22,1,0.36,1);
+          overflow: hidden;
+        }
+        .stall-picker-handle {
+          width: 36px; height: 4px; border-radius: 2px;
+          background: rgba(255,255,255,0.2);
+          margin: 10px auto 0;
+          flex-shrink: 0;
+        }
+        .stall-picker-header {
+          display: flex; align-items: center; justify-content: space-between;
+          padding: 10px 16px 8px;
+          flex-shrink: 0;
+        }
+        .stall-picker-title {
+          font-size: 13px; font-weight: 800; color: #fff;
+        }
+        .stall-picker-close {
+          width: 28px; height: 28px; border-radius: 50%;
+          background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);
+          display: flex; align-items: center; justify-content: center;
+          cursor: pointer; color: rgba(255,255,255,0.7);
+          transition: background 0.15s;
+        }
+        .stall-picker-close:active { background: rgba(255,255,255,0.16); }
+        .stall-picker-search-wrap {
+          padding: 0 14px 8px; flex-shrink: 0;
+        }
+        .stall-picker-search {
+          width: 100%; padding: 8px 12px 8px 34px;
+          background: rgba(255,255,255,0.07);
+          border: 1px solid rgba(255,255,255,0.13); border-radius: 10px;
+          color: #fff; font-size: 12px; outline: none;
+        }
+        .stall-picker-search::placeholder { color: rgba(255,255,255,0.35); }
+        .stall-picker-list {
+          flex: 1; overflow-y: auto;
+          -webkit-overflow-scrolling: touch;
+          padding: 0 10px 16px;
+        }
+        .stall-picker-list::-webkit-scrollbar { width: 3px; }
+        .stall-picker-list::-webkit-scrollbar-track { background: transparent; }
+        .stall-picker-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+        .stall-item {
+          display: flex; align-items: center; justify-content: space-between;
+          padding: 10px 12px; border-radius: 10px;
+          margin-bottom: 3px; cursor: pointer;
+          transition: background 0.12s; gap: 8px;
+        }
+        .stall-item:hover, .stall-item:active { background: rgba(255,255,255,0.07); }
+        .stall-item.selected { background: rgba(232,98,26,0.18); }
+        .stall-item-label { font-size: 12px; font-weight: 600; color: #f1f5f9; flex: 1; min-width: 0; }
+        .stall-item-zone {
+          font-size: 9px; font-weight: 800; letter-spacing: 0.05em;
+          color: #e8621a; background: rgba(232,98,26,0.12);
+          border: 1px solid rgba(232,98,26,0.25);
+          border-radius: 999px; padding: 2px 7px; white-space: nowrap; flex-shrink: 0;
+        }
+        .stall-item.selected .stall-item-zone { background: rgba(232,98,26,0.25); }
+        .stall-empty-state {
+          text-align: center; padding: 28px 16px;
+          color: rgba(255,255,255,0.35); font-size: 12px; font-weight: 600;
+        }
+
+        .toast {
+          position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+          background: rgba(255,255,255,0.97); border: 1px solid #e2e8f0;
+          border-radius: 999px; padding: 7px 14px;
+          font-size: 11px; font-weight: 700; color: #1e293b;
+          display: flex; align-items: center; gap: 6px;
+          box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+          white-space: nowrap; z-index: 30;
           animation: fadeSlideIn 0.2s ease;
           max-width: calc(100% - 24px);
-          overflow: hidden;
-          text-overflow: ellipsis;
+          overflow: hidden; text-overflow: ellipsis;
         }
 
-        /* ── INFO CARD ── */
         .ar-info-card {
-          position: absolute;
-          bottom: 10px;
-          left: 10px;
-          right: 56px; /* leave room for HUD */
-          background: rgba(255,255,255,0.97);
-          border: 1px solid #e2e8f0;
-          border-radius: 14px;
-          padding: 10px 12px;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 8px;
-          z-index: 20;
+          position: absolute; bottom: 10px; left: 10px; right: 56px;
+          background: rgba(255,255,255,0.97); border: 1px solid #e2e8f0;
+          border-radius: 14px; padding: 10px 12px;
+          display: flex; align-items: center; justify-content: space-between;
+          gap: 8px; z-index: 20;
           box-shadow: 0 4px 20px rgba(0,0,0,0.14);
           animation: slideUp 0.2s ease;
         }
         @media (max-width: 640px) {
-          .ar-info-card {
-            right: 54px;
-            left: 8px;
-            bottom: 8px;
-            padding: 8px 10px;
-          }
+          .ar-info-card { right: 54px; left: 8px; bottom: 8px; padding: 8px 10px; }
         }
 
-        /* ── SIM BADGE ── */
         .sim-badge {
-          position: absolute;
-          bottom: 6px;
-          left: 6px;
-          background: #1a5c2a;
-          color: #fff;
-          font-size: 9px;
-          font-weight: 700;
-          padding: 3px 8px;
-          border-radius: 999px;
-          display: flex;
-          align-items: center;
-          gap: 4px;
-          z-index: 10;
+          position: absolute; bottom: 6px; left: 6px;
+          background: #1a5c2a; color: #fff;
+          font-size: 9px; font-weight: 700;
+          padding: 3px 8px; border-radius: 999px;
+          display: flex; align-items: center; gap: 4px; z-index: 10;
         }
 
-        /* ── SCANNER OVERLAY ── */
         .scanner-overlay {
-          position: absolute;
-          inset: 0;
-          background: rgba(255,255,255,0.98);
-          backdrop-filter: blur(10px);
-          z-index: 50;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: flex-start;
-          padding: 16px;
-          overflow-y: auto;
+          position: absolute; inset: 0;
+          background: rgba(255,255,255,0.98); backdrop-filter: blur(10px);
+          z-index: 50; display: flex; flex-direction: column;
+          align-items: center; justify-content: flex-start;
+          padding: 16px; overflow-y: auto;
           -webkit-overflow-scrolling: touch;
           animation: fadeIn 0.15s ease;
         }
@@ -900,14 +875,13 @@ export default function ArFinder({ onBack }) {
         padding: "6px 10px",
         background: "rgba(10,15,10,0.95)",
         borderBottom: "1px solid rgba(255,255,255,0.08)",
-        flexShrink: 0, zIndex: 40,
-        minHeight: 50,
+        flexShrink: 0, zIndex: 40, minHeight: 50,
       }}>
         <button onClick={onBack} className="hud-btn" style={{ flexShrink: 0 }}>
           <ArrowLeft size={16} />
         </button>
 
-        {/* On desktop: selects in header. On mobile: in sub-bar below */}
+        {/* Desktop: selects in header */}
         {!isMobile && (
           <div style={{ display: "flex", gap: 6, alignItems: "center", flex: 1, minWidth: 0 }}>
             <div className="stall-select">
@@ -918,17 +892,11 @@ export default function ArFinder({ onBack }) {
                 gpsAnchorRef.current = null;
                 if (val !== "custom") {
                   const found = HALLWAYS.find(h => h.id === val);
-                  if (found) {
-                    setUserX(found.x);
-                    setUserY(found.y);
-                    setToastMsg(`Starting point set to ${found.label}`);
-                  }
+                  if (found) { setUserX(found.x); setUserY(found.y); setToastMsg(`Starting point set to ${found.label}`); }
                 }
               }} style={{ maxWidth: 160 }}>
                 <option value="custom" disabled={selectedStartId !== "custom"}>Custom Location</option>
-                {HALLWAYS.map(h => (
-                  <option key={h.id} value={h.id}>{h.label}</option>
-                ))}
+                {HALLWAYS.map(h => <option key={h.id} value={h.id}>{h.label}</option>)}
               </select>
             </div>
             <div className="stall-select">
@@ -947,8 +915,7 @@ export default function ArFinder({ onBack }) {
             </div>
             <div className="stall-select">
               <label>STALL:</label>
-              <select value={selectedStallId} onChange={e => setSelectedStallId(e.target.value)}
-                style={{ maxWidth: 180 }}>
+              <select value={selectedStallId} onChange={e => setSelectedStallId(e.target.value)} style={{ maxWidth: 180 }}>
                 {(selectedCategory === "all" ? stallsList : stallsList.filter(s => s.category === selectedCategory)).map(s => (
                   <option key={s.id} value={s.id}>{s.label} - {s.zone}</option>
                 ))}
@@ -960,7 +927,7 @@ export default function ArFinder({ onBack }) {
         {isMobile && <div style={{ flex: 1 }} />}
 
         <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-          <button onClick={() => setCameraEnabled(c => !c)} className={`hud-btn${cameraEnabled ? " active" : ""}`} title={cameraEnabled ? "Turn Camera Off" : "Turn Camera On"}>
+          <button onClick={() => setCameraEnabled(c => !c)} className={`hud-btn${cameraEnabled ? " active" : ""}`}>
             {cameraEnabled ? <Camera size={15} /> : <CameraOff size={15} />}
           </button>
           <button onClick={() => setShowHelp(h => !h)} className={`hud-btn${showHelp ? " active" : ""}`}>
@@ -969,87 +936,52 @@ export default function ArFinder({ onBack }) {
         </div>
       </header>
 
-      {/* ── SEARCH BAR HUD INPUT PANEL ── */}
+      {/* ── SEARCH BAR ── */}
       <div style={{
         padding: "8px 10px",
         background: "rgba(10,15,10,0.95)",
         borderBottom: "1px solid rgba(255,255,255,0.08)",
-        display: "flex",
-        alignItems: "center",
-        gap: 8,
-        zIndex: 35,
-        position: "relative",
+        display: "flex", alignItems: "center", gap: 8,
+        zIndex: 35, position: "relative",
       }}>
-        <div style={{
-          position: "relative",
-          flex: 1,
-          display: "flex",
-          alignItems: "center",
-        }}>
+        <div style={{ position: "relative", flex: 1, display: "flex", alignItems: "center" }}>
           <input
             type="text"
             placeholder="Search stall (e.g. 'Stall 11', 'Zone E', 'veggies')..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            onKeyDown={e => {
-              if (e.key === 'Enter') handleSearchSubmit();
-            }}
+            onKeyDown={e => { if (e.key === 'Enter') handleSearchSubmit(); }}
             style={{
-              width: "100%",
-              padding: "6px 12px",
-              paddingRight: "30px",
+              width: "100%", padding: "6px 12px", paddingRight: "30px",
               background: "rgba(255,255,255,0.07)",
-              border: "1px solid rgba(255,255,255,0.15)",
-              borderRadius: "8px",
-              color: "#fff",
-              fontSize: "12px",
-              outline: "none",
-              transition: "border-color 0.2s, background-color 0.2s",
+              border: "1px solid rgba(255,255,255,0.15)", borderRadius: "8px",
+              color: "#fff", fontSize: "12px", outline: "none",
             }}
           />
           {searchQuery && (
-            <button
-              onClick={() => setSearchQuery("")}
-              style={{
-                position: "absolute",
-                right: 8,
-                background: "none",
-                border: "none",
-                color: "rgba(255,255,255,0.5)",
-                cursor: "pointer",
-                padding: 4,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
+            <button onClick={() => setSearchQuery("")} style={{
+              position: "absolute", right: 8, background: "none", border: "none",
+              color: "rgba(255,255,255,0.5)", cursor: "pointer", padding: 4,
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
               <X size={12} />
             </button>
           )}
         </div>
-        <button
-          onClick={handleSearchSubmit}
-          style={{
-            padding: "6px 14px",
-            background: "#e8621a",
-            color: "#fff",
-            border: "none",
-            borderRadius: "8px",
-            fontSize: "12px",
-            fontWeight: "700",
-            cursor: "pointer",
-            transition: "background 0.2s",
-            whiteSpace: "nowrap",
-          }}
-        >
+        <button onClick={handleSearchSubmit} style={{
+          padding: "6px 14px", background: "#e8621a", color: "#fff",
+          border: "none", borderRadius: "8px", fontSize: "12px", fontWeight: "700",
+          cursor: "pointer", whiteSpace: "nowrap",
+        }}>
           Find
         </button>
       </div>
 
-      {/* Mobile-only: selects in a scrollable sub-bar */}
+      {/* ── MOBILE SELECTS BAR ── */}
       {isMobile && (
         <div className="header-selects-bar">
-          <div className="stall-select" style={{ flexShrink: 0 }}>
+          {/* START select — native is fine, short list */}
+          <div className="mobile-select-pill">
             <label>START:</label>
             <select value={selectedStartId} onChange={e => {
               const val = e.target.value;
@@ -1057,42 +989,39 @@ export default function ArFinder({ onBack }) {
               gpsAnchorRef.current = null;
               if (val !== "custom") {
                 const found = HALLWAYS.find(h => h.id === val);
-                if (found) {
-                  setUserX(found.x);
-                  setUserY(found.y);
-                  setToastMsg(`Starting point set to ${found.label}`);
-                }
+                if (found) { setUserX(found.x); setUserY(found.y); setToastMsg(`Start: ${found.label}`); }
               }
-            }} style={{ maxWidth: 100 }}>
+            }} style={{ maxWidth: 90 }}>
               <option value="custom" disabled={selectedStartId !== "custom"}>Custom</option>
-              {HALLWAYS.map(h => (
-                <option key={h.id} value={h.id}>{h.label.replace("Hallway ", "H")}</option>
-              ))}
+              {HALLWAYS.map(h => <option key={h.id} value={h.id}>{h.label.replace("Hallway ", "H").replace(" (", " (").split("(")[0].trim()}</option>)}
             </select>
           </div>
-          <div className="stall-select" style={{ flexShrink: 0 }}>
+
+          {/* SEC select — native is fine, only 4 options */}
+          <div className="mobile-select-pill">
             <label>SEC:</label>
             <select value={selectedCategory} onChange={e => {
               const cat = e.target.value;
               setSelectedCategory(cat);
               const filtered = cat === "all" ? stallsList : stallsList.filter(s => s.category === cat);
               if (filtered.length > 0) setSelectedStallId(filtered[0].id);
-            }}>
+              setStallPickerSearch("");
+            }} style={{ maxWidth: 70 }}>
               <option value="all">All</option>
-              <option value="meat">🥩 Meat</option>
-              <option value="fish">🐟 Fish</option>
-              <option value="veggies">🥬 Veg</option>
+              <option value="meat">🥩</option>
+              <option value="fish">🐟</option>
+              <option value="veggies">🥬</option>
             </select>
           </div>
-          <div className="stall-select" style={{ flex: 1, minWidth: 0 }}>
-            <label>STALL:</label>
-            <select value={selectedStallId} onChange={e => setSelectedStallId(e.target.value)}
-              style={{ maxWidth: "100%", minWidth: 0 }}>
-              {(selectedCategory === "all" ? stallsList : stallsList.filter(s => s.category === selectedCategory)).map(s => (
-                <option key={s.id} value={s.id}>{s.label} - {s.zone}</option>
-              ))}
-            </select>
-          </div>
+
+          {/* STALL — custom button → bottom sheet (fixes the overflow bug) */}
+          <button className="stall-picker-btn" onClick={() => { setStallPickerSearch(""); setShowStallPicker(true); }}>
+            <div className="spb-label-wrap">
+              <span className="spb-caption">STALL:</span>
+              <span className="spb-value">{getShortStallLabel(currentStall)}</span>
+            </div>
+            <ChevronDown size={13} color="rgba(255,255,255,0.6)" style={{ flexShrink: 0 }} />
+          </button>
         </div>
       )}
 
@@ -1107,7 +1036,12 @@ export default function ArFinder({ onBack }) {
             {cameraActive && !cameraError && cameraEnabled ? (
               <video ref={videoRef} autoPlay playsInline muted style={{ width: "100%", height: "100%", objectFit: "cover" }} />
             ) : (
-              <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, background: "linear-gradient(135deg, #f0faf2 0%, #e8f5e9 100%)", textAlign: "center", padding: 16 }}>
+              <div style={{
+                width: "100%", height: "100%", display: "flex", flexDirection: "column",
+                alignItems: "center", justifyContent: "center", gap: 10,
+                background: "linear-gradient(135deg, #f0faf2 0%, #e8f5e9 100%)",
+                textAlign: "center", padding: 16,
+              }}>
                 <div style={{ width: 50, height: 50, borderRadius: "50%", background: "rgba(26,92,42,0.1)", border: "1px solid rgba(26,92,42,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <CameraOff size={22} color="#1a5c2a" />
                 </div>
@@ -1131,24 +1065,20 @@ export default function ArFinder({ onBack }) {
             <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(0,0,0,0.25) 0%, transparent 25%, transparent 75%, rgba(0,0,0,0.2) 100%)", pointerEvents: "none" }} />
           </div>
 
-          {/* ── AR OVERLAYS ── */}
+          {/* AR Overlays */}
           <div style={{ position: "absolute", inset: 0, zIndex: 10, pointerEvents: "none" }}>
-
-            {/* Toast */}
             {toastMsg && (
               <div className="toast" style={{ pointerEvents: "auto" }}>
-                <Check size={13} color="#22c55e" />
-                <span>{toastMsg}</span>
+                <Check size={13} color="#22c55e" /><span>{toastMsg}</span>
               </div>
             )}
 
-            {/* Help Panel */}
             {showHelp && (
               <div className="animate-fadeIn" style={{
                 position: "absolute", top: 10, left: 10, right: 54,
                 background: "rgba(255,255,255,0.98)", border: "1px solid #e2e8f0",
                 borderRadius: 14, padding: "12px 14px",
-                boxShadow: "0 4px 20px rgba(0,0,0,0.12)", pointerEvents: "auto", zIndex: 20
+                boxShadow: "0 4px 20px rgba(0,0,0,0.12)", pointerEvents: "auto", zIndex: 20,
               }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 6, borderBottom: "1px solid #f1f5f9", paddingBottom: 8, marginBottom: 8 }}>
                   <Info size={13} color="#1a5c2a" />
@@ -1156,15 +1086,15 @@ export default function ArFinder({ onBack }) {
                   <button onClick={() => setShowHelp(false)} style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", color: "#94a3b8", padding: 0 }}><X size={14} /></button>
                 </div>
                 <ul style={{ fontSize: 11, color: "#475569", paddingLeft: 16, margin: 0, lineHeight: 1.7 }}>
-                  <li>Select your starting hallway using the <strong>Starting Point</strong> selector.</li>
-                  <li>Follow floating orange dots and direction indicator in the camera view.</li>
+                  <li>Select your starting hallway using the <strong>START</strong> selector.</li>
+                  <li>Tap <strong>STALL</strong> to pick your destination from the sheet.</li>
+                  <li>Follow the floating orange dots in the camera view.</li>
                   <li>Use the right-side HUD to simulate walking or rotating.</li>
                   <li>Tap anywhere on the floor map to set your position manually.</li>
                 </ul>
               </div>
             )}
 
-            {/* AR Path Dots */}
             {arPathDots.map((dot, i) => (
               <div key={i} style={{
                 position: "absolute",
@@ -1177,14 +1107,13 @@ export default function ArFinder({ onBack }) {
               }} />
             ))}
 
-            {/* AR Target Marker / Off-screen indicator */}
             {targetProj.isVisible ? (
               <div style={{
                 position: "absolute",
                 left: `${targetProj.xPct}%`, top: `${targetProj.yPct}%`,
                 transform: `translate(-50%,-50%) scale(${targetProj.scale})`,
                 display: "flex", flexDirection: "column", alignItems: "center",
-                animation: "pulse 1.5s ease-in-out infinite"
+                animation: "pulse 1.5s ease-in-out infinite",
               }}>
                 <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(232,98,26,0.95)", border: "2.5px solid #fff", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 16px rgba(232,98,26,0.5)" }}>
                   <Navigation size={20} color="#fff" style={{ transform: `rotate(${targetBearing - heading}deg)` }} />
@@ -1204,36 +1133,32 @@ export default function ArFinder({ onBack }) {
             )}
           </div>
 
-          {/* ── RIGHT HUD CONTROLS ── */}
+          {/* Right HUD */}
           <div style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", zIndex: 20, display: "flex", flexDirection: "column", gap: 5 }}>
-            <button
-              onClick={toggleGps}
-              className={`ctrl-btn${gpsActive ? " primary" : ""}`}
-              style={gpsActive ? { background: "#1a5c2a", color: "#fff", borderColor: "#1a5c2a", marginBottom: 4 } : { marginBottom: 4 }}
-              title={gpsActive ? "Disable GPS Tracking" : "Enable GPS Tracking"}
-            >
+            <button onClick={toggleGps} className={`ctrl-btn${gpsActive ? " primary" : ""}`}
+              style={gpsActive ? { background: "#1a5c2a", color: "#fff", borderColor: "#1a5c2a", marginBottom: 4 } : { marginBottom: 4 }}>
               <Locate size={15} />
             </button>
             {!hasOrientation && (
-              <button onClick={requestCompassPermission} className="ctrl-btn" style={{ background: "#e8621a", color: "#fff", borderColor: "#e8621a", marginBottom: 4 }} title="Request Compass">
+              <button onClick={requestCompassPermission} className="ctrl-btn" style={{ background: "#e8621a", color: "#fff", borderColor: "#e8621a", marginBottom: 4 }}>
                 <Compass size={15} />
               </button>
             )}
             <div style={{ background: "rgba(255,255,255,0.92)", border: "1px solid rgba(226,232,240,0.8)", borderRadius: 12, padding: 5, display: "flex", flexDirection: "column", gap: 4, backdropFilter: "blur(8px)", boxShadow: "0 2px 12px rgba(0,0,0,0.12)" }}>
-              <button onClick={handleStepForward} className="ctrl-btn primary" title="Step Forward"><Navigation size={14} /></button>
-              <button onClick={handleRotateLeft} className="ctrl-btn" title="Rotate Left"><RotateCw size={13} style={{ transform: "scaleX(-1)" }} /></button>
-              <button onClick={handleRotateRight} className="ctrl-btn" title="Rotate Right"><RotateCw size={13} /></button>
+              <button onClick={handleStepForward} className="ctrl-btn primary"><Navigation size={14} /></button>
+              <button onClick={handleRotateLeft} className="ctrl-btn"><RotateCw size={13} style={{ transform: "scaleX(-1)" }} /></button>
+              <button onClick={handleRotateRight} className="ctrl-btn"><RotateCw size={13} /></button>
               <div style={{ height: 1, background: "rgba(226,232,240,0.8)", margin: "1px 0" }} />
-              <button onClick={handleResetPosition} className="ctrl-btn" title="Reset Position" style={{ fontSize: 7, fontWeight: 800, color: "#64748b" }}>RST</button>
+              <button onClick={handleResetPosition} className="ctrl-btn" style={{ fontSize: 7, fontWeight: 800, color: "#64748b" }}>RST</button>
             </div>
           </div>
 
-          {/* ── BOTTOM INFO CARD ── */}
+          {/* Bottom info card */}
           {showCard && (
             <div className="ar-info-card" style={{ flexDirection: "column", alignItems: "stretch", gap: 6 }}>
-              <div style={{ display: "flex", alignItems: "center", justifycontent: "space-between", width: "100%" }}>
+              <div style={{ display: "flex", alignItems: "center", width: "100%" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
-                  <div style={{ width: 32, height: 32, borderRadius: 9, background: "rgba(232,98,26,0.1)", border: "1px solid rgba(232,98,26,0.2)", display: "flex", alignItems: "center", justifycontent: "center", flexShrink: 0 }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 9, background: "rgba(232,98,26,0.1)", border: "1px solid rgba(232,98,26,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                     <Navigation size={15} color="#e8621a" />
                   </div>
                   <div style={{ minWidth: 0 }}>
@@ -1249,26 +1174,14 @@ export default function ArFinder({ onBack }) {
                   <button onClick={() => setShowStartSelector(true)} style={{ display: "flex", alignItems: "center", gap: 4, padding: "6px 10px", background: "#1a5c2a", color: "#fff", fontSize: 10, fontWeight: 700, border: "none", borderRadius: 9, cursor: "pointer", whiteSpace: "nowrap" }}>
                     <Navigation size={12} /><span>Start Point</span>
                   </button>
-                  <button onClick={() => setShowCard(false)} style={{ width: 28, height: 28, borderRadius: 7, background: "#f1f5f9", border: "1px solid #e2e8f0", display: "flex", alignItems: "center", justifycontent: "center", cursor: "pointer", color: "#64748b", flexShrink: 0 }}>
+                  <button onClick={() => setShowCard(false)} style={{ width: 28, height: 28, borderRadius: 7, background: "#f1f5f9", border: "1px solid #e2e8f0", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#64748b", flexShrink: 0 }}>
                     <X size={12} />
                   </button>
                 </div>
               </div>
               {searchDirections && (
-                <div style={{
-                  fontSize: 10,
-                  color: "#1e293b",
-                  lineHeight: "1.4",
-                  background: "rgba(232,98,26,0.06)",
-                  borderLeft: "2px solid #e8621a",
-                  padding: "6px 10px",
-                  borderRadius: "0 6px 6px 0",
-                  maxHeight: "80px",
-                  overflowY: "auto",
-                  width: "100%",
-                }}>
-                  <span style={{ fontWeight: "800", color: "#e8621a" }}>Directions: </span>
-                  {searchDirections}
+                <div style={{ fontSize: 10, color: "#1e293b", lineHeight: "1.4", background: "rgba(232,98,26,0.06)", borderLeft: "2px solid #e8621a", padding: "6px 10px", borderRadius: "0 6px 6px 0", maxHeight: "80px", overflowY: "auto", width: "100%" }}>
+                  <span style={{ fontWeight: "800", color: "#e8621a" }}>Directions: </span>{searchDirections}
                 </div>
               )}
             </div>
@@ -1286,15 +1199,12 @@ export default function ArFinder({ onBack }) {
           className={`ar-map-panel${!isMobile && mapCollapsed ? " collapsed-desktop" : ""}`}
           style={isMobile ? { height: mapCollapsed ? MAP_HEADER_H : MAP_EXPANDED_H } : {}}
         >
-          {/* Map header */}
           <div className="ar-map-header" onClick={() => setMapCollapsed(c => !c)}>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <Map size={13} color="#e8621a" style={{ flexShrink: 0 }} />
               {(!isMobile ? !mapCollapsed : true) && (
                 <span className="ar-map-header-label">
-                  {isMobile
-                    ? mapCollapsed ? "Show Floor Map" : "Hide Floor Map"
-                    : "Floor Map"}
+                  {isMobile ? (mapCollapsed ? "Show Floor Map" : "Hide Floor Map") : "Floor Map"}
                 </span>
               )}
             </div>
@@ -1302,77 +1212,36 @@ export default function ArFinder({ onBack }) {
               <div style={{ color: "#94a3b8", flexShrink: 0 }}>
                 {isMobile
                   ? (mapCollapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />)
-                  : (mapCollapsed ? <ChevronLeft size={14} /> : <ChevronRight size={14} />)
-                }
+                  : (mapCollapsed ? <ChevronLeft size={14} /> : <ChevronRight size={14} />)}
               </div>
             )}
           </div>
 
-          {/* Map body — hidden when collapsed */}
-          {(!mapCollapsed || (!isMobile && !mapCollapsed)) && (
+          {!mapCollapsed && (
             <div className="ar-map-body">
-              <svg
-                viewBox="0 0 2305 1824"
-                preserveAspectRatio="xMidYMid meet"
-                onClick={handleMapClick}
-                style={{ width: "100%", height: "100%", cursor: "crosshair", userSelect: "none" }}
-              >
+              <svg viewBox="0 0 2305 1824" preserveAspectRatio="xMidYMid meet"
+                onClick={handleMapClick} style={{ width: "100%", height: "100%", cursor: "crosshair", userSelect: "none" }}>
                 <image xlinkHref={mapImage} href={mapImage} x="-20" y="-15" width="2305" height="1824" preserveAspectRatio="none" />
-
-                {/* Stalls */}
-
                 {stallsList.filter(s => selectedCategory === "all" || s.category === selectedCategory).map(s => {
                   const isSelected = s.id === selectedStallId;
-
-                  // Color according to dynamic database status
-                  let circleColor = "rgba(226,232,240,0.9)";
-                  let textColor = "#1e293b";
-                  let strokeColor = "#ffffff";
-                  let strokeWidth = "2.5";
-
-                  if (isSelected) {
-                    circleColor = "#e8621a";
-                    textColor = "#ffffff";
-                    strokeColor = "#ffffff";
-                    strokeWidth = "3.5";
-                  } else if (s.status === "available") {
-                    circleColor = "rgba(34, 197, 94, 0.9)"; // Brighter theme green matching InteractiveStallMap
-                    textColor = "#ffffff";
-                    strokeColor = "#ffffff";
-                  } else if (s.status === "occupied") {
-                    circleColor = "rgba(239, 68, 68, 0.9)"; // Brighter occupied red matching InteractiveStallMap
-                    textColor = "#ffffff";
-                    strokeColor = "#ffffff";
-                  } else if (s.status === "pending") {
-                    circleColor = "rgba(245, 158, 11, 0.9)"; // Brighter pending orange matching InteractiveStallMap
-                    textColor = "#ffffff";
-                    strokeColor = "#ffffff";
-                  }
-
+                  let circleColor = "rgba(226,232,240,0.9)", textColor = "#1e293b", strokeColor = "#ffffff", strokeWidth = "2.5";
+                  if (isSelected) { circleColor = "#e8621a"; textColor = "#ffffff"; strokeColor = "#ffffff"; strokeWidth = "3.5"; }
+                  else if (s.status === "available") { circleColor = "rgba(34,197,94,0.9)"; textColor = "#ffffff"; strokeColor = "#ffffff"; }
+                  else if (s.status === "occupied") { circleColor = "rgba(239,68,68,0.9)"; textColor = "#ffffff"; strokeColor = "#ffffff"; }
+                  else if (s.status === "pending") { circleColor = "rgba(245,158,11,0.9)"; textColor = "#ffffff"; strokeColor = "#ffffff"; }
                   return (
                     <g key={s.id} transform={`translate(${s.x},${s.y})`}>
                       <circle r="18" fill={circleColor} stroke={strokeColor} strokeWidth={strokeWidth} />
-                      <text
-                        y="0"
-                        textAnchor="middle"
-                        dominantBaseline="middle"
-                        fontSize="13"
-                        fontWeight="900"
-                        fill={textColor}
-                        style={{ fontFamily: "'Inter', system-ui, -apple-system, sans-serif" }}
-                      >
+                      <text y="0" textAnchor="middle" dominantBaseline="middle" fontSize="13" fontWeight="900" fill={textColor}
+                        style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>
                         {getCircleDisplayNumber(s.rawId)}
                       </text>
                     </g>
                   );
                 })}
-
-                <polyline
-                  points={pathPoints.map(p => `${p.x},${p.y}`).join(" ")}
+                <polyline points={pathPoints.map(p => `${p.x},${p.y}`).join(" ")}
                   fill="none" stroke="#e8621a" strokeWidth="10"
-                  strokeDasharray="15 15" strokeLinecap="round" strokeLinejoin="round"
-                />
-
+                  strokeDasharray="15 15" strokeLinecap="round" strokeLinejoin="round" />
                 <g transform={`translate(${userX},${userY})`}>
                   <path d="M0 0 L-70 -120 A140 140 0 0 1 70 -120 Z" fill="rgba(26,92,42,0.22)" transform={`rotate(${heading})`} style={{ transformOrigin: "0px 0px" }} />
                   <g transform={`rotate(${heading})`}>
@@ -1381,7 +1250,6 @@ export default function ArFinder({ onBack }) {
                   </g>
                 </g>
               </svg>
-
               <div className="sim-badge">
                 <Compass size={10} className="animate-spin-slow" />
                 <span>{userX}, {userY} | {heading}°</span>
@@ -1391,7 +1259,7 @@ export default function ArFinder({ onBack }) {
         </div>
       </div>
 
-      {/* ── STARTING POINT SELECTOR OVERLAY ── */}
+      {/* ── START SELECTOR OVERLAY ── */}
       {showStartSelector && (
         <div className="scanner-overlay" style={{ background: "rgba(10,15,10,0.98)" }}>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "100%", maxWidth: 440, gap: 14 }}>
@@ -1399,32 +1267,20 @@ export default function ArFinder({ onBack }) {
               <p style={{ fontSize: 15, fontWeight: 800, color: "#fff", margin: "0 0 4px" }}>Select Starting Point</p>
               <p style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", margin: 0 }}>Choose a hallway or entrance as your navigation start location.</p>
             </div>
-
             <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 12, maxHeight: "65vh", overflowY: "auto", paddingRight: 4 }}>
               {Object.entries(HALLWAY_GROUPS).map(([groupName, items]) => (
                 <div key={groupName} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   <div style={{ fontSize: 10, fontWeight: 800, color: "#e8621a", textTransform: "uppercase", letterSpacing: "0.06em", paddingLeft: 4, marginTop: 4 }}>{groupName}</div>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 6 }}>
                     {items.map(item => (
-                      <button
-                        key={item.id}
-                        onClick={() => handleSelectStartPoint(item)}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          padding: "10px 12px",
-                          background: selectedStartId === item.id ? "#1a5c2a" : "rgba(255,255,255,0.06)",
-                          border: `1px solid ${selectedStartId === item.id ? "#22c55e" : "rgba(255,255,255,0.12)"}`,
-                          borderRadius: 12,
-                          fontSize: 11,
-                          fontWeight: 700,
-                          color: "#fff",
-                          cursor: "pointer",
-                          transition: "background 0.2s, border-color 0.2s",
-                          textAlign: "left"
-                        }}
-                      >
+                      <button key={item.id} onClick={() => handleSelectStartPoint(item)} style={{
+                        display: "flex", alignItems: "center", justifyContent: "space-between",
+                        padding: "10px 12px",
+                        background: selectedStartId === item.id ? "#1a5c2a" : "rgba(255,255,255,0.06)",
+                        border: `1px solid ${selectedStartId === item.id ? "#22c55e" : "rgba(255,255,255,0.12)"}`,
+                        borderRadius: 12, fontSize: 11, fontWeight: 700, color: "#fff",
+                        cursor: "pointer", textAlign: "left",
+                      }}>
                         <span>{item.label}</span>
                         {selectedStartId === item.id && <Check size={12} color="#22c55e" />}
                       </button>
@@ -1433,26 +1289,63 @@ export default function ArFinder({ onBack }) {
                 </div>
               ))}
             </div>
-
-            <button
-              onClick={() => setShowStartSelector(false)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "9px 20px",
-                background: "rgba(255,255,255,0.08)",
-                border: "1px solid rgba(255,255,255,0.15)",
-                borderRadius: 12,
-                fontSize: 12,
-                fontWeight: 700,
-                color: "#fff",
-                cursor: "pointer",
-                marginTop: 8
-              }}
-            >
+            <button onClick={() => setShowStartSelector(false)} style={{
+              display: "flex", alignItems: "center", gap: 6, padding: "9px 20px",
+              background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)",
+              borderRadius: 12, fontSize: 12, fontWeight: 700, color: "#fff", cursor: "pointer", marginTop: 8,
+            }}>
               <X size={14} /><span>Close</span>
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── CUSTOM STALL PICKER BOTTOM SHEET (mobile) ── */}
+      {showStallPicker && (
+        <div className="stall-picker-backdrop" onClick={() => setShowStallPicker(false)}>
+          <div className="stall-picker-sheet" onClick={e => e.stopPropagation()}>
+            <div className="stall-picker-handle" />
+
+            <div className="stall-picker-header">
+              <span className="stall-picker-title">Choose a Stall</span>
+              <button className="stall-picker-close" onClick={() => setShowStallPicker(false)}>
+                <X size={13} />
+              </button>
+            </div>
+
+            {/* Search */}
+            <div className="stall-picker-search-wrap">
+              <div style={{ position: "relative" }}>
+                <Search size={13} color="rgba(255,255,255,0.4)" style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
+                <input
+                  className="stall-picker-search"
+                  type="text"
+                  placeholder="Search stall or zone…"
+                  value={stallPickerSearch}
+                  onChange={e => setStallPickerSearch(e.target.value)}
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            {/* List */}
+            <div className="stall-picker-list">
+              {filteredStallsForPicker.length === 0 ? (
+                <div className="stall-empty-state">No stalls match "{stallPickerSearch}"</div>
+              ) : (
+                filteredStallsForPicker.map(s => (
+                  <div
+                    key={s.id}
+                    className={`stall-item${s.id === selectedStallId ? " selected" : ""}`}
+                    onClick={() => { setSelectedStallId(s.id); setShowStallPicker(false); setStallPickerSearch(""); }}
+                  >
+                    <span className="stall-item-label">{s.label}</span>
+                    <span className="stall-item-zone">{s.zone}</span>
+                    {s.id === selectedStallId && <Check size={13} color="#e8621a" style={{ flexShrink: 0 }} />}
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
       )}
