@@ -27,7 +27,7 @@ const PORT = process.env.PORT || 5001;
 const mongoUri = process.env.MONGODB_URI || process.env.MONGODB_URI_DEV;
 
 mongoose
-  .connect(mongoUri)
+  .connect(mongoUri, { dbName: 'MyTalipapa' })
   .then(() => console.log('MongoDB connected'))
   .catch(err => {
     console.error('MongoDB connection error:', err);
