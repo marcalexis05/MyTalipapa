@@ -428,7 +428,7 @@ export default function ContractorDashboard() {
               <div className="liveview-card relative overflow-hidden" style={{ cursor: 'grab' }}>
                 <div ref={liveViewMountRef} className="w-full h-full absolute inset-0 z-0" />
                 <div className="liveview-overlay absolute inset-0 z-10 pointer-events-none flex flex-col justify-between p-3.5">
-                  <span className="live-badge"><span className="live-dot" /> LIVE 360° VIEW</span>
+                  <span className="live-badge"><span className="live-dot" /> VIRTUAL TOUR</span>
                   <span className="liveview-label">Main Produce Section B</span>
                 </div>
               </div>
