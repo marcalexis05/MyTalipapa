@@ -19,7 +19,6 @@ const ProfileIcon = () => <Icon d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2 M12
 const RecordsIcon = () => <Icon d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2 M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2" />;
 const ChevronRightIcon = () => <Icon d="M9 18l6-6-6-6" size={16} />;
 const ArrowLeftIcon = () => <Icon d="M19 12H5M12 5l-7 7 7 7" size={20} />;
-const ShareIcon = () => <Icon d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8 M16 6l-4-4-4 4 M12 2v13" size={18} />;
 const ZoneIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
@@ -315,9 +314,6 @@ export default function StallDetail({ stall = stallData, onBack, onNavigate, onI
               <ChevronRightIcon />
               <span className="text-gray-700 font-medium font-bold">Stall #{displayId}</span>
             </div>
-            <button className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-500 transition-colors">
-              <ShareIcon />
-            </button>
           </header>
 
           {/* Mobile Header — overlaid on image */}
@@ -338,9 +334,6 @@ export default function StallDetail({ stall = stallData, onBack, onNavigate, onI
                   <ArrowLeftIcon />
                 </button>
                 <span className="font-semibold text-white text-sm drop-shadow">Stall #{displayId}</span>
-                <button className="w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow text-gray-700">
-                  <ShareIcon />
-                </button>
               </div>
               <div className="absolute top-4 right-4 mt-10">
                 <span className={`sd-status-badge text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider shadow text-white ${
