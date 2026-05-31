@@ -84,6 +84,7 @@ const STATUS_CONFIG = {
 };
 
 const SORT_OPTIONS = ["Recent", "Name A-Z", "Status", "Stall #"];
+const SEEN_KEY = 'seenMoveOuts_v1';
 
 const parseMoveOutDetails = (message) => {
   const details = {
@@ -144,12 +145,26 @@ export default function ContractorRecords() {
   const user = getUser();
   const userEmail = user?.email || '';
 
-  // ── FIX 1: Just dismiss the banner — do NOT mark anything as read ──
-  const markAllSeen = () => {
+  // ── Helpers for "seen" tracking ──────────────────────────────
+  const getSeenIds = () => {
+    try { return JSON.parse(localStorage.getItem(SEEN_KEY) || '[]'); }
+    catch { return []; }
+  };
+
+  const markAllSeen = async () => {
+    const token = localStorage.getItem('authToken');
+    if (token) {
+      await fetch('/api/contractor/notifications/read-all', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+    }
+    setMoveOutRequests(prev => prev.map(r => ({ ...r, read: true })));
+    setNewMoveOutCount(0);
     setBannerDismissed(true);
   };
 
-  // ── Mark single move out as read — only called from the modal button ──
+  // Mark single move out as read
   const markMoveOutAsRead = async (id) => {
     if (!id) return;
     const token = localStorage.getItem('authToken');
@@ -162,13 +177,17 @@ export default function ContractorRecords() {
       if (res.ok) {
         setMoveOutRequests(prev => prev.map(r => r._id === id ? { ...r, read: true } : r));
         setNewMoveOutCount(prev => Math.max(0, prev - 1));
+        const seenIds = getSeenIds();
+        if (!seenIds.includes(id)) {
+          localStorage.setItem(SEEN_KEY, JSON.stringify([...seenIds, id]));
+        }
       }
     } catch (err) {
       console.error('Failed to mark move out as read:', err);
     }
   };
 
-  // ── Mark as read button inside the modal ──
+  // Mark as read from inside the modal
   const handleMarkAsRead = async () => {
     if (!selectedMoveOut?._id) return;
     setMarkingRead(true);
@@ -177,7 +196,7 @@ export default function ContractorRecords() {
     setMarkingRead(false);
   };
 
-  // ── Fetch contractor profile ──
+  // ── Fetch contractor profile ─────────────────────────────────
   useEffect(() => {
     const token = localStorage.getItem('authToken');
     if (!token) return;
@@ -187,7 +206,7 @@ export default function ContractorRecords() {
       .catch(err => console.error('Profile fetch error:', err));
   }, []);
 
-  // ── Fetch active records ──
+  // ── Fetch active records ─────────────────────────────────────
   useEffect(() => {
     if (!userEmail || isShowingArchives) return;
     setLoading(true);
@@ -198,7 +217,7 @@ export default function ContractorRecords() {
       .finally(() => setLoading(false));
   }, [userEmail, isShowingArchives]);
 
-  // ── Fetch archived records ──
+  // ── Fetch archived records ───────────────────────────────────
   useEffect(() => {
     if (!userEmail || !isShowingArchives) return;
     const token = localStorage.getItem('authToken');
@@ -210,7 +229,7 @@ export default function ContractorRecords() {
       .finally(() => setLoading(false));
   }, [userEmail, isShowingArchives]);
 
-  // ── Fetch move-out notifications (poll every 15s) ──
+  // ── Fetch move-out notifications (poll every 15s) ────────────
   const fetchMoveOuts = () => {
     const token = localStorage.getItem('authToken');
     if (!token) return;
@@ -241,6 +260,7 @@ export default function ContractorRecords() {
     return () => clearInterval(interval);
   }, [userEmail]);
 
+  // ── Derived data ─────────────────────────────────────────────
   const RENTERS = isShowingArchives ? archivedRecords : records;
 
   const [search, setSearch] = useState('');
@@ -257,7 +277,10 @@ export default function ContractorRecords() {
   const handleNav = (item) => { setActiveNav(item.id); navigate(item.path); };
   const handleLogout = () => navigate('/login');
   const closeRenterModal = () => { setSelectedRenter(null); setShowPaymentForm(false); };
-  const closeMoveOutModal = () => { setSelectedMoveOut(null); setRenterEmail(''); };
+  const closeMoveOutModal = () => {
+    setSelectedMoveOut(null);
+    setRenterEmail('');
+  };
 
   const handleRequestArchiveAccess = async () => {
     const token = localStorage.getItem('authToken');
@@ -308,11 +331,13 @@ export default function ContractorRecords() {
     finally { setRecordingPayment(false); }
   };
 
-  // ── FIX 3: Open modal — do NOT auto-mark as read on card click ──
   const handleMoveOutClick = async (req) => {
     setSelectedMoveOut(req);
     setRenterEmail('');
-    // No auto-mark here. Only the "Mark as Read" button in the modal triggers markMoveOutAsRead().
+
+    if (!req.read) {
+      await markMoveOutAsRead(req._id);
+    }
 
     const details = parseMoveOutDetails(req.message);
     if (details.stallNumber) {
@@ -467,7 +492,7 @@ export default function ContractorRecords() {
               </div>
             </div>
 
-            {/* ── Renter Archives Toggle ── */}
+            {/* ── Renter Archives Toggle ──────────────────────────────── */}
             <div className="flex justify-between items-center bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mt-4 mb-2">
               <div className="text-left">
                 <h3 className="text-xs font-bold text-gray-800 uppercase tracking-wide">Renter Archives</h3>
@@ -513,7 +538,7 @@ export default function ContractorRecords() {
               )}
             </div>
 
-            {/* ── Move Out Requests Section ── */}
+            {/* ── Move Out Requests Section ───────────────────────────── */}
             <div className="mt-3 mb-2">
 
               {/* New-request banner */}
@@ -527,9 +552,8 @@ export default function ContractorRecords() {
                     </span>
                   </div>
                   <div className="moveout-banner-actions">
-                    {/* FIX 2: "View now" only shows list + dismisses banner, does NOT mark as read */}
                     <button
-                      onClick={() => { setBannerDismissed(true); setShowMoveOut(true); }}
+                      onClick={() => { markAllSeen(); setShowMoveOut(true); }}
                       className="moveout-banner-view"
                     >
                       View now
@@ -560,9 +584,12 @@ export default function ContractorRecords() {
                   </div>
                   <p className="text-[10px] text-gray-400">Tenants requesting to vacate their stall</p>
                 </div>
-                {/* FIX 1: Only toggles visibility — never marks anything as read */}
                 <button
-                  onClick={() => setShowMoveOut(prev => !prev)}
+                  onClick={() => {
+                    const next = !showMoveOut;
+                    setShowMoveOut(next);
+                    if (next) markAllSeen();
+                  }}
                   className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
                     showMoveOut
                       ? 'bg-[#edf5ed] text-[#1a5c2a] border-[#1a5c2a]'
@@ -720,7 +747,7 @@ export default function ContractorRecords() {
           ))}
         </nav>
 
-        {/* ── Move Out Detail Modal ── */}
+        {/* ── Move Out Detail Modal ───────────────────────────────── */}
         {selectedMoveOut && (
           <div className="logout-overlay" onClick={closeMoveOutModal}>
             <div className="rec-modal" onClick={e => e.stopPropagation()}>
@@ -762,6 +789,8 @@ export default function ContractorRecords() {
                         <span className="moveout-detail-label">RENTER CONTACT</span>
                         <span className="moveout-detail-value moveout-contact-value">{details.contactNumber}</span>
                       </div>
+
+                      {/* Email box */}
                       <div className="moveout-detail-item" style={{ gridColumn: '1 / -1' }}>
                         <span className="moveout-detail-label">RENTER EMAIL</span>
                         {loadingEmail ? (
@@ -774,6 +803,7 @@ export default function ContractorRecords() {
                           <span className="moveout-email-empty">No email on file</span>
                         )}
                       </div>
+
                       <div className="moveout-detail-item" style={{ gridColumn: '1 / -1' }}>
                         <span className="moveout-detail-label">REASON FOR MOVE OUT</span>
                         <p className="moveout-reason-text">{details.reason}</p>
@@ -790,7 +820,7 @@ export default function ContractorRecords() {
                   <span>Contact the renter for more info about the request.</span>
                 </div>
 
-                {/* Only this button marks the notification as read */}
+                {/* Mark as Read — button when unread, label when read */}
                 {!selectedMoveOut.read ? (
                   <button
                     type="button"
@@ -818,7 +848,7 @@ export default function ContractorRecords() {
           </div>
         )}
 
-        {/* ── Renter History Modal ── */}
+        {/* ── Renter History Modal ────────────────────────────────── */}
         {selectedRenter && (
           <div className="logout-overlay" onClick={closeRenterModal}>
             <div className="rec-modal" onClick={e => e.stopPropagation()}>
