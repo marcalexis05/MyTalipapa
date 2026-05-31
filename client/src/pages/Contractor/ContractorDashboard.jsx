@@ -78,7 +78,13 @@ export default function ContractorDashboard() {
     const mount = liveViewMountRef.current
     if (!mount) return
 
+    let isCleanedUp = false
+
     async function initThree() {
+      // Wait for layout to settle (150ms)
+      await new Promise(resolve => setTimeout(resolve, 150))
+      if (isCleanedUp) return
+
       if (!window.THREE) {
         await new Promise((resolve, reject) => {
           const s = document.createElement('script')
@@ -88,10 +94,12 @@ export default function ContractorDashboard() {
           document.head.appendChild(s)
         })
       }
+      if (isCleanedUp) return
       THREE = window.THREE
 
-      const width = mount.clientWidth || 300
-      const height = mount.clientHeight || 160
+      const rect = mount.getBoundingClientRect()
+      const width = rect.width || mount.clientWidth || mount.parentElement?.clientWidth || 350
+      const height = rect.height || mount.clientHeight || 160
 
       scene = new THREE.Scene()
       camera = new THREE.PerspectiveCamera(70, width / height, 0.1, 1000)
@@ -215,6 +223,7 @@ export default function ContractorDashboard() {
     })
 
     return () => {
+      isCleanedUp = true
       if (cleanupFn) cleanupFn()
     }
   }, [])
