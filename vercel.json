@@ -14,44 +14,15 @@
     }
   ],
   "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/server/api/index.js"
-    },
-    {
-      "src": "/assets/(.*)",
-      "dest": "/client/assets/$1"
-    },
-    {
-      "src": "/export360/(.*)",
-      "dest": "/client/export360/$1"
-    },
-    {
-      "src": "/bg.png",
-      "dest": "/client/bg.png"
-    },
-    {
-      "src": "/logo.png",
-      "dest": "/client/logo.png"
-    },
-    {
-      "handle": "filesystem"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/client/index.html"
-    },
-    { 
-      "src": "/android/(.*)",
-      "dest": "/client/android/$1" 
-    },
-    { 
-      "src": "/ios/(.*)",
-       "dest": "/client/ios/$1" 
-    },
-    { 
-      "src": "/windows/(.*)", 
-      "dest": "/client/windows/$1" 
-    }
+    { "src": "/api/(.*)", "dest": "/server/api/index.js" },
+    { "src": "/assets/(.*)", "dest": "/client/assets/$1" },
+    { "src": "/export360/(.*)", "dest": "/client/export360/$1" },
+    { "src": "/android/(.*)", "dest": "/client/android/$1" },
+    { "src": "/ios/(.*)", "dest": "/client/ios/$1" },
+    { "src": "/windows/(.*)", "dest": "/client/windows/$1" },
+    { "src": "/bg.png", "dest": "/client/bg.png" },
+    { "src": "/logo.png", "dest": "/client/logo.png" },
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/client/index.html" }
   ]
 }
