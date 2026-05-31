@@ -31,7 +31,11 @@ router.post('/records/:renterId/archive', controller.archiveRenter);
 router.post('/archive-request', controller.requestArchiveAccess);
 
 // Get archived records (contractor, access-restricted)
+// NOTE: must be before /records/:id if that ever gets added
 router.get('/records/archived', controller.getArchivedRecords);
+
+// Get renter email by stall number (for move-out modal)
+router.get('/records/by-stall/:stallNumber', controller.getRenterByStall);
 
 // Get archive requests list (admin)
 router.get('/admin/archive-requests', controller.getArchiveRequests);

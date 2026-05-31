@@ -66,7 +66,6 @@ exports.getStalls = async (req, res) => {
     }
     const stalls = await Stall.find(query).sort({ section: 1, floorArea: 1, floorCol: 1, floorRow: 1 });
 
-    // Find all users who are contractors to map their emails to names
     const User = require('../models/User');
     const contractors = await User.find({ role: 'contractor' }, 'email full_name contact_number');
     const contractorMap = {};
@@ -137,7 +136,6 @@ exports.getApplications = async (req, res) => {
     const mapped = await Promise.all(apps.map(async (app) => {
       const stall = await findStallByAppStallNumber(app.preferredStall, app.intendedBusinessUse);
 
-      // Filter by contractor email if query param is provided
       if (email && (!stall || stall.managedBy !== email.toLowerCase())) {
         return null;
       }
@@ -193,21 +191,16 @@ exports.updateApplicationStatus = async (req, res) => {
       return res.status(400).json({ error: 'Invalid action. Use "approve" or "reject".' });
     }
 
-    // 1. Find the application
     const app = await Application.findById(id);
     if (!app) return res.status(404).json({ error: 'Application not found' });
 
-    // 2. Find the linked stall
     const stall = await findStallByAppStallNumber(app.preferredStall, app.intendedBusinessUse);
     if (!stall) {
       console.warn(`[updateApplicationStatus] No stall found for preferredStall="${app.preferredStall}"`);
     }
 
-    // 3. Update stall based on action
     if (stall) {
       if (action === 'approve') {
-        // ✅ Set stall to occupied + write tenant object wholesale
-        // Using $set with full tenant object works even when tenant is currently null
         await Stall.findByIdAndUpdate(
           stall._id,
           {
@@ -226,7 +219,6 @@ exports.updateApplicationStatus = async (req, res) => {
           { new: true }
         );
       } else {
-        // ❌ Rejected — revert stall to available, clear tenant
         await Stall.findByIdAndUpdate(
           stall._id,
           {
@@ -247,7 +239,6 @@ exports.updateApplicationStatus = async (req, res) => {
       }
     }
 
-    // 4. Update application status
     const updatedApp = await Application.findByIdAndUpdate(
       id,
       {
@@ -260,7 +251,6 @@ exports.updateApplicationStatus = async (req, res) => {
       { new: true }
     );
 
-    // Trigger notification to renter
     const Notification = require('../models/Notification');
     await Notification.create({
       recipient: app.email.toLowerCase(),
@@ -289,16 +279,14 @@ exports.getRecords = async (req, res) => {
   try {
     const { email } = req.query;
     const approved = await Application.find({ status: 'approved', archived: { $ne: true } }).sort({ reviewedAt: -1 });
-    const Payment = require('../models/Payment'); // import here to avoid circular deps
+    const Payment = require('../models/Payment');
     const records = await Promise.all(approved.map(async (app) => {
       const stall = await findStallByAppStallNumber(app.preferredStall, app.intendedBusinessUse);
 
-      // Filter by contractor email if query param is provided
       if (email && (!stall || stall.managedBy !== email.toLowerCase())) {
         return null;
       }
 
-      // fetch payment history for this renter
       const payments = await Payment.find({ renter: app._id }).sort({ date: -1 });
       const history = payments.map(p => ({
         date: new Date(p.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
@@ -308,7 +296,6 @@ exports.getRecords = async (req, res) => {
       const lastPaid = payments.find(p => p.status === 'paid');
       const lastPayment = lastPaid ? new Date(lastPaid.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
 
-      // Calculate dynamic payment validity and status (1 month validity)
       const baseDate = lastPaid ? lastPaid.date : (app.reviewedAt || app.appliedAt || new Date());
       const nextDueDate = new Date(baseDate);
       nextDueDate.setMonth(nextDueDate.getMonth() + 1);
@@ -347,6 +334,48 @@ exports.getRecords = async (req, res) => {
   } catch (err) {
     console.error('getRecords error:', err);
     res.status(500).json({ error: 'Failed to fetch records' });
+  }
+};
+
+// ── GET /api/contractor/records/by-stall/:stallNumber ────
+exports.getRenterByStall = async (req, res) => {
+  try {
+    const { stallNumber } = req.params;
+
+    // Try exact match first, then fallback to regex for padded numbers
+    let application = await Application.findOne({
+      preferredStall: stallNumber,
+      status: 'approved',
+      archived: { $ne: true },
+    });
+
+    // Fallback: try stripping leading zeros or padding
+    if (!application) {
+      const stripped = String(Number(stallNumber)); // "051" → "51"
+      application = await Application.findOne({
+        preferredStall: stripped,
+        status: 'approved',
+        archived: { $ne: true },
+      });
+    }
+
+    // Fallback: regex match (e.g. stored as "Stall #51")
+    if (!application) {
+      application = await Application.findOne({
+        preferredStall: { $regex: stallNumber, $options: 'i' },
+        status: 'approved',
+        archived: { $ne: true },
+      });
+    }
+
+    if (!application) {
+      return res.status(404).json({ error: 'No renter found for this stall' });
+    }
+
+    res.json({ email: application.email || '' });
+  } catch (err) {
+    console.error('getRenterByStall error:', err);
+    res.status(500).json({ error: 'Server error' });
   }
 };
 
@@ -395,7 +424,7 @@ exports.getContractorApplications = async (req, res) => {
 exports.updateContractorApplicationStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { action, rejectionReason } = req.body; // "approve" | "reject", optional rejectionReason
+    const { action, rejectionReason } = req.body;
 
     if (!['approve', 'reject'].includes(action)) {
       return res.status(400).json({ error: 'Invalid action. Use "approve" or "reject".' });
@@ -414,7 +443,6 @@ exports.updateContractorApplicationStatus = async (req, res) => {
         userExists.status = 'approved';
         await userExists.save();
       } else {
-        // Fallback: Create new user if they didn't have one (for older records)
         await User.create({
           full_name: app.fullName,
           email: app.email.toLowerCase(),
@@ -426,7 +454,6 @@ exports.updateContractorApplicationStatus = async (req, res) => {
         });
       }
 
-      // Update stalls to be managed by this contractor email
       if (app.selectedStalls && app.selectedStalls.length > 0) {
         await Stall.updateMany(
           { stallNumber: { $in: app.selectedStalls } },
@@ -435,7 +462,7 @@ exports.updateContractorApplicationStatus = async (req, res) => {
       }
 
       app.status = 'approved';
-      app.rejectionReason = undefined; // clear rejection reason on approval
+      app.rejectionReason = undefined;
 
       const Notification = require('../models/Notification');
       await Notification.create({
@@ -445,7 +472,6 @@ exports.updateContractorApplicationStatus = async (req, res) => {
         link: '/contractor/dashboard'
       });
     } else {
-      // Reject action
       const userExists = await User.findOne({ email: app.email.toLowerCase() });
       if (userExists) {
         userExists.status = 'rejected';
@@ -476,7 +502,7 @@ exports.updateContractorApplicationStatus = async (req, res) => {
   }
 };
 
-// ── POST /api/contractor/records/:renterId/payments ──────────────────────────
+// ── POST /api/contractor/records/:renterId/payments ──────
 exports.recordPayment = async (req, res) => {
   try {
     const { renterId } = req.params;
@@ -498,7 +524,7 @@ exports.recordPayment = async (req, res) => {
       renter: renterId,
       amount: Number(amount),
       date: date ? new Date(date) : new Date(),
-      status: 'paid', // Contractor cash inputs are immediately paid
+      status: 'paid',
     });
 
     const Notification = require('../models/Notification');
@@ -516,7 +542,7 @@ exports.recordPayment = async (req, res) => {
   }
 };
 
-// ── POST /api/contractor/records/:renterId/archive ──────────────────────────
+// ── POST /api/contractor/records/:renterId/archive ───────
 exports.archiveRenter = async (req, res) => {
   try {
     const { renterId } = req.params;
@@ -529,12 +555,10 @@ exports.archiveRenter = async (req, res) => {
       return res.status(404).json({ error: 'Renter application not found' });
     }
 
-    // Mark application as archived
     app.archived = true;
     app.archivedAt = new Date();
     await app.save();
 
-    // Find linked stall and free it up
     const stall = await findStallByAppStallNumber(app.preferredStall, app.intendedBusinessUse);
     if (stall) {
       await Stall.findByIdAndUpdate(stall._id, {
@@ -552,7 +576,6 @@ exports.archiveRenter = async (req, res) => {
       });
     }
 
-    // Trigger notification to admin
     await Notification.create({
       recipient: 'admin',
       title: 'Renter Moved Out',
@@ -567,7 +590,7 @@ exports.archiveRenter = async (req, res) => {
   }
 };
 
-// ── POST /api/contractor/archive-request ──────────────────────────
+// ── POST /api/contractor/archive-request ─────────────────
 exports.requestArchiveAccess = async (req, res) => {
   try {
     const jwt = require('jsonwebtoken');
@@ -588,7 +611,6 @@ exports.requestArchiveAccess = async (req, res) => {
     user.archiveAccessStatus = 'pending';
     await user.save();
 
-    // Trigger notification to admin
     await Notification.create({
       recipient: 'admin',
       title: 'Archive Access Request',
@@ -603,7 +625,7 @@ exports.requestArchiveAccess = async (req, res) => {
   }
 };
 
-// ── GET /api/contractor/records/archived ──────────────────────────
+// ── GET /api/contractor/records/archived ─────────────────
 exports.getArchivedRecords = async (req, res) => {
   try {
     const jwt = require('jsonwebtoken');
@@ -624,12 +646,11 @@ exports.getArchivedRecords = async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Auto-expire archive access status if 24 hours have passed since approval
     if (user.archiveAccessStatus === 'approved' && user.archiveAccessApprovedAt) {
       const now = new Date();
       const approvedTime = new Date(user.archiveAccessApprovedAt);
       const diffMs = now - approvedTime;
-      const validityMs = 24 * 60 * 60 * 1000; // 24 hours
+      const validityMs = 24 * 60 * 60 * 1000;
       if (diffMs > validityMs) {
         user.archiveAccessStatus = 'none';
         user.archiveAccessApprovedAt = null;
@@ -637,7 +658,6 @@ exports.getArchivedRecords = async (req, res) => {
       }
     }
 
-    // Verify they are approved for archives
     if (user.archiveAccessStatus !== 'approved') {
       return res.status(200).json({ error: 'Access denied. Archive request not approved.', archiveAccessStatus: user.archiveAccessStatus || 'none', isArchivedList: true });
     }
@@ -647,7 +667,6 @@ exports.getArchivedRecords = async (req, res) => {
     const records = await Promise.all(archivedApps.map(async (app) => {
       const stall = await findStallByAppStallNumber(app.preferredStall, app.intendedBusinessUse);
 
-      // Filter by contractor email (since contractor can only see stalls they manage)
       if (!stall || stall.managedBy !== user.email.toLowerCase()) {
         return null;
       }
@@ -685,7 +704,7 @@ exports.getArchivedRecords = async (req, res) => {
   }
 };
 
-// ── GET /api/contractor/admin/archive-requests ──────────────────────────
+// ── GET /api/contractor/admin/archive-requests ───────────
 exports.getArchiveRequests = async (req, res) => {
   try {
     const User = require('../models/User');
@@ -697,11 +716,11 @@ exports.getArchiveRequests = async (req, res) => {
   }
 };
 
-// ── POST /api/contractor/admin/archive-requests/:userId/status ──────────────────────────
+// ── POST /api/contractor/admin/archive-requests/:userId/status ──
 exports.updateArchiveRequestStatus = async (req, res) => {
   try {
     const { userId } = req.params;
-    const { action } = req.body; // 'approve' or 'deny'
+    const { action } = req.body;
     const User = require('../models/User');
     const Notification = require('../models/Notification');
 
@@ -714,7 +733,6 @@ exports.updateArchiveRequestStatus = async (req, res) => {
       user.archiveAccessStatus = 'approved';
       user.archiveAccessApprovedAt = new Date();
 
-      // Trigger notification for contractor
       await Notification.create({
         recipient: user.email.toLowerCase(),
         title: 'Archive Request Approved',
@@ -722,10 +740,9 @@ exports.updateArchiveRequestStatus = async (req, res) => {
         link: '/contractor/records'
       });
     } else {
-      user.archiveAccessStatus = 'none'; // denied
+      user.archiveAccessStatus = 'none';
       user.archiveAccessApprovedAt = null;
 
-      // Trigger notification for contractor
       await Notification.create({
         recipient: user.email.toLowerCase(),
         title: 'Archive Request Denied',
@@ -742,7 +759,7 @@ exports.updateArchiveRequestStatus = async (req, res) => {
   }
 };
 
-// ── GET /api/contractor/admin/records/archived ──────────────────────────
+// ── GET /api/contractor/admin/records/archived ───────────
 exports.getAdminArchivedRecords = async (req, res) => {
   try {
     const Application = require('../models/Application');
@@ -786,7 +803,7 @@ exports.getAdminArchivedRecords = async (req, res) => {
   }
 };
 
-// ── GET /api/contractor/notifications ──────────────────────────
+// ── GET /api/contractor/notifications ────────────────────
 exports.getNotifications = async (req, res) => {
   try {
     const jwt = require('jsonwebtoken');
@@ -818,7 +835,7 @@ exports.getNotifications = async (req, res) => {
   }
 };
 
-// ── POST /api/contractor/notifications/:id/read ──────────────────────────
+// ── POST /api/contractor/notifications/:id/read ──────────
 exports.markAsRead = async (req, res) => {
   try {
     const Notification = require('../models/Notification');
@@ -830,7 +847,7 @@ exports.markAsRead = async (req, res) => {
   }
 };
 
-// ── POST /api/contractor/notifications/read-all ──────────────────────────
+// ── POST /api/contractor/notifications/read-all ──────────
 exports.markAllAsRead = async (req, res) => {
   try {
     const jwt = require('jsonwebtoken');
