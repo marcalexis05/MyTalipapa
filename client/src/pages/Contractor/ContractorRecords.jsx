@@ -98,6 +98,9 @@ export default function ContractorRecords() {
 
   const [contractorProfile, setContractorProfile] = useState(null);
   const [isShowingArchives, setIsShowingArchives] = useState(false);
+const [moveOutRequests, setMoveOutRequests] = useState([]);
+const [loadingMoves, setLoadingMoves] = useState(false);
+const [showMoveOut, setShowMoveOut] = useState(false);
   const [archivedRecords, setArchivedRecords] = useState([]);
 
   const user = getUser();
@@ -161,6 +164,30 @@ export default function ContractorRecords() {
       })
       .finally(() => setLoading(false));
   }, [userEmail, isShowingArchives]);
+
+  // Fetch move-out notifications for contractor
+  useEffect(() => {
+    const token = localStorage.getItem('authToken');
+    if (!token) return;
+    setLoadingMoves(true);
+    fetch('/api/contractor/notifications', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+      .then(res => {
+        if (!res.ok) throw new Error(`Server error: ${res.status}`);
+        return res.json();
+      })
+      .then(data => {
+        const moves = data.filter(n => n.title && n.title.toLowerCase().includes('move out'));
+        setMoveOutRequests(moves);
+        setError(null);
+      })
+      .catch(err => {
+        console.error('Failed to fetch move-out requests:', err);
+        setError('Failed to load move-out requests.');
+      })
+      .finally(() => setLoadingMoves(false));
+  }, [userEmail]);
 
   const RENTERS = isShowingArchives ? archivedRecords : records;
 
@@ -461,6 +488,30 @@ export default function ContractorRecords() {
               >
                 🔑 Request Archive Access
               </button>
+            )}
+          </div>
+
+          {/* Move Out Requests Section */}
+          <div className="mt-4 mb-4">
+            <h3 className="text-sm font-bold mb-2">Move Out Requests</h3>
+            {loadingMoves ? (
+              <p>Loading move-out requests...</p>
+            ) : moveOutRequests.length === 0 ? (
+              <p className="text-gray-500">No move-out requests.</p>
+            ) : (
+              moveOutRequests.map((req, idx) => (
+                <div key={idx} className="bg-white p-3 rounded-md shadow mb-2 flex justify-between items-center">
+                  <div>
+                    <p className="font-medium">{req.message}</p>
+                  </div>
+                  <button
+                    className="text-blue-600 underline"
+                    onClick={() => navigate(req.link || '/contractor/records')}
+                  >
+                    View Details
+                  </button>
+                </div>
+              ))
             )}
           </div>
 
