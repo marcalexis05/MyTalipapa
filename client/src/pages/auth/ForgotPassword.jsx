@@ -240,7 +240,7 @@ export default function ForgotPassword() {
       <div
         className="min-h-screen flex items-center justify-center px-4 py-10 relative"
         style={{
-          backgroundImage: 'url("/bg.png")',
+          backgroundImage: 'url("/public/bg.png")',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat',
