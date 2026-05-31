@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { getUser } from "../../utils/auth";
 
 // --- Icons ---
 const Icon = ({ d, size = 20, className = "" }) => (
@@ -254,40 +253,6 @@ export default function StallDetail({ stall = stallData, onBack, onNavigate, onI
   const displayContractorName = stall.contractorName || "None";
   const displayContractorContact = stall.contractorContact || "N/A";
 
-  const currentUser = getUser();
-  const userEmail = currentUser?.email?.toLowerCase();
-  const isOwnedByCurrentUser = stall.tenant && stall.tenant.email && stall.tenant.email.toLowerCase() === userEmail;
-
-  // --- Move Out Request state ---
-  const [moveOutPhone, setMoveOutPhone] = useState(currentUser?.contact_number || currentUser?.phone || "");
-  const [moveOutReason, setMoveOutReason] = useState("");
-  const [moveOutSubmitting, setMoveOutSubmitting] = useState(false);
-  const [moveOutSubmitted, setMoveOutSubmitted] = useState(false);
-
-  const handleMoveOutSubmit = () => {
-    if (moveOutSubmitting || moveOutSubmitted || !moveOutPhone.trim()) return;
-    setMoveOutSubmitting(true);
-
-    fetch(`/api/renter/stalls/${stall._id || stall.id}/move-out`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contactNumber: moveOutPhone,
-        reason: moveOutReason
-      }),
-    })
-      .then(res => { if (!res.ok) throw new Error("Failed"); return res.json(); })
-      .then(() => {
-        setMoveOutSubmitted(true);
-      })
-      .catch((err) => {
-        console.error("Failed to submit move out request:", err);
-      })
-      .finally(() => {
-        setMoveOutSubmitting(false);
-      });
-  };
-
   const handleNavClick = (path) => {
     if (onNavigate) onNavigate(path);
   };
@@ -298,6 +263,13 @@ export default function StallDetail({ stall = stallData, onBack, onNavigate, onI
   const [reportDetails,    setReportDetails]    = useState("");
   const [reportSubmitting, setReportSubmitting] = useState(false);
   const [reportSubmitted,  setReportSubmitted]  = useState(false);
+
+  // --- Move-Out Request state ---
+  const [moveOutOpen, setMoveOutOpen] = useState(false);
+  const [moveOutContact, setMoveOutContact] = useState("");
+  const [moveOutReason, setMoveOutReason] = useState("");
+  const [moveOutSubmitting, setMoveOutSubmitting] = useState(false);
+  const [moveOutSubmitted, setMoveOutSubmitted] = useState(false);
 
   const handleReportSubmit = () => {
     if (reportSubmitting || reportSubmitted) return;
@@ -327,6 +299,34 @@ export default function StallDetail({ stall = stallData, onBack, onNavigate, onI
           setReportType("");
           setReportDetails("");
         }, 3500);
+      });
+  };
+
+  // --- Move-Out Request handler ---
+  const handleMoveOutSubmit = () => {
+    if (moveOutSubmitting) return;
+    if (!moveOutContact.trim()) return;
+    setMoveOutSubmitting(true);
+    const payload = {
+      contactNumber: moveOutContact,
+      reason: moveOutReason,
+    };
+    fetch(`/api/renter/stalls/${stall._id || stall.id}/move-out`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    })
+      .then(res => { if (!res.ok) throw new Error("Failed"); return res.json(); })
+      .catch(() => {})
+      .finally(() => {
+        setMoveOutSubmitting(false);
+        setMoveOutSubmitted(true);
+        setTimeout(() => {
+          setMoveOutSubmitted(false);
+          setMoveOutOpen(false);
+          setMoveOutContact("");
+          setMoveOutReason("");
+        }, 3000);
       });
   };
 
@@ -624,69 +624,7 @@ export default function StallDetail({ stall = stallData, onBack, onNavigate, onI
                   </button>
                 </div>
               )}
-            </div>
-            }
-
-            {/* Request Move Out — only for occupied stalls owned by current user */}
-            {status === "occupied" && isOwnedByCurrentUser && (
-              <div className="sd-section bg-white rounded-2xl px-4 py-4 border border-gray-100 shadow-sm" style={{ animationDelay: "0.48s" }}>
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-7 h-7 bg-orange-50 rounded-lg flex items-center justify-center text-orange-600 shrink-0">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-gray-900 leading-tight">Request Move Out</p>
-                    <p className="text-[10px] text-gray-400">Notify the contractor of your intention to vacate the stall</p>
-                  </div>
-                </div>
-
-                {moveOutSubmitted ? (
-                  <div className="sd-report-success bg-green-50 border border-green-200 rounded-xl p-4 flex gap-3 items-start">
-                    <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center shrink-0">
-                      <CheckDoneIcon />
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-green-800 mb-0.5">Request Submitted!</p>
-                      <p className="text-xs text-green-700 leading-relaxed">
-                        Your move out request has been sent to the contractor. They will contact you shortly at <strong>{moveOutPhone}</strong>.
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    <div>
-                      <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider mb-1.5">Your Contact Number</p>
-                      <input
-                        type="text"
-                        value={moveOutPhone}
-                        onChange={e => setMoveOutPhone(e.target.value)}
-                        placeholder="e.g. 09123456789"
-                        className="sd-report-textarea w-full bg-[#f5f5f0] border border-transparent rounded-xl px-4 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#2d6a2d] focus:bg-white transition-all duration-200"
-                      />
-                    </div>
-
-                    <div>
-                      <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider mb-1.5">Reason for Vacating (Optional)</p>
-                      <textarea
-                        value={moveOutReason}
-                        onChange={e => setMoveOutReason(e.target.value)}
-                        placeholder="Please explain briefly why you want to move out..."
-                        rows={3}
-                        className="sd-report-textarea w-full bg-[#f5f5f0] border border-transparent rounded-xl px-4 py-3 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#2d6a2d] focus:bg-white transition-all duration-200 resize-none"
-                      />
-                    </div>
-
-                    <button
-                      onClick={handleMoveOutSubmit}
-                      disabled={moveOutSubmitting || !moveOutPhone.trim()}
-                      className="sd-btn w-full py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all bg-orange-600 hover:bg-orange-700 text-white disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
-                    >
-                      {moveOutSubmitting ? "Submitting..." : "Submit Move Out Request"}
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
+            </div>}
 
             {/* CTA Buttons */}
             <div className="sd-section space-y-2.5 pt-1" style={{ animationDelay: "0.52s" }}>
@@ -719,7 +657,57 @@ export default function StallDetail({ stall = stallData, onBack, onNavigate, onI
                   ? "Application Pending"
                   : "Send Rental Inquiry"}
               </button>
+              {/* Request Move-Out button visible for occupied stalls */}
+              {status === "occupied" && (
+                <button
+                  onClick={() => setMoveOutOpen(true)}
+                  className="sd-btn-primary w-full py-3 rounded-xl text-sm font-semibold bg-red-600 hover:bg-red-700 text-white"
+                >
+                  Request Move-Out
+                </button>
+              )}
             </div>
+
+            {/* Move-Out Modal */}
+            {moveOutOpen && (
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                <div className="bg-white rounded-xl p-6 w-80 shadow-lg">
+                  <h3 className="text-lg font-bold mb-4">Request Move-Out</h3>
+                  <input
+                    type="text"
+                    placeholder="Contact Number"
+                    value={moveOutContact}
+                    onChange={e => setMoveOutContact(e.target.value)}
+                    className="w-full mb-3 p-2 border rounded"
+                  />
+                  <textarea
+                    placeholder="Reason (optional)"
+                    value={moveOutReason}
+                    onChange={e => setMoveOutReason(e.target.value)}
+                    className="w-full mb-3 p-2 border rounded"
+                    rows={3}
+                  />
+                  <div className="flex justify-end gap-2">
+                    <button
+                      onClick={() => setMoveOutOpen(false)}
+                      className="px-3 py-1 rounded bg-gray-200"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleMoveOutSubmit}
+                      disabled={moveOutSubmitting}
+                      className="px-3 py-1 rounded bg-red-600 text-white disabled:opacity-40"
+                    >
+                      {moveOutSubmitting ? "Submitting…" : "Submit"}
+                    </button>
+                  </div>
+                  {moveOutSubmitted && (
+                    <p className="mt-2 text-green-600 text-sm">Request submitted!</p>
+                  )}
+                </div>
+              </div>
+            )}
 
           </div>
         </main>
