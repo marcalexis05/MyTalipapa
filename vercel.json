@@ -27,6 +27,14 @@
       "dest": "/client/export360/$1"
     },
     {
+      "src": "/bg.png",
+      "dest": "/client/public/bg.png"
+    },
+    {
+      "src": "/logo.png",
+      "dest": "/client/public/logo.png"
+    },
+    {
       "handle": "filesystem"
     },
     {

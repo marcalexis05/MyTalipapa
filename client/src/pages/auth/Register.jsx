@@ -352,7 +352,7 @@ export default function Register() {
       <div
         className="min-h-screen flex flex-col relative"
         style={{
-          backgroundImage: 'url("/public/bg.png")',
+          backgroundImage: 'url("/bg.png")',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat',
