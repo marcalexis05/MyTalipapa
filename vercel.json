@@ -40,6 +40,18 @@
     {
       "src": "/(.*)",
       "dest": "/client/index.html"
+    },
+    { 
+      "src": "/android/(.*)",
+      "dest": "/client/android/$1" 
+    },
+    { 
+      "src": "/ios/(.*)",
+       "dest": "/client/ios/$1" 
+    },
+    { 
+      "src": "/windows/(.*)", 
+      "dest": "/client/windows/$1" 
     }
   ]
 }
