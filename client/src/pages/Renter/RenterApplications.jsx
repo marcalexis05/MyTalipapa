@@ -483,8 +483,8 @@ function TopBar({ showBack, onBack }) {
         MyTalipapa
       </div>
       <div className="flex items-center gap-2 w-20 justify-end">
-  <NotificationBell />
-</div>
+        <NotificationBell />
+      </div>
     </header>
   )
 }
@@ -529,18 +529,18 @@ export default function RenterApplications({ prefill }) {
       })
   }
 
- const fetchStallsList = () => {
-  fetch('/api/stalls')
-    .then(res => { if (!res.ok) throw new Error(); return res.json() })
-    .then(data => {
-      const withContractor = data.filter(s =>
-        s.managedBy && s.managedBy.trim() !== ''
-      )
-      const sorted = withContractor.sort((a, b) => (parseInt(a.stallNumber) || 0) - (parseInt(b.stallNumber) || 0))
-      setStallsList(sorted)
-    })
-    .catch(err => console.error('Failed to fetch stalls list:', err))
-}
+  const fetchStallsList = () => {
+    fetch('/api/stalls')
+      .then(res => { if (!res.ok) throw new Error(); return res.json() })
+      .then(data => {
+        const withContractor = data.filter(s =>
+          s.managedBy && s.managedBy.trim() !== ''
+        )
+        const sorted = withContractor.sort((a, b) => (parseInt(a.stallNumber) || 0) - (parseInt(b.stallNumber) || 0))
+        setStallsList(sorted)
+      })
+      .catch(err => console.error('Failed to fetch stalls list:', err))
+  }
 
   useEffect(() => { fetchApplications(); fetchStallsList() }, [])
 
@@ -987,14 +987,15 @@ export default function RenterApplications({ prefill }) {
         {/* ── Detail Modal ── */}
         {selectedApp && (
           <div
-            className="ra-overlay fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            className="ra-overlay fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end md:items-center justify-center p-0 md:p-4"
             onClick={() => setSelectedApp(null)}
           >
             <div
-              className="ra-modal bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl border border-gray-100 flex flex-col"
+              className="ra-modal bg-white rounded-t-3xl md:rounded-3xl w-full max-w-md overflow-hidden shadow-2xl border border-gray-100 flex flex-col max-h-[90vh]"
               onClick={e => e.stopPropagation()}
             >
-              <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+              {/* Modal header — fixed */}
+              <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-[#f0f7f0] flex items-center justify-center text-[#1a5c2a] font-extrabold text-sm shrink-0">
                     {selectedApp.fullName
@@ -1013,7 +1014,8 @@ export default function RenterApplications({ prefill }) {
                 </button>
               </div>
 
-              <div className="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
+              {/* Modal body — scrollable, fills remaining space */}
+              <div className="p-6 space-y-5 overflow-y-auto flex-1 min-h-0">
                 <div className="flex items-center justify-between bg-[#f9fafb] rounded-xl px-4 py-3" style={{ animation: 'fadeSlideUp 0.3s ease both' }}>
                   <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Application Status</span>
                   <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase ${
@@ -1079,7 +1081,8 @@ export default function RenterApplications({ prefill }) {
                 )}
               </div>
 
-              <div className="px-6 py-4 bg-gray-50 border-t border-gray-100">
+              {/* Modal footer — fixed */}
+              <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 shrink-0">
                 <button onClick={() => setSelectedApp(null)} className="ra-submit-btn w-full py-2.5 bg-[#1a5c2a] hover:bg-[#154d23] text-white font-bold text-xs rounded-xl shadow-sm">
                   Close Details
                 </button>
