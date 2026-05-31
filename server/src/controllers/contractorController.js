@@ -440,7 +440,8 @@ exports.updateContractorApplicationStatus = async (req, res) => {
     if (action === 'approve') {
       const userExists = await User.findOne({ email: app.email.toLowerCase() });
       if (userExists) {
-        userExists.status = 'approved';z
+        userExists.status = 'approved';
+        userExists.passwordHash = app.passwordHash; // Sync the password hash in case they resubmitted with a new password
         await userExists.save();
       } else {
         await User.create({
