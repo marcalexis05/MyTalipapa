@@ -251,11 +251,12 @@ router.post('/login', async (req, res) => {
 
   try {
     const user = await User.findOne({ email: email.toLowerCase() });
-
+    console.log(`[Login attempt] Email: ${email.toLowerCase()}, Role requested: ${role}, User found: ${user ? 'Yes' : 'No'}`);
     if (!user) {
       // Check if there is a pending or rejected contractor application
       const ContractorApplication = require('../models/ContractorApplication');
       const app = await ContractorApplication.findOne({ email: email.toLowerCase() }).sort({ createdAt: -1 });
+      console.log(`[Login attempt] No user found. ContractorApplication status: ${app ? app.status : 'None'}`);
       if (app) {
         if (app.status === 'pending') {
           return res.status(403).json({ error: 'Your registration is still pending admin review.' });
@@ -266,23 +267,28 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid email or password.' });
     }
 
+    console.log(`[Login attempt] User role: ${user.role}, User status: ${user.status}`);
     // Check role matches
     if (user.role !== role) {
       return res.status(403).json({ error: `This account is not registered as a ${role}.` });
     }
 
     let isMatch = await bcrypt.compare(password, user.passwordHash);
+    console.log(`[Login attempt] Password matches User.passwordHash: ${isMatch}`);
     if (!isMatch && user.role === 'contractor') {
       const ContractorApplication = require('../models/ContractorApplication');
       const app = await ContractorApplication.findOne({ email: email.toLowerCase() }).sort({ createdAt: -1 });
+      console.log(`[Login attempt] Password failed for contractor. App found: ${app ? 'Yes' : 'No'}, App status: ${app ? app.status : 'N/A'}`);
       if (app && app.status === 'approved') {
         const isAppMatch = await bcrypt.compare(password, app.passwordHash);
+        console.log(`[Login attempt] Password matches App.passwordHash: ${isAppMatch}`);
         if (isAppMatch) {
           // Self-heal: Sync the correct passwordHash and status to User document
           user.passwordHash = app.passwordHash;
           user.status = 'approved';
           await user.save();
           isMatch = true;
+          console.log(`[Login attempt] Self-healed User password and status successfully.`);
         }
       }
     }
