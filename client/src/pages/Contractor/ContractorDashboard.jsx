@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronRight, Store } from 'lucide-react'
 import { useCurrentUser, getUser } from '../../utils/auth'
@@ -66,6 +66,158 @@ export default function ContractorDashboard() {
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const { userName, loading: authLoading } = useCurrentUser()
   const [processingId, setProcessingId] = useState(null)
+  const liveViewMountRef = useRef(null)
+
+  useEffect(() => {
+    let THREE
+    let renderer, scene, camera, material, animationFrameId
+    let isDragging = false
+    let previousMousePosition = { x: 0, y: 0 }
+    let spherical = { phi: Math.PI / 2, theta: 0 }
+
+    const mount = liveViewMountRef.current
+    if (!mount) return
+
+    async function initThree() {
+      if (!window.THREE) {
+        await new Promise((resolve, reject) => {
+          const s = document.createElement('script')
+          s.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js'
+          s.onload = resolve
+          s.onerror = reject
+          document.head.appendChild(s)
+        })
+      }
+      THREE = window.THREE
+
+      const width = mount.clientWidth || 300
+      const height = mount.clientHeight || 160
+
+      scene = new THREE.Scene()
+      camera = new THREE.PerspectiveCamera(70, width / height, 0.1, 1000)
+      camera.position.set(0, 0, 0.001)
+
+      renderer = new THREE.WebGLRenderer({ antialias: true })
+      renderer.setSize(width, height)
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+      mount.appendChild(renderer.domElement)
+
+      const geometry = new THREE.SphereGeometry(500, 64, 40)
+      geometry.scale(-1, 1, 1)
+
+      const texture = new THREE.TextureLoader().load('/export360/stall24 - vegies.jpg')
+      material = new THREE.MeshBasicMaterial({ map: texture })
+      const sphere = new THREE.Mesh(geometry, material)
+      scene.add(sphere)
+
+      const updateCamera = () => {
+        const { phi, theta } = spherical
+        const x = Math.sin(phi) * Math.cos(theta)
+        const y = Math.cos(phi)
+        const z = Math.sin(phi) * Math.sin(theta)
+        camera.lookAt(x, y, z)
+      }
+      updateCamera()
+
+      const onMouseDown = (e) => {
+        isDragging = true
+        previousMousePosition = { x: e.clientX, y: e.clientY }
+      }
+
+      const onMouseMove = (e) => {
+        if (!isDragging) return
+        const deltaX = e.clientX - previousMousePosition.x
+        const deltaY = e.clientY - previousMousePosition.y
+        previousMousePosition = { x: e.clientX, y: e.clientY }
+
+        spherical.theta -= deltaX * 0.003
+        spherical.phi = Math.max(0.1, Math.min(Math.PI - 0.1, spherical.phi - deltaY * 0.003))
+        updateCamera()
+      }
+
+      const onMouseUp = () => {
+        isDragging = false
+      }
+
+      const onTouchStart = (e) => {
+        if (e.touches.length === 1) {
+          isDragging = true
+          previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+        }
+      }
+
+      const onTouchMove = (e) => {
+        if (!isDragging || e.touches.length !== 1) return
+        const deltaX = e.touches[0].clientX - previousMousePosition.x
+        const deltaY = e.touches[0].clientY - previousMousePosition.y
+        previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+
+        spherical.theta -= deltaX * 0.003
+        spherical.phi = Math.max(0.1, Math.min(Math.PI - 0.1, spherical.phi - deltaY * 0.003))
+        updateCamera()
+      }
+
+      const onTouchEnd = () => {
+        isDragging = false
+      }
+
+      mount.addEventListener('mousedown', onMouseDown)
+      window.addEventListener('mousemove', onMouseMove)
+      window.addEventListener('mouseup', onMouseUp)
+
+      mount.addEventListener('touchstart', onTouchStart, { passive: true })
+      mount.addEventListener('touchmove', onTouchMove, { passive: true })
+      mount.addEventListener('touchend', onTouchEnd)
+
+      const handleResize = () => {
+        if (!mount || !renderer || !camera) return
+        const w = mount.clientWidth
+        const h = mount.clientHeight
+        camera.aspect = w / h
+        camera.updateProjectionMatrix()
+        renderer.setSize(w, h)
+      }
+      window.addEventListener('resize', handleResize)
+
+      const animate = () => {
+        animationFrameId = requestAnimationFrame(animate)
+        if (!isDragging) {
+          spherical.theta += 0.001
+          updateCamera()
+        }
+        renderer.render(scene, camera)
+      }
+      animate()
+
+      // Cleanup function
+      return () => {
+        cancelAnimationFrame(animationFrameId)
+        mount.removeEventListener('mousedown', onMouseDown)
+        window.removeEventListener('mousemove', onMouseMove)
+        window.removeEventListener('mouseup', onMouseUp)
+        mount.removeEventListener('touchstart', onTouchStart)
+        mount.removeEventListener('touchmove', onTouchMove)
+        mount.removeEventListener('touchend', onTouchEnd)
+        window.removeEventListener('resize', handleResize)
+        if (renderer && renderer.domElement) {
+          mount.removeChild(renderer.domElement)
+          renderer.dispose()
+        }
+        if (geometry) geometry.dispose()
+        if (material) material.dispose()
+        if (texture) texture.dispose()
+      }
+    }
+
+    let cleanupFn
+    initThree().then(cleanup => {
+      cleanupFn = cleanup
+    })
+
+    return () => {
+      if (cleanupFn) cleanupFn()
+    }
+  }, [])
 
   // ── Live data from DB ──────────────────────────────────
   const [stalls, setStalls] = useState([])
@@ -273,10 +425,10 @@ export default function ContractorDashboard() {
               </div>
 
               {/* Live View */}
-              <div className="liveview-card">
-                <img src={marketImage} alt="Main Produce Section B live view" className="liveview-img" />
-                <div className="liveview-overlay">
-                  <span className="live-badge"><span className="live-dot" /> LIVE VIEW</span>
+              <div className="liveview-card relative overflow-hidden" style={{ cursor: 'grab' }}>
+                <div ref={liveViewMountRef} className="w-full h-full absolute inset-0 z-0" />
+                <div className="liveview-overlay absolute inset-0 z-10 pointer-events-none flex flex-col justify-between p-3.5">
+                  <span className="live-badge"><span className="live-dot" /> LIVE 360° VIEW</span>
                   <span className="liveview-label">Main Produce Section B</span>
                 </div>
               </div>
