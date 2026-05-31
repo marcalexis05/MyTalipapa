@@ -17,7 +17,7 @@ const getHallwayName = (hallway) => {
     'hallway26': 'Pathway 26 (between left wall and Zone E)',
     'hallway25&26': 'Pathway 25 & 26 (near Zone E)',
     'hallway24': 'Pathway 24 (between Zone E & F)',
-    'hallway21&22&23': 'Pathway 21, 22 & 23 (near Zone F & G central path)',
+    'hallway21&22&23': 'Pathway 21, 22 & 23 (nzear Zone F & G central path)',
     'hallway17&18&19': 'Pathway 17, 18 & 19 (between Zone G & H)',
     'hallway16': 'Pathway 16 (near Zone H left)',
     'hallway13&14&15': 'Pathway 13, 14 & 15 (near Zone H right)',

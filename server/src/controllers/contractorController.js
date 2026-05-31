@@ -440,7 +440,7 @@ exports.updateContractorApplicationStatus = async (req, res) => {
     if (action === 'approve') {
       const userExists = await User.findOne({ email: app.email.toLowerCase() });
       if (userExists) {
-        userExists.status = 'approved';
+        userExists.status = 'approved';z
         await userExists.save();
       } else {
         await User.create({

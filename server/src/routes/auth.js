@@ -104,6 +104,10 @@ router.post('/contractor/register-application', async (req, res) => {
     selectedStalls,
   } = req.body;
 
+  // Validate required fields and ensure at least one stall is selected
+  if (!fullName || !businessName || !email || !password || !contactNumber || !Array.isArray(selectedStalls) || selectedStalls.length === 0) {
+    return res.status(400).json({ error: 'All fields are required and at least one stall must be selected.' });
+  }
   if (
     !fullName ||
     !businessName ||
@@ -209,9 +213,24 @@ router.post('/contractor/register-application', async (req, res) => {
       }
     });
   } catch (err) {
-    console.error('Contractor application registration error:', err);
-    return res.status(500).json({ error: 'Server error' });
+    // Detailed logging for debugging
+    console.error('Contractor registration error:', err);
+    // Duplicate key error (e.g., email already exists)
+    if (err.code === 11000 && err.keyPattern) {
+      const duplicateField = Object.keys(err.keyPattern)[0];
+      return res.status(409).json({ error: `An account with this ${duplicateField} already exists.` });
+    }
+    // Mongoose validation errors
+    if (err.name === 'ValidationError') {
+      const messages = Object.values(err.errors).map(e => e.message).join(', ');
+      return res.status(400).json({ error: `Validation error: ${messages}` });
+    }
+    // Generic server error (include message in dev)
+    const message = process.env.NODE_ENV !== 'production' ? err.message : 'Server error';
+    return res.status(500).json({ error: message });
   }
+
+
 });
 
 
@@ -520,7 +539,7 @@ router.post('/forgot-password', async (req, res) => {
 
     // Dispatch the OTP via selected method (Nodemailer or Twilio)
     if (method === 'email') {
-      await sendEmailOtp(user.email, otp);
+      await sendEmailOtp(user.email, otp, 'reset');
     } else {
       await sendSmsOtp(user.contact_number, otp);
     }
