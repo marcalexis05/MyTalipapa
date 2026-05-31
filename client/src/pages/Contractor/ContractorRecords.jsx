@@ -141,6 +141,9 @@ export default function ContractorRecords() {
   const [newMoveOutCount, setNewMoveOutCount] = useState(0);
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const [selectedMoveOut, setSelectedMoveOut] = useState(null);
+  const [renterEmail, setRenterEmail] = useState('');
+  const [loadingEmail, setLoadingEmail] = useState(false);
+  const [markingRead, setMarkingRead] = useState(false);
   const prevMoveOutIds = useRef([]);
 
   const user = getUser();
@@ -169,9 +172,7 @@ export default function ContractorRecords() {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
-        // Update local state to mark as read
         setMoveOutRequests(prev => prev.map(r => r._id === id ? { ...r, read: true } : r));
-        // Update seen tracking
         const seenIds = getSeenIds();
         if (!seenIds.includes(id)) {
           localStorage.setItem(SEEN_KEY, JSON.stringify([...seenIds, id]));
@@ -180,6 +181,15 @@ export default function ContractorRecords() {
     } catch (err) {
       console.error('Failed to mark move out as read:', err);
     }
+  };
+
+  // Mark as read from inside the modal
+  const handleMarkAsRead = async () => {
+    if (!selectedMoveOut?._id) return;
+    setMarkingRead(true);
+    await markMoveOutAsRead(selectedMoveOut._id);
+    setSelectedMoveOut(prev => ({ ...prev, read: true }));
+    setMarkingRead(false);
   };
 
   // ── Fetch contractor profile ─────────────────────────────────
@@ -225,12 +235,10 @@ export default function ContractorRecords() {
         const moves = data.filter(n => n.title && n.title.toLowerCase().includes('move out'));
         setMoveOutRequests(moves);
 
-        // Detect genuinely new ones vs previously seen
         const seen = getSeenIds();
         const unseen = moves.filter(r => !seen.includes(r._id || r.message));
         setNewMoveOutCount(unseen.length);
 
-        // If new ones appeared since last poll, reset banner dismissal
         const currentIds = moves.map(r => r._id || r.message);
         const hasNew = currentIds.some(id => !prevMoveOutIds.current.includes(id));
         if (hasNew && unseen.length > 0) setBannerDismissed(false);
@@ -266,7 +274,10 @@ export default function ContractorRecords() {
   const handleNav = (item) => { setActiveNav(item.id); navigate(item.path); };
   const handleLogout = () => navigate('/login');
   const closeRenterModal = () => { setSelectedRenter(null); setShowPaymentForm(false); };
-  const closeMoveOutModal = () => { setSelectedMoveOut(null); };
+  const closeMoveOutModal = () => {
+    setSelectedMoveOut(null);
+    setRenterEmail('');
+  };
 
   const handleRequestArchiveAccess = async () => {
     const token = localStorage.getItem('authToken');
@@ -319,8 +330,30 @@ export default function ContractorRecords() {
 
   const handleMoveOutClick = async (req) => {
     setSelectedMoveOut(req);
+    setRenterEmail('');
+
     if (!req.read) {
       await markMoveOutAsRead(req._id);
+    }
+
+    // Fetch renter email by stall number
+    const details = parseMoveOutDetails(req.message);
+    if (details.stallNumber) {
+      setLoadingEmail(true);
+      const token = localStorage.getItem('authToken');
+      try {
+        const res = await fetch(`/api/contractor/records/by-stall/${details.stallNumber}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setRenterEmail(data.email || '');
+        }
+      } catch (err) {
+        console.error('Failed to fetch renter email:', err);
+      } finally {
+        setLoadingEmail(false);
+      }
     }
   };
 
@@ -536,7 +569,7 @@ export default function ContractorRecords() {
                 </div>
               )}
 
-              {/* Toggle card — same style as Archive card */}
+              {/* Toggle card */}
               <div className="flex justify-between items-center bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
                 <div className="text-left">
                   <div className="flex items-center gap-2">
@@ -713,10 +746,12 @@ export default function ContractorRecords() {
           ))}
         </nav>
 
-        {/* Move Out Detail Modal */}
+        {/* ── Move Out Detail Modal ───────────────────────────────── */}
         {selectedMoveOut && (
           <div className="logout-overlay" onClick={closeMoveOutModal}>
             <div className="rec-modal" onClick={e => e.stopPropagation()}>
+
+              {/* Header */}
               <div className="moveout-modal-header">
                 <div className="moveout-modal-icon-wrap">
                   <span className="text-2xl">🚪</span>
@@ -730,8 +765,13 @@ export default function ContractorRecords() {
                     })}
                   </p>
                 </div>
+                {/* Read badge */}
+                {selectedMoveOut.read && (
+                  <span className="moveout-read-badge">✓ Read</span>
+                )}
               </div>
 
+              {/* Details grid */}
               <div className="moveout-modal-content">
                 {(() => {
                   const details = parseMoveOutDetails(selectedMoveOut.message);
@@ -749,6 +789,24 @@ export default function ContractorRecords() {
                         <span className="moveout-detail-label">RENTER CONTACT</span>
                         <span className="moveout-detail-value moveout-contact-value">{details.contactNumber}</span>
                       </div>
+
+                      {/* Email box */}
+                      <div className="moveout-detail-item" style={{ gridColumn: '1 / -1' }}>
+                        <span className="moveout-detail-label">RENTER EMAIL</span>
+                        {loadingEmail ? (
+                          <span className="moveout-email-loading">Fetching email…</span>
+                        ) : renterEmail ? (
+                          <a
+                            href={`mailto:${renterEmail}`}
+                            className="moveout-detail-value moveout-email-value"
+                          >
+                            ✉️ {renterEmail}
+                          </a>
+                        ) : (
+                          <span className="moveout-email-empty">No email on file</span>
+                        )}
+                      </div>
+
                       <div className="moveout-detail-item" style={{ gridColumn: '1 / -1' }}>
                         <span className="moveout-detail-label">REASON FOR MOVE OUT</span>
                         <p className="moveout-reason-text">{details.reason}</p>
@@ -758,21 +816,31 @@ export default function ContractorRecords() {
                 })()}
               </div>
 
+              {/* Actions */}
               <div className="moveout-modal-actions">
-                <button 
-                  type="button" 
-                  className="moveout-call-btn"
-                  onClick={() => {
-                    const details = parseMoveOutDetails(selectedMoveOut.message);
-                    if (details.contactNumber) {
-                      window.location.href = `tel:${details.contactNumber}`;
-                    }
-                  }}
+                {/* Info message */}
+                <div className="moveout-contact-info-msg">
+                  <span className="moveout-contact-info-icon">ℹ️</span>
+                  <span>Contact the renter for more info about the request.</span>
+                </div>
+
+                {/* Mark as Read button */}
+                <button
+                  type="button"
+                  className={`moveout-markread-btn ${selectedMoveOut.read ? 'moveout-markread-btn--done' : ''}`}
+                  onClick={handleMarkAsRead}
+                  disabled={markingRead || selectedMoveOut.read}
                 >
-                  📞 Call Renter
+                  {selectedMoveOut.read
+                    ? '✓ Marked as Read'
+                    : markingRead
+                      ? 'Marking…'
+                      : '✔ Mark as Read'}
                 </button>
-                <button 
-                  type="button" 
+
+                {/* Close button */}
+                <button
+                  type="button"
                   className="moveout-modal-close-btn"
                   onClick={closeMoveOutModal}
                 >
@@ -783,7 +851,7 @@ export default function ContractorRecords() {
           </div>
         )}
 
-        {/* Renter History Modal */}
+        {/* ── Renter History Modal ────────────────────────────────── */}
         {selectedRenter && (
           <div className="logout-overlay" onClick={closeRenterModal}>
             <div className="rec-modal" onClick={e => e.stopPropagation()}>
@@ -853,7 +921,6 @@ export default function ContractorRecords() {
                 )}
               </div>
 
-              {/* Cash Payment / Move Out Section */}
               {selectedRenter.status !== 'archived' && (
                 <div className="rec-payment-record-section" style={{ borderTop: '1px solid #f3f4f6', paddingTop: '14px', marginTop: '4px' }}>
                   {!showPaymentForm ? (
@@ -942,13 +1009,8 @@ export default function ContractorRecords() {
 
           /* ── Move-out banner ───────────────────────────────── */
           .moveout-banner {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 10px;
-            padding: 10px 14px;
-            margin-bottom: 10px;
-            border-radius: 14px;
+            display: flex; align-items: center; justify-content: space-between; gap: 10px;
+            padding: 10px 14px; margin-bottom: 10px; border-radius: 14px;
             border: 1.5px solid #fed7aa;
             background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
             animation: banner-slide-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -959,20 +1021,12 @@ export default function ContractorRecords() {
           }
           .moveout-banner-left { display: flex; align-items: center; gap: 8px; }
           .moveout-banner-pulse {
-            position: relative;
-            display: inline-block;
-            width: 8px; height: 8px;
-            border-radius: 50%;
-            background: #f97316;
-            flex-shrink: 0;
+            position: relative; display: inline-block;
+            width: 8px; height: 8px; border-radius: 50%; background: #f97316; flex-shrink: 0;
           }
           .moveout-banner-pulse::after {
-            content: '';
-            position: absolute;
-            inset: -3px;
-            border-radius: 50%;
-            background: #f97316;
-            opacity: 0.3;
+            content: ''; position: absolute; inset: -3px; border-radius: 50%;
+            background: #f97316; opacity: 0.3;
             animation: pulse-ring 1.4s ease-out infinite;
           }
           @keyframes pulse-ring {
@@ -988,28 +1042,17 @@ export default function ContractorRecords() {
 
           /* ── Move-out request cards ────────────────────────── */
           .moveout-request-card {
-            display: flex;
-            align-items: flex-start;
-            gap: 12px;
-            background: #fff;
-            border-radius: 16px;
-            padding: 14px;
-            border: 1px solid #f3f4f6;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+            display: flex; align-items: flex-start; gap: 12px;
+            background: #fff; border-radius: 16px; padding: 14px;
+            border: 1px solid #f3f4f6; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
             transition: box-shadow 0.2s, transform 0.2s;
           }
           .moveout-request-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); transform: translateY(-1px); }
-          .moveout-request-card--new {
-            border-color: #fed7aa;
-            background: linear-gradient(135deg, #fff7ed 0%, #fff 60%);
-          }
+          .moveout-request-card--new { border-color: #fed7aa; background: linear-gradient(135deg, #fff7ed 0%, #fff 60%); }
           .moveout-request-icon-wrap {
-            width: 36px; height: 36px;
-            border-radius: 10px;
-            background: #fff7ed;
-            border: 1px solid #fed7aa;
-            display: flex; align-items: center; justify-content: center;
-            flex-shrink: 0;
+            width: 36px; height: 36px; border-radius: 10px;
+            background: #fff7ed; border: 1px solid #fed7aa;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
           }
           .moveout-request-body { flex: 1; min-width: 0; }
           .moveout-request-title { font-size: 12px; font-weight: 800; color: #1f2937; margin: 0; }
@@ -1018,122 +1061,90 @@ export default function ContractorRecords() {
           .moveout-new-badge {
             font-size: 8px; font-weight: 900; letter-spacing: 0.5px;
             padding: 2px 6px; border-radius: 999px;
-            background: #f97316; color: #fff;
-            flex-shrink: 0;
+            background: #f97316; color: #fff; flex-shrink: 0;
           }
 
           /* ── Move out detail modal ─────────────────────────── */
           .moveout-modal-header {
-            display: flex;
-            align-items: flex-start;
-            gap: 14px;
-            padding-bottom: 14px;
-            border-bottom: 1px solid #f3f4f6;
+            display: flex; align-items: flex-start; gap: 14px;
+            padding-bottom: 14px; border-bottom: 1px solid #f3f4f6;
           }
           .moveout-modal-icon-wrap {
-            width: 52px;
-            height: 52px;
-            border-radius: 14px;
-            background: #fff7ed;
-            border: 2px solid #fed7aa;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
+            width: 52px; height: 52px; border-radius: 14px;
+            background: #fff7ed; border: 2px solid #fed7aa;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
           }
-          .moveout-modal-title {
-            font-size: 17px;
-            font-weight: 800;
-            color: #1f2937;
-            margin: 0 0 2px;
+          .moveout-modal-title { font-size: 17px; font-weight: 800; color: #1f2937; margin: 0 0 2px; }
+          .moveout-modal-time { font-size: 12px; color: #9ca3af; margin: 0; font-weight: 500; }
+          .moveout-read-badge {
+            margin-left: auto; flex-shrink: 0; align-self: flex-start;
+            font-size: 10px; font-weight: 700; color: #15803d;
+            background: #dcfce7; border: 1px solid #bbf7d0;
+            padding: 3px 10px; border-radius: 999px;
           }
-          .moveout-modal-time {
-            font-size: 12px;
-            color: #9ca3af;
-            margin: 0;
-            font-weight: 500;
-          }
-          .moveout-modal-content {
-            padding: 14px 0;
-          }
-          .moveout-details-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-          }
+          .moveout-modal-content { padding: 14px 0; }
+          .moveout-details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
           .moveout-detail-item {
-            background: #f9fafb;
-            border-radius: 12px;
-            padding: 12px;
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
+            background: #f9fafb; border-radius: 12px; padding: 12px;
+            display: flex; flex-direction: column; gap: 4px;
             border: 1px solid #f3f4f6;
           }
-          .moveout-detail-label {
-            font-size: 10px;
-            font-weight: 700;
-            color: #9ca3af;
-            text-transform: uppercase;
-            letter-spacing: 0.4px;
+          .moveout-detail-label { font-size: 10px; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.4px; }
+          .moveout-detail-value { font-size: 14px; font-weight: 800; color: #1f2937; }
+          .moveout-contact-value { font-family: 'Courier New', monospace; letter-spacing: 0.5px; color: #1a5c2a; }
+          .moveout-email-value {
+            font-size: 13px; font-weight: 700; color: #1a5c2a;
+            text-decoration: underline; text-underline-offset: 2px;
+            word-break: break-all;
           }
-          .moveout-detail-value {
-            font-size: 14px;
-            font-weight: 800;
-            color: #1f2937;
-          }
-          .moveout-contact-value {
-            font-family: 'Courier New', monospace;
-            letter-spacing: 0.5px;
-            color: #1a5c2a;
-          }
-          .moveout-reason-text {
-            font-size: 13px;
-            color: #6b7280;
-            line-height: 1.6;
-            margin: 0;
-          }
+          .moveout-email-value:hover { color: #154d23; }
+          .moveout-email-loading { font-size: 12px; color: #9ca3af; font-style: italic; }
+          .moveout-email-empty { font-size: 12px; color: #9ca3af; }
+          .moveout-reason-text { font-size: 13px; color: #6b7280; line-height: 1.6; margin: 0; }
+
+          /* ── Modal actions ─────────────────────────────────── */
           .moveout-modal-actions {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            margin-top: 14px;
-            padding-top: 14px;
-            border-top: 1px solid #f3f4f6;
+            display: flex; flex-direction: column; gap: 8px;
+            margin-top: 14px; padding-top: 14px; border-top: 1px solid #f3f4f6;
           }
-          .moveout-call-btn {
-            width: 100%;
-            padding: 12px;
-            background: #1a5c2a;
-            hover:background: #154d23;
-            color: #fff;
-            border: none;
+
+          /* Info message */
+          .moveout-contact-info-msg {
+            display: flex; align-items: center; gap: 8px;
+            padding: 10px 14px;
+            background: #eff6ff; border: 1px solid #bfdbfe;
             border-radius: 10px;
-            font-size: 13px;
-            font-weight: 700;
+            font-size: 12px; font-weight: 600; color: #1d4ed8; line-height: 1.4;
+          }
+          .moveout-contact-info-icon { font-size: 14px; flex-shrink: 0; }
+
+          /* Mark as read button */
+          .moveout-markread-btn {
+            width: 100%; padding: 12px;
+            background: #1a5c2a; color: #fff;
+            border: none; border-radius: 10px;
+            font-size: 13px; font-weight: 700;
             font-family: 'Inter', sans-serif;
-            cursor: pointer;
-            transition: background 0.2s;
+            cursor: pointer; transition: background 0.2s;
           }
-          .moveout-call-btn:hover {
-            background: #154d23;
+          .moveout-markread-btn:hover:not(:disabled) { background: #154d23; }
+          .moveout-markread-btn--done {
+            background: #f0fdf4 !important;
+            color: #15803d !important;
+            border: 1.5px solid #bbf7d0 !important;
+            cursor: default !important;
           }
+          .moveout-markread-btn:disabled { opacity: 0.7; cursor: not-allowed; }
+
+          /* Close button */
           .moveout-modal-close-btn {
-            width: 100%;
-            padding: 10px;
-            background: #f3f4f6;
-            border: 1px solid #e5e7eb;
-            border-radius: 10px;
-            font-size: 13px;
-            font-weight: 700;
-            color: #6b7280;
-            font-family: 'Inter', sans-serif;
-            cursor: pointer;
-            transition: background 0.2s;
+            width: 100%; padding: 10px;
+            background: #f3f4f6; border: 1px solid #e5e7eb;
+            border-radius: 10px; font-size: 13px; font-weight: 700;
+            color: #6b7280; font-family: 'Inter', sans-serif;
+            cursor: pointer; transition: background 0.2s;
           }
-          .moveout-modal-close-btn:hover {
-            background: #e5e7eb;
-          }
+          .moveout-modal-close-btn:hover { background: #e5e7eb; }
 
           /* ── Filter pills ──────────────────────────────────── */
           .rec-filter-pills { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }

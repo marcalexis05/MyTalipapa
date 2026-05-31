@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 // --- Icons ---
 const Icon = ({ d, size = 20, className = "" }) => (
@@ -178,12 +178,6 @@ const navItems = [
   { label: "Profile",      icon: <ProfileIcon />,     path: "profile" },
 ];
 
-// --- Floor plan grid ---
-const floorGrid = [
-  ["038", "039", "040", "041"],
-  ["043", "042", "044", "045"],
-  ["046", "047", "048", "049"],
-];
 
 const stallData = {
   id: "042",
@@ -276,11 +270,35 @@ export default function StallDetail({ stall = stallData, onBack, onNavigate, onI
   const [reportSubmitted,  setReportSubmitted]  = useState(false);
 
   // --- Move-Out Request state ---
-  const [moveOutContact, setMoveOutContact] = useState(stall.renterContact || "");
-  const [moveOutEmail, setMoveOutEmail] = useState(stall.renterEmail || "");
+  const [moveOutContact, setMoveOutContact] = useState("");
+  const [moveOutEmail, setMoveOutEmail] = useState("");
   const [moveOutReason, setMoveOutReason] = useState("");
   const [moveOutSubmitting, setMoveOutSubmitting] = useState(false);
   const [moveOutSubmitted, setMoveOutSubmitted] = useState(false);
+
+  // Fetch renter contact info on mount
+  useEffect(() => {
+    const fetchRenterInfo = async () => {
+      try {
+        const token = localStorage.getItem('authToken');
+        if (!token) return;
+        
+        const res = await fetch('/api/renter/profile', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          setMoveOutContact(data.contactNumber || data.phone || "");
+          setMoveOutEmail(data.email || "");
+        }
+      } catch (err) {
+        console.error('Failed to fetch renter info:', err);
+      }
+    };
+
+    fetchRenterInfo();
+  }, []);
 
   const handleReportSubmit = () => {
     if (reportSubmitting || reportSubmitted) return;
@@ -516,37 +534,6 @@ export default function StallDetail({ stall = stallData, onBack, onNavigate, onI
                     {a.label}
                   </span>
                 ))}
-              </div>
-            </div>
-
-            {/* Floor Plan */}
-            <div className="sd-section bg-white rounded-2xl px-4 py-4 border border-gray-100 shadow-sm" style={{ animationDelay: "0.36s" }}>
-              <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider mb-3">Floor Plan Location</p>
-              <div className="space-y-1.5">
-                {floorGrid.map((row, ri) => (
-                  <div key={ri} className="grid grid-cols-4 gap-1.5">
-                    {row.map((cell, ci) => (
-                      <div
-                        key={cell}
-                        className={`sd-floor-cell h-10 flex items-center justify-center rounded-lg text-xs font-semibold transition-all ${
-                          cell === displayId
-                            ? "bg-[#e87722] text-white shadow-sm scale-105"
-                            : "bg-gray-100 text-gray-400"
-                        }`}
-                        style={{ animationDelay: `${0.38 + (ri * 4 + ci) * 0.04}s` }}
-                      >
-                        {cell}
-                      </div>
-                    ))}
-                  </div>
-                ))}
-              </div>
-              <div className="flex items-center justify-between mt-3">
-                <p className="text-[10px] text-gray-400">Section: {displaySection} ({displayZone})</p>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-2.5 h-2.5 rounded-sm bg-[#e87722]" />
-                  <span className="text-[10px] text-gray-500 font-semibold">Your Selection</span>
-                </div>
               </div>
             </div>
 
