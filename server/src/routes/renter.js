@@ -306,5 +306,49 @@ router.post('/applications', async (req, res) => {
     res.status(500).json({ error: 'Failed to submit application.' });
   }
 });
+// ── POST /api/renter/stalls/:id/move-out ──
+router.post('/stalls/:id/move-out', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { contactNumber, reason } = req.body;
+
+    if (!contactNumber) {
+      return res.status(400).json({ error: 'Contact number is required for move out request.' });
+    }
+
+    const stall = await Stall.findById(id);
+    if (!stall) {
+      return res.status(404).json({ error: 'Stall not found.' });
+    }
+
+    // Set contact number
+    stall.tenant.contact = contactNumber;
+    await stall.save();
+
+    // Trigger notification to the contractor who manages this stall (or admin if unmanaged)
+    const Notification = require('../models/Notification');
+    if (stall.managedBy) {
+      await Notification.create({
+        recipient: stall.managedBy.toLowerCase(),
+        title: 'Stall Move Out Request',
+        message: `Tenant at Stall #${stall.stallNumber} (${stall.section}) has requested to move out. Renter Contact: ${contactNumber}. Reason: ${reason || 'Not specified'}`,
+        link: '/contractor/stalls'
+      });
+    } else {
+      await Notification.create({
+        recipient: 'admin',
+        title: 'Stall Move Out Request',
+        message: `Tenant at Stall #${stall.stallNumber} has requested to move out. Renter Contact: ${contactNumber}. Reason: ${reason || 'Not specified'}`,
+        link: '/admin/stalls'
+      });
+    }
+
+    res.json({ success: true, message: 'Move out request submitted successfully.' });
+  } catch (err) {
+    console.error('Renter moveOutRequest error:', err);
+    res.status(500).json({ error: 'Failed to submit move out request.' });
+  }
+});
+
 module.exports = router;
 
