@@ -271,7 +271,22 @@ router.post('/login', async (req, res) => {
       return res.status(403).json({ error: `This account is not registered as a ${role}.` });
     }
 
-    const isMatch = await bcrypt.compare(password, user.passwordHash);
+    let isMatch = await bcrypt.compare(password, user.passwordHash);
+    if (!isMatch && user.role === 'contractor') {
+      const ContractorApplication = require('../models/ContractorApplication');
+      const app = await ContractorApplication.findOne({ email: email.toLowerCase() }).sort({ createdAt: -1 });
+      if (app && app.status === 'approved') {
+        const isAppMatch = await bcrypt.compare(password, app.passwordHash);
+        if (isAppMatch) {
+          // Self-heal: Sync the correct passwordHash and status to User document
+          user.passwordHash = app.passwordHash;
+          user.status = 'approved';
+          await user.save();
+          isMatch = true;
+        }
+      }
+    }
+
     if (!isMatch) {
       return res.status(401).json({ error: 'Invalid email or password.' });
     }
