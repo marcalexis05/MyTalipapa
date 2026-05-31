@@ -105,7 +105,7 @@ export default function ContractorDashboard() {
       const geometry = new THREE.SphereGeometry(500, 64, 40)
       geometry.scale(-1, 1, 1)
 
-      const texture = new THREE.TextureLoader().load('/export360/stall24 - vegies.jpg')
+      const texture = new THREE.TextureLoader().load(marketImage)
       material = new THREE.MeshBasicMaterial({ map: texture })
       const sphere = new THREE.Mesh(geometry, material)
       scene.add(sphere)
@@ -425,10 +425,16 @@ export default function ContractorDashboard() {
               </div>
 
               {/* Live View */}
-              <div className="liveview-card relative overflow-hidden" style={{ cursor: 'grab' }}>
-                <div ref={liveViewMountRef} className="w-full h-full absolute inset-0 z-0" />
+              <div 
+                className="liveview-card relative overflow-hidden cursor-pointer" 
+                onClick={() => navigate('/tour')}
+                style={{ height: '160px' }}
+              >
+                <div ref={liveViewMountRef} style={{ width: '100%', height: '160px' }} className="absolute inset-0 z-0" />
                 <div className="liveview-overlay absolute inset-0 z-10 pointer-events-none flex flex-col justify-between p-3.5">
-                  <span className="live-badge"><span className="live-dot" /> VIRTUAL TOUR</span>
+                  <span className="live-badge cursor-pointer pointer-events-auto" onClick={(e) => { e.stopPropagation(); navigate('/tour'); }}>
+                    <span className="live-dot" /> VIRTUAL TOUR
+                  </span>
                   <span className="liveview-label">Main Produce Section B</span>
                 </div>
               </div>
