@@ -44,8 +44,7 @@ async function sendEmailOtp(email, otp) {
       },
     });
 
-const verificationUrl = `${process.env.BACKEND_URL ||
-  'http://localhost:5000'}/verify-email?token=${otp}`;
+const verificationUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/verify-email?token=${otp}`;
 
     const mailOptions = {
       from: process.env.EMAIL_FROM || '"MyTalipapa Recovery" <no-reply@mytalipapa.com>',
