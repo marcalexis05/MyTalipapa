@@ -1,31 +1,21 @@
 const nodemailer = require('nodemailer');
-const twilio = require('twilio');
 
-// Format PH numbers from e.g. 09171234567 to +639171234567
-function formatPhoneNumber(phone) {
-  let cleaned = phone.replace(/\D/g, ''); // remove non-digits
-  if (cleaned.startsWith('09') && cleaned.length === 11) {
-    return '+63' + cleaned.substring(1);
-  }
-  if (cleaned.startsWith('63') && cleaned.length === 12) {
-    return '+' + cleaned;
-  }
-  if (cleaned.startsWith('9') && cleaned.length === 10) {
-    return '+63' + cleaned;
-  }
-  // Default fallback (prefix with '+' if it doesn't have it and looks like a country code, or return as is)
-  if (!phone.startsWith('+') && cleaned.length > 0) {
-    return '+' + cleaned;
-  }
-  return phone;
-}
-
-async function sendEmailOtp(email, otp) {
+/**
+ * Send email OTP for verification or password reset
+ * @param {string} email - Recipient email
+ * @param {string} otp - For 'verify': verification token | For 'reset': 6-digit OTP
+ * @param {string} type - 'verify' (registration) | 'reset' (forgot password)
+ */
+async function sendEmailOtp(email, otp, type = 'verify') {
   const isEnvConfigured = process.env.SMTP_USER && process.env.SMTP_PASS;
 
   console.log('--------------------------------------------------');
-  console.log(`✉️  [OTP EMAIL SENT TO: ${email}]`);
-  console.log(`👉  VERIFICATION CODE: ${otp}`);
+  console.log(`✉️  [EMAIL SENT TO: ${email}] | TYPE: ${type.toUpperCase()}`);
+  if (type === 'reset') {
+    console.log(`👉  6-DIGIT OTP: ${otp}`);
+  } else {
+    console.log(`👉  VERIFICATION TOKEN: ${otp}`);
+  }
   console.log('--------------------------------------------------');
 
   if (!isEnvConfigured) {
@@ -44,36 +34,74 @@ async function sendEmailOtp(email, otp) {
       },
     });
 
-// Ensure CLIENT_URL points to your frontend app (e.g., http://localhost:5173 or your production Vercel URL)
-const verificationUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/verify-email?token=${otp}`;
+    const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+    
+    let subject = '';
+    let emailHtml = '';
 
-const mailOptions = {
-  from: process.env.EMAIL_FROM || '"MyTalipapa Recovery" <no-reply@mytalipapa.com>',
-  to: email,
-  subject: 'MyTalipapa - Email Verification',
-  html: `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 12px; background-color: #fcfbf9;">
-      <div style="text-align: center; margin-bottom: 20px;">
-        <span style="font-size: 40px;">🏪</span>
-        <h2 style="color: #1a5c2a; margin-top: 10px;">MyTalipapa</h2>
-      </div>
-      <h3 style="color: #374151;">Email Verification</h3>
-      <p style="color: #4b5563; line-height: 1.6;">
-        Please click the button below to verify your email address. This link will expire in 24 hours.
-      </p>
-      <div style="text-align: center; margin: 30px 0;">
-        <a href="${verificationUrl}" style="display: inline-block; padding: 12px 24px; font-size: 18px; color: #fff; background-color: #1a5c2a; border-radius: 8px; text-decoration: none; font-weight: bold;">
-          Verify Email
-        </a>
-      </div>
-      <p style="color: #9ca3af; font-size: 12px; line-height: 1.4; border-top: 1px solid #e5e7eb; padding-top: 15px;">
-        If you did not request this, please ignore this email.
-      </p>
-    </div>
-  `,
-};
+    if (type === 'reset') {
+      // ━━━━━ PASSWORD RESET: 6-DIGIT OTP ━━━━━
+      subject = 'MyTalipapa - Password Reset OTP';
+      emailHtml = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 12px; background-color: #fcfbf9;">
+          <div style="text-align: center; margin-bottom: 20px;">
+            <span style="font-size: 40px;">🏪</span>
+            <h2 style="color: #1a5c2a; margin-top: 10px;">MyTalipapa</h2>
+          </div>
+          <h3 style="color: #374151;">🔐 Password Reset Request</h3>
+          <p style="color: #4b5563; line-height: 1.6;">
+            We received a request to reset your password. Use the 6-digit code below to proceed. <strong>This code is valid for 10 minutes.</strong>
+          </p>
+          <div style="text-align: center; margin: 30px 0;">
+            <div style="display: inline-block; padding: 16px 28px; font-size: 32px; font-family: 'Courier New', monospace; color: #1a5c2a; background-color: #f0fdf4; border: 2px dashed #1a5c2a; border-radius: 8px; font-weight: bold; letter-spacing: 8px;">
+              ${otp}
+            </div>
+          </div>
+          <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 20px 0;">
+            ⚠️ <strong>Never share this code with anyone.</strong> MyTalipapa staff will never ask for your OTP.
+          </p>
+          <p style="color: #9ca3af; font-size: 12px; line-height: 1.4; border-top: 1px solid #e5e7eb; padding-top: 15px;">
+            If you did not request a password reset, please ignore this email or secure your account if you suspect unauthorized activity.
+          </p>
+        </div>
+      `;
+    } else {
+      // ━━━━━ EMAIL VERIFICATION: VERIFICATION LINK ━━━━━
+      subject = 'MyTalipapa - Email Verification';
+      const verificationUrl = `${clientUrl}/verify-email?token=${otp}`;
+      emailHtml = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 12px; background-color: #fcfbf9;">
+          <div style="text-align: center; margin-bottom: 20px;">
+            <span style="font-size: 40px;">🏪</span>
+            <h2 style="color: #1a5c2a; margin-top: 10px;">MyTalipapa</h2>
+          </div>
+          <h3 style="color: #374151;">✉️ Email Verification</h3>
+          <p style="color: #4b5563; line-height: 1.6;">
+            Welcome to MyTalipapa! Please verify your email address by clicking the button below to activate your account. <strong>This link will expire in 24 hours.</strong>
+          </p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${verificationUrl}" style="display: inline-block; padding: 12px 32px; font-size: 16px; color: #fff; background-color: #1a5c2a; border-radius: 8px; text-decoration: none; font-weight: bold; transition: background-color 0.3s;">
+              ✓ Verify Email Address
+            </a>
+          </div>
+          <p style="color: #6b7280; font-size: 13px; line-height: 1.6; margin: 20px 0;">
+            Or copy and paste this link in your browser:<br>
+            <span style="color: #1a5c2a; word-break: break-all; font-family: monospace; font-size: 11px;">${verificationUrl}</span>
+          </p>
+          <p style="color: #9ca3af; font-size: 12px; line-height: 1.4; border-top: 1px solid #e5e7eb; padding-top: 15px;">
+            If you did not create this account, please ignore this email.
+          </p>
+        </div>
+      `;
+    }
 
-// Pass mailOptions to your nodemailer transport transporter instance here...
+    const mailOptions = {
+      from: process.env.EMAIL_FROM || '"MyTalipapa" <no-reply@mytalipapa.com>',
+      to: email,
+      subject: subject,
+      html: emailHtml,
+    };
+
     await transporter.sendMail(mailOptions);
     return { success: true, mocked: false };
   } catch (error) {
@@ -82,36 +110,6 @@ const mailOptions = {
   }
 }
 
-async function sendSmsOtp(contactNumber, otp) {
-  const formattedPhone = formatPhoneNumber(contactNumber);
-  const isEnvConfigured = process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_PHONE_NUMBER;
-
-  console.log('--------------------------------------------------');
-  console.log(`📱  [OTP SMS SENT TO: ${formattedPhone} (Original: ${contactNumber})]`);
-  console.log(`👉  VERIFICATION CODE: ${otp}`);
-  console.log('--------------------------------------------------');
-
-  if (!isEnvConfigured) {
-    console.log('⚠️  Twilio credentials not set in .env. Mocking SMS delivery.');
-    return { success: true, mocked: true };
-  }
-
-  try {
-    const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-    await client.messages.create({
-      body: `[MyTalipapa] Your verification code is ${otp}. Valid for 10 minutes. Please do not share this code.`,
-      from: process.env.TWILIO_PHONE_NUMBER,
-      to: formattedPhone,
-    });
-    return { success: true, mocked: false };
-  } catch (error) {
-    console.error('Failed to send Twilio SMS:', error);
-    throw error;
-  }
-}
-
 module.exports = {
-  sendEmailOtp,
-  sendSmsOtp,
-  formatPhoneNumber
+  sendEmailOtp
 };
