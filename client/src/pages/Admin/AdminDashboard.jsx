@@ -108,8 +108,6 @@ export default function AdminDashboard() {
   const [announceTarget, setAnnounceTarget] = useState('all');
   const [submittingAnnounce, setSubmittingAnnounce] = useState(false);
   const [editingAnnId, setEditingAnnId] = useState(null);
-  // Overall loading flag for dashboard data
-  const [loadingAll, setLoadingAll] = useState(true);
 const [editTitle, setEditTitle] = useState('')
 const [editContent, setEditContent] = useState('')
 const [editTarget, setEditTarget] = useState('all')
@@ -204,8 +202,8 @@ const handleDeleteAnnouncement = async (id) => {
   }
 }
   useEffect(() => {
-    Promise.all([fetchAnnouncements(), fetchStalls(), fetchApplications()])
-      .finally(() => setLoadingAll(false));
+    // Load all dashboard data in parallel (no visual overlay)
+    Promise.all([fetchAnnouncements(), fetchStalls(), fetchApplications()]);
   }, []);
 
   // Total monthly revenue from occupied stalls with a monthlyRate
@@ -261,12 +259,6 @@ const handleDeleteAnnouncement = async (id) => {
 
   return (
     <div className="flex h-screen bg-[#f5f5f0] font-sans overflow-hidden w-full">
-        {/* Overall loading overlay */}
-        {loadingAll && (
-          <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-70 z-50">
-            <div className="text-xl font-semibold text-gray-700">Loading dashboard…</div>
-          </div>
-        )}
       {/* Logout Modal */}
       {showLogoutModal && (
         <div className="logout-overlay" onClick={() => setShowLogoutModal(false)}>
