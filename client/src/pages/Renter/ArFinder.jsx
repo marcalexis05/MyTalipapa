@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Compass, Info, HelpCircle, Navigation, RotateCw, Check, X, Camera, CameraOff, Map, ChevronDown, ChevronUp, Locate, ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { ArrowLeft, Compass, Info, HelpCircle, Navigation, RotateCw, Check, X, Camera, CameraOff, Map, ChevronDown, ChevronUp, Locate, ChevronLeft, ChevronRight, Search, Footprints } from "lucide-react";
 import mapImage from "../../images/map.png";
 import { SVG_STALL_COORDS } from "../../utils/coords_dict";
 
@@ -143,7 +143,6 @@ const HALLWAY_GROUPS = {
 };
 
 const HALLWAYS = Object.values(HALLWAY_GROUPS).flat();
-
 const CATEGORY_EMOJI = { meat: "🥩", fish: "🐟", veggies: "🥬", all: "🏪" };
 
 export default function ArFinder({ onBack }) {
@@ -153,9 +152,13 @@ export default function ArFinder({ onBack }) {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchDirections, setSearchDirections] = useState("");
-
   const [showStallPicker, setShowStallPicker] = useState(false);
   const [stallPickerSearch, setStallPickerSearch] = useState("");
+
+  // ── Step Detection ──────────────────────────────────────
+  const [motionActive, setMotionActive] = useState(false)
+  const [stepCount, setStepCount] = useState(0)
+  const headingRef = useRef(0)
 
   const handleSearchSubmit = async () => {
     if (!searchQuery.trim()) return;
@@ -284,6 +287,9 @@ export default function ArFinder({ onBack }) {
   const gpsAnchorRef = useRef(null);
   const [gpsActive, setGpsActive] = useState(false);
 
+  // Keep headingRef in sync so devicemotion can read latest heading
+  useEffect(() => { headingRef.current = heading }, [heading])
+
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth <= 640);
     check();
@@ -297,6 +303,58 @@ export default function ArFinder({ onBack }) {
       return () => clearTimeout(timer);
     }
   }, [toastMsg]);
+
+  // ── Step Detection Effect ───────────────────────────────
+  useEffect(() => {
+    if (!motionActive) return
+
+    let lastMag = 0
+    let lastStepTime = 0
+    const STEP_THRESHOLD = 4      // tune if too sensitive / not sensitive enough
+    const STEP_COOLDOWN = 350     // ms between steps to avoid double-counting
+    const STEP_SIZE = 45          // map units per step
+
+    const handleMotion = (e) => {
+      const acc = e.accelerationIncludingGravity
+      if (!acc || acc.x == null) return
+      const mag = Math.sqrt(acc.x ** 2 + acc.y ** 2 + acc.z ** 2)
+      const delta = Math.abs(mag - lastMag)
+      lastMag = mag
+      const now = Date.now()
+      if (delta > STEP_THRESHOLD && now - lastStepTime > STEP_COOLDOWN) {
+        lastStepTime = now
+        const rad = (headingRef.current * Math.PI) / 180
+        setUserX(x => Math.max(30, Math.min(2270, x + Math.round(Math.sin(rad) * STEP_SIZE))))
+        setUserY(y => Math.max(30, Math.min(1790, y - Math.round(Math.cos(rad) * STEP_SIZE))))
+        setStepCount(c => c + 1)
+      }
+    }
+
+    // iOS 13+ requires permission for DeviceMotion
+    const requestAndListen = async () => {
+      if (typeof DeviceMotionEvent?.requestPermission === 'function') {
+        try {
+          const perm = await DeviceMotionEvent.requestPermission()
+          if (perm !== 'granted') {
+            setToastMsg('Motion permission denied.')
+            setMotionActive(false)
+            return
+          }
+        } catch {
+          setToastMsg('Could not request motion permission.')
+          setMotionActive(false)
+          return
+        }
+      }
+      window.addEventListener('devicemotion', handleMotion)
+      setToastMsg('Step detection ON — walk to move!')
+    }
+
+    requestAndListen()
+    return () => {
+      window.removeEventListener('devicemotion', handleMotion)
+    }
+  }, [motionActive])
 
   const toggleGps = () => {
     if (gpsActive) {
@@ -495,7 +553,13 @@ export default function ArFinder({ onBack }) {
   };
   const handleRotateLeft = () => setHeading(h => (h - 15 + 360) % 360);
   const handleRotateRight = () => setHeading(h => (h + 15) % 360);
-  const handleResetPosition = () => { gpsAnchorRef.current = null; setUserX(1050); setUserY(1720); setHeading(0); setSelectedStartId("entrance"); setToastMsg("Location reset to Main Entrance."); };
+  const handleResetPosition = () => {
+    gpsAnchorRef.current = null;
+    setUserX(1050); setUserY(1720); setHeading(0);
+    setSelectedStartId("entrance");
+    setStepCount(0);
+    setToastMsg("Location reset to Main Entrance.");
+  };
   const handleSelectStartPoint = (point) => {
     gpsAnchorRef.current = null;
     setUserX(point.x); setUserY(point.y);
@@ -567,9 +631,15 @@ export default function ArFinder({ onBack }) {
         @keyframes pulse {
           0%, 100% { opacity: 1; } 50% { opacity: 0.6; }
         }
+        @keyframes stepPulse {
+          0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(232,98,26,0.6); }
+          50% { transform: scale(1.05); box-shadow: 0 0 0 6px rgba(232,98,26,0); }
+          100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(232,98,26,0); }
+        }
         .animate-fadeIn    { animation: fadeIn 0.2s ease forwards; }
         .animate-scanLine  { position: absolute; animation: scan 3s linear infinite; }
         .animate-spin-slow { animation: spin-slow 12s linear infinite; }
+        .step-active       { animation: stepPulse 0.6s ease; }
 
         .ar-body {
           display: flex;
@@ -667,6 +737,8 @@ export default function ArFinder({ onBack }) {
         .ctrl-btn:active { transform: scale(0.92); }
         .ctrl-btn.primary { background: #1a5c2a; color: #fff; border-color: #1a5c2a; }
         .ctrl-btn.primary:hover { background: #154a22; }
+        .ctrl-btn.motion-on { background: #e8621a; color: #fff; border-color: #e8621a; }
+        .ctrl-btn.motion-on:hover { background: #cc5316; }
 
         .stall-select {
           display: flex; align-items: center;
@@ -858,6 +930,20 @@ export default function ArFinder({ onBack }) {
           padding: 16px; overflow-y: auto;
           -webkit-overflow-scrolling: touch;
           animation: fadeIn 0.15s ease;
+        }
+
+        /* Step counter badge */
+        .step-badge {
+          position: absolute; top: 10px; right: 56px;
+          background: rgba(232,98,26,0.92);
+          border: 1px solid rgba(255,255,255,0.3);
+          border-radius: 999px; padding: 4px 10px;
+          font-size: 10px; font-weight: 800; color: #fff;
+          display: flex; align-items: center; gap: 5px;
+          z-index: 25; backdrop-filter: blur(6px);
+        }
+        @media (max-width: 640px) {
+          .step-badge { right: 54px; }
         }
       `}</style>
 
@@ -1061,6 +1147,14 @@ export default function ArFinder({ onBack }) {
               </div>
             )}
 
+            {/* Step counter badge — only shown when motion is active */}
+            {motionActive && (
+              <div className="step-badge">
+                <span>👟</span>
+                <span>{stepCount} steps</span>
+              </div>
+            )}
+
             {showHelp && (
               <div className="animate-fadeIn" style={{
                 position: "absolute", top: 10, left: 10, right: 54,
@@ -1079,6 +1173,7 @@ export default function ArFinder({ onBack }) {
                   <li>Follow the floating orange dots in the camera view.</li>
                   <li>Use the right-side HUD to simulate walking or rotating.</li>
                   <li>Tap anywhere on the floor map to set your position manually.</li>
+                  <li>Tap <strong>STEP</strong> (👟) to enable automatic step detection — walk and the map updates automatically!</li>
                 </ul>
               </div>
             )}
@@ -1104,7 +1199,6 @@ export default function ArFinder({ onBack }) {
                 animation: "pulse 1.5s ease-in-out infinite",
               }}>
                 <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(232,98,26,0.95)", border: "2.5px solid #fff", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 16px rgba(232,98,26,0.5)" }}>
-                  {/* ── FIXED: arrow now points toward next waypoint on the path, not the final stall ── */}
                   <Navigation size={20} color="#fff" style={{ transform: `rotate(${nextBearing - heading}deg)`, transition: 'transform 0.2s ease-out' }} />
                 </div>
                 <div style={{ marginTop: 6, background: "rgba(255,255,255,0.97)", border: "1px solid #e2e8f0", borderRadius: 10, padding: "4px 10px", textAlign: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.1)", maxWidth: 160 }}>
@@ -1124,21 +1218,39 @@ export default function ArFinder({ onBack }) {
 
           {/* Right HUD */}
           <div style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", zIndex: 20, display: "flex", flexDirection: "column", gap: 5 }}>
+            {/* GPS Button */}
             <button onClick={toggleGps} className={`ctrl-btn${gpsActive ? " primary" : ""}`}
-              style={gpsActive ? { background: "#1a5c2a", color: "#fff", borderColor: "#1a5c2a", marginBottom: 4 } : { marginBottom: 4 }}>
+              style={gpsActive ? { background: "#1a5c2a", color: "#fff", borderColor: "#1a5c2a", marginBottom: 4 } : { marginBottom: 4 }}
+              title="Toggle GPS">
               <Locate size={15} />
             </button>
+
+            {/* Step Detection Button */}
+            <button
+              onClick={() => {
+                setMotionActive(m => !m)
+                if (motionActive) {
+                  setToastMsg('Step detection OFF.')
+                }
+              }}
+              className={`ctrl-btn${motionActive ? " motion-on" : ""}`}
+              style={{ marginBottom: 4 }}
+              title="Toggle Step Detection"
+            >
+              <span style={{ fontSize: motionActive ? 13 : 11 }}>👟</span>
+            </button>
+
             {!hasOrientation && (
               <button onClick={requestCompassPermission} className="ctrl-btn" style={{ background: "#e8621a", color: "#fff", borderColor: "#e8621a", marginBottom: 4 }}>
                 <Compass size={15} />
               </button>
             )}
             <div style={{ background: "rgba(255,255,255,0.92)", border: "1px solid rgba(226,232,240,0.8)", borderRadius: 12, padding: 5, display: "flex", flexDirection: "column", gap: 4, backdropFilter: "blur(8px)", boxShadow: "0 2px 12px rgba(0,0,0,0.12)" }}>
-              <button onClick={handleStepForward} className="ctrl-btn primary"><Navigation size={14} /></button>
-              <button onClick={handleRotateLeft} className="ctrl-btn"><RotateCw size={13} style={{ transform: "scaleX(-1)" }} /></button>
-              <button onClick={handleRotateRight} className="ctrl-btn"><RotateCw size={13} /></button>
+              <button onClick={handleStepForward} className="ctrl-btn primary" title="Step Forward"><Navigation size={14} /></button>
+              <button onClick={handleRotateLeft} className="ctrl-btn" title="Rotate Left"><RotateCw size={13} style={{ transform: "scaleX(-1)" }} /></button>
+              <button onClick={handleRotateRight} className="ctrl-btn" title="Rotate Right"><RotateCw size={13} /></button>
               <div style={{ height: 1, background: "rgba(226,232,240,0.8)", margin: "1px 0" }} />
-              <button onClick={handleResetPosition} className="ctrl-btn" style={{ fontSize: 7, fontWeight: 800, color: "#64748b" }}>RST</button>
+              <button onClick={handleResetPosition} className="ctrl-btn" style={{ fontSize: 7, fontWeight: 800, color: "#64748b" }} title="Reset Position">RST</button>
             </div>
           </div>
 
@@ -1241,7 +1353,7 @@ export default function ArFinder({ onBack }) {
               </svg>
               <div className="sim-badge">
                 <Compass size={10} className="animate-spin-slow" />
-                <span>{userX}, {userY} | {heading}°</span>
+                <span>{userX}, {userY} | {heading}°{motionActive ? ` | 👟${stepCount}` : ''}</span>
               </div>
             </div>
           )}
@@ -1294,14 +1406,12 @@ export default function ArFinder({ onBack }) {
         <div className="stall-picker-backdrop" onClick={() => setShowStallPicker(false)}>
           <div className="stall-picker-sheet" onClick={e => e.stopPropagation()}>
             <div className="stall-picker-handle" />
-
             <div className="stall-picker-header">
               <span className="stall-picker-title">Choose a Stall</span>
               <button className="stall-picker-close" onClick={() => setShowStallPicker(false)}>
                 <X size={13} />
               </button>
             </div>
-
             <div className="stall-picker-search-wrap">
               <div style={{ position: "relative" }}>
                 <Search size={13} color="rgba(255,255,255,0.4)" style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
@@ -1315,7 +1425,6 @@ export default function ArFinder({ onBack }) {
                 />
               </div>
             </div>
-
             <div className="stall-picker-list">
               {filteredStallsForPicker.length === 0 ? (
                 <div className="stall-empty-state">No stalls match "{stallPickerSearch}"</div>

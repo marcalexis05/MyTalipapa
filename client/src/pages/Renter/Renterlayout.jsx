@@ -26,7 +26,7 @@ const LogoutIcon = () => (
 const NAV_ITEMS = [
   { id: 'home',         label: 'Home',            Icon: Home       },
   { id: 'navigate',     label: '360° Tour',       Icon: Navigation },
-  { id: 'ar-finder',    label: 'AR Finder',       Icon: Camera     },
+  { id: 'ar-finder',    label: 'AR Stall Finder',       Icon: Camera     },
   { id: 'stalls',       label: 'Stalls',          Icon: Store      },
   { id: 'applications', label: 'Applications',    Icon: FileText   },
   { id: 'profile',      label: 'Profile',         Icon: User       },
