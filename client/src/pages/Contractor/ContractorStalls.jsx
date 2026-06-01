@@ -74,11 +74,13 @@ export default function ContractorStalls() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { userName, loading: authLoading } = useCurrentUser();
+  
   // New state for stall request feature
   const [showAddModal, setShowAddModal] = useState(false);
   const [availableStalls, setAvailableStalls] = useState([]);
-  const [selectedStallId, setSelectedStallId] = useState('');
-  const [searchLocation, setSearchLocation] = useState('');
+  const [selectedStallIds, setSelectedStallIds] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedZoneFilter, setSelectedZoneFilter] = useState('all');
   const [requestStatus, setRequestStatus] = useState(null);
 
   // Active section tab (Fishes / Meat / Vegetables)
@@ -105,6 +107,16 @@ export default function ContractorStalls() {
         setLoading(false);
       });
   }, [userEmail]);
+
+  // Fetch available stalls when modal opens
+  useEffect(() => {
+    if (showAddModal) {
+      fetch('/api/contractor/stall-requests/available')
+        .then(res => res.json())
+        .then(data => setAvailableStalls(data))
+        .catch(err => console.error('Failed to fetch available stalls:', err));
+    }
+  }, [showAddModal]);
 
   // All unique section keys from DB
   const sectionKeys = useMemo(() => {
@@ -192,11 +204,78 @@ export default function ContractorStalls() {
     });
   }, [displayStalls]);
 
+  // Filtered available stalls for modal
+  const filteredAvailableStalls = useMemo(() => {
+    let filtered = availableStalls.filter(s => s.status === 'available');
+    
+    if (selectedZoneFilter !== 'all') {
+      filtered = filtered.filter(s => s.zone === selectedZoneFilter);
+    }
+    
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter(s => 
+        s.location.toLowerCase().includes(q) || 
+        s.zone.toLowerCase().includes(q)
+      );
+    }
+    
+    return sortStalls(filtered);
+  }, [availableStalls, selectedZoneFilter, searchQuery]);
+
+  // Get unique zones from available stalls
+  const availableZones = useMemo(() => {
+    return [...new Set(availableStalls.map(s => s.zone).filter(Boolean))].sort();
+  }, [availableStalls]);
+
+  // Calculate total price of selected stalls
+  const totalPrice = useMemo(() => {
+    return selectedStallIds.reduce((sum, id) => {
+      const stall = availableStalls.find(s => s._id === id);
+      return sum + (stall?.monthlyRate || 0);
+    }, 0);
+  }, [selectedStallIds, availableStalls]);
+
   const filterOptions = ["all", "available", "occupied", "pending"];
   const getSectionMeta = (section) => SECTION_META[section] || { color: "#374151", bg: "#f3f4f6", border: "#d1d5db" };
 
   const handleNav = (item) => { setActiveNav(item.id); navigate(item.path); };
   const handleLogout = () => navigate('/login');
+
+  const handleSelectStall = (stallId) => {
+    setSelectedStallIds(prev =>
+      prev.includes(stallId)
+        ? prev.filter(id => id !== stallId)
+        : [...prev, stallId]
+    );
+  };
+
+  const handleSendRequest = async () => {
+    if (selectedStallIds.length === 0) {
+      setRequestStatus('Please select at least one stall');
+      return;
+    }
+
+    try {
+      const resp = await fetch('/api/contractor/stall-requests/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stallIds: selectedStallIds }),
+      });
+      const json = await resp.json();
+      if (resp.ok) {
+        setRequestStatus('success');
+        setSelectedStallIds([]);
+        setSearchQuery('');
+        setSelectedZoneFilter('all');
+        setTimeout(() => setShowAddModal(false), 500);
+      } else {
+        setRequestStatus(json.error || 'Failed to send request');
+      }
+    } catch (err) {
+      setRequestStatus('Error sending request');
+    }
+  };
 
   return (
     <ContractorLockScreen>
@@ -243,12 +322,6 @@ export default function ContractorStalls() {
                 <span className="welcome-role">Contractor</span>
               </div>
               <NotificationBell />
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="px-2 py-1 bg-green-600 text-white rounded-md text-sm hover:bg-green-700 transition"
-        >
-          Add Stall
-        </button>
               <button className="header-logout-btn" aria-label="Log out" onClick={() => setShowLogoutModal(true)}>
                 <LogoutIcon />
               </button>
@@ -260,11 +333,6 @@ export default function ContractorStalls() {
               <h1 className="stalls-page-title">Market Floor Plan</h1>
               <p className="stalls-page-sub">Real-time stall availability and management.</p>
             </div>
-            {/* Add Stall button */}
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
-            >Add Stall</button>
 
             {loading && (
               <div className="stalls-state-msg">
@@ -278,64 +346,135 @@ export default function ContractorStalls() {
 
             {/* Add Stall Modal */}
             {showAddModal && (
-              <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
-                <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
-                  <h2 className="text-xl font-semibold mb-4">Request a Stall</h2>
-                  <div className="mb-3">
-                    <label className="block text-sm font-medium mb-1">Location</label>
-                    <input
-                      type="text"
-                      value={searchLocation}
-                      onChange={e => setSearchLocation(e.target.value)}
-                      className="w-full border rounded px-2 py-1"
-                      placeholder="Enter location keyword"
-                    />
-                    <button
-                      onClick={async () => {
-                        const res = await fetch(`/api/contractor/stall-requests/available?location=${encodeURIComponent(searchLocation)}`);
-                        const data = await res.json();
-                        setAvailableStalls(data);
-                      }}
-                      className="mt-2 px-3 py-1 bg-blue-600 text-white rounded"
-                    >Search</button>
+              <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50 p-4">
+                <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                  {/* Modal Header */}
+                  <div className="mb-6">
+                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Choose Your Stalls</h2>
+                    <p className="text-sm text-gray-600">Select the stalls you want to manage from the available below. Each stall represents a physical space in the market grid.</p>
                   </div>
-                  <div className="mb-3">
-                    <label className="block text-sm font-medium mb-1">Select Stall</label>
-                    <select
-                      value={selectedStallId}
-                      onChange={e => setSelectedStallId(e.target.value)}
-                      className="w-full border rounded px-2 py-1"
+
+                  {/* Search Bar */}
+                  <div className="mb-4">
+                    <div className="relative">
+                      <svg className="absolute left-3 top-3 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                      <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={e => setSearchQuery(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg bg-gray-50 text-sm placeholder-gray-500 focus:outline-none focus:border-green-500 focus:bg-white transition"
+                        placeholder="Search location or zone..."
+                      />
+                    </div>
+                  </div>
+
+                  {/* Zone Filter Tabs */}
+                  <div className="mb-6 flex gap-2 overflow-x-auto pb-2">
+                    <button
+                      onClick={() => setSelectedZoneFilter('all')}
+                      className={`px-4 py-2 rounded-full font-semibold text-sm whitespace-nowrap transition ${
+                        selectedZoneFilter === 'all'
+                          ? 'bg-green-600 text-white'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      }`}
                     >
-                      <option value="">-- choose --</option>
-                      {availableStalls.map(st => (
-                        <option key={st._id} value={st._id}>
-                          {st.section} - {st.zone} ({st.location})
-                        </option>
-                      ))}
-                    </select>
+                      All
+                    </button>
+                    {availableZones.map(zone => (
+                      <button
+                        key={zone}
+                        onClick={() => setSelectedZoneFilter(zone)}
+                        className={`px-4 py-2 rounded-full font-semibold text-sm whitespace-nowrap transition ${
+                          selectedZoneFilter === zone
+                            ? 'bg-green-600 text-white'
+                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        }`}
+                      >
+                        Zone {zone}
+                      </button>
+                    ))}
                   </div>
-                  <div className="flex justify-end space-x-2">
-                    <button onClick={() => setShowAddModal(false)} className="px-3 py-1 border rounded">Cancel</button>
-                    <button
-                      onClick={async () => {
-                        if (!selectedStallId) return setRequestStatus('Please select a stall');
-                        const resp = await fetch('/api/contractor/stall-requests/request', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ stallId: selectedStallId }),
-                        });
-                        const json = await resp.json();
-                        if (resp.ok) {
-                          setRequestStatus('Request sent to admin');
-                          setShowAddModal(false);
-                        } else {
-                          setRequestStatus(json.error || 'Failed to send request');
-                        }
-                      }}
-                      className="px-3 py-1 bg-green-600 text-white rounded"
-                    >Send request to admin</button>
+
+                  {/* Stall Grid */}
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6 max-h-[40vh] overflow-y-auto">
+                    {filteredAvailableStalls.length === 0 ? (
+                      <div className="col-span-full text-center py-8 text-gray-500">
+                        No stalls available matching your search.
+                      </div>
+                    ) : (
+                      filteredAvailableStalls.map(stall => (
+                        <button
+                          key={stall._id}
+                          onClick={() => handleSelectStall(stall._id)}
+                          className={`p-4 rounded-xl border-2 transition ${
+                            selectedStallIds.includes(stall._id)
+                              ? 'border-green-500 bg-green-50'
+                              : 'border-gray-200 bg-white hover:border-green-400'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="text-left">
+                              <div className="text-lg font-bold text-gray-900">{stall.location}</div>
+                              <div className="text-xs text-gray-500 font-medium">ZONE {stall.zone}</div>
+                            </div>
+                            <span className="inline-block px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full">
+                              AVAILABLE
+                            </span>
+                          </div>
+                          <div className="space-y-1 text-left border-t pt-2">
+                            <div className="flex justify-between text-xs">
+                              <span className="text-gray-600">Size</span>
+                              <span className="font-semibold text-gray-900">{stall.size || '12'} sqm</span>
+                            </div>
+                            <div className="flex justify-between text-xs">
+                              <span className="text-gray-600">Rate</span>
+                              <span className="font-semibold text-gray-900">₱{stall.monthlyRate?.toLocaleString() || '0'}/mo</span>
+                            </div>
+                          </div>
+                        </button>
+                      ))
+                    )}
                   </div>
-                  {requestStatus && <p className="mt-2 text-sm text-red-600">{requestStatus}</p>}
+
+                  {/* Footer */}
+                  <div className="border-t pt-4 flex items-center justify-between">
+                    <div className="text-sm text-gray-600">
+                      <span className="font-semibold">{selectedStallIds.length}</span> stall{selectedStallIds.length !== 1 ? 's' : ''} selected
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="text-right">
+                        <div className="text-sm text-gray-600">Total</div>
+                        <div className="text-2xl font-bold text-gray-900">₱{totalPrice.toLocaleString()}</div>
+                      </div>
+                      <button
+                        onClick={handleSendRequest}
+                        className="px-6 py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-lg transition flex items-center gap-2"
+                      >
+                        Next: Review
+                        <span>→</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {requestStatus && requestStatus !== 'success' && (
+                    <p className="mt-4 text-sm text-red-600 bg-red-50 p-3 rounded-lg">{requestStatus}</p>
+                  )}
+
+                  {/* Close Button */}
+                  <button
+                    onClick={() => {
+                      setShowAddModal(false);
+                      setRequestStatus(null);
+                      setSelectedStallIds([]);
+                    }}
+                    className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
                 </div>
               </div>
             )}
@@ -437,27 +576,35 @@ export default function ContractorStalls() {
                       {filterStatus !== 'all' ? ` · ${STATUS_LABEL[filterStatus]}` : ''}
                     </span>
                   </div>
-                  <div className="stalls-filter-wrap">
-                    <button className="stalls-filter-btn" onClick={() => setFilterOpen(o => !o)}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
-                      </svg>
-                      Filter
-                      {filterStatus !== 'all' && <span className="filter-active-dot" />}
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setShowAddModal(true)}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition"
+                    >
+                      + Add Stall
                     </button>
-                    {filterOpen && (
-                      <div className="stalls-filter-dropdown">
-                        {filterOptions.map(f => (
-                          <button
-                            key={f}
-                            className={`stalls-filter-option${filterStatus === f ? " filter-selected" : ""}`}
-                            onClick={() => { setFilterStatus(f); setFilterOpen(false); }}
-                          >
-                            {f === "all" ? "All Statuses" : STATUS_LABEL[f]}
-                          </button>
-                        ))}
-                      </div>
-                    )}
+                    <div className="stalls-filter-wrap">
+                      <button className="stalls-filter-btn" onClick={() => setFilterOpen(o => !o)}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+                        </svg>
+                        Filter
+                        {filterStatus !== 'all' && <span className="filter-active-dot" />}
+                      </button>
+                      {filterOpen && (
+                        <div className="stalls-filter-dropdown">
+                          {filterOptions.map(f => (
+                            <button
+                              key={f}
+                              className={`stalls-filter-option${filterStatus === f ? " filter-selected" : ""}`}
+                              onClick={() => { setFilterStatus(f); setFilterOpen(false); }}
+                            >
+                              {f === "all" ? "All Statuses" : STATUS_LABEL[f]}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
 
