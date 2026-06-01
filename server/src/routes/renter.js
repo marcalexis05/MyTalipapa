@@ -268,7 +268,7 @@
         fullName,
         contactNumber,
         email: email.toLowerCase(),
-        preferredStall: stall ? stall.stallNumber : cleanedStall,
+        preferredStall: stall ? stall._id.toString() : cleanedStall,
         stallLabel: stall ? `${stall.section} (${stall.floorArea === 'upper' ? 'Upper' : 'Lower'} Floor)` : 'Market Stall',
         intendedBusinessUse,
         additionalMessage: additionalMessage || '',

@@ -136,9 +136,9 @@ exports.getApplications = async (req, res) => {
     const mapped = await Promise.all(apps.map(async (app) => {
       const stall = await findStallByAppStallNumber(app.preferredStall, app.intendedBusinessUse);
 
-      if (email && (!stall || stall.managedBy !== email.toLowerCase())) {
-        return null;
-      }
+      if (email && (!stall || stall.managedBy?.trim().toLowerCase() !== email.trim().toLowerCase())) {
+  return null;
+}
 
       let stallDisplay = '';
       if (app.stallLabel) {
@@ -283,9 +283,9 @@ exports.getRecords = async (req, res) => {
     const records = await Promise.all(approved.map(async (app) => {
       const stall = await findStallByAppStallNumber(app.preferredStall, app.intendedBusinessUse);
 
-      if (email && (!stall || stall.managedBy !== email.toLowerCase())) {
-        return null;
-      }
+      if (email && (!stall || stall.managedBy?.trim().toLowerCase() !== email.trim().toLowerCase())) {
+  return null;
+}
 
       const payments = await Payment.find({ renter: app._id }).sort({ date: -1 });
       const history = payments.map(p => ({
