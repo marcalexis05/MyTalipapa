@@ -105,7 +105,7 @@ export default function AdminApplication() {
 
   const pendingRentersCount = applications.filter(a => a.status === "pending").length;
   const pendingContractorsCount = contractorApps.filter(a => a.status === "pending").length;
-
+  const [selectedStallRequest, setSelectedStallRequest] = useState(null);
   // ── Fetch applications ──────────────────────────
   const fetchAllApps = () => {
     setLoadingApps(true);
@@ -563,29 +563,30 @@ export default function AdminApplication() {
                   <span>No {tab.toLowerCase()} stall requests</span>
                 </div>
               ) : (
-                stallRequests.map(req => (
-                  <div key={req._id} className="application-row apps-row-full">
-                    <div className="app-info">
-                      <div className="apps-name-row">
-                        <span className="app-name">Stall #{req.stallId?.stallNumber || req.stallId?._id}</span>
-                        <span className="apps-stall-badge" style={{ background: '#fbbf24' }}>{req.contractorEmail}</span>
-                      </div>
-                      <span className="app-meta">Requested at: {new Date(req.createdAt).toLocaleString()}</span>
-                    </div>
-                    <div className="apps-action-col">
-                      {tab === "Pending" ? (
-                        <>
-                          <button className="apps-view-btn" onClick={() => handleStallAction(req._id, 'approve')}>Approve</button>
-                          <button className="apps-view-btn" onClick={() => handleStallAction(req._id, 'reject')}>Reject</button>
-                        </>
-                      ) : (
-                        <span className={`apps-status-chip apps-status-${req.status}`}>
-                          {req.status === "approved" ? "✓ Approved" : "✗ Rejected"}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ))
+               stallRequests.map(req => (
+  <div key={req._id} className="application-row apps-row-full">
+    <div className="app-info">
+      <div className="apps-name-row">
+        <span className="app-name">Stall #{req.stallId?.stallNumber || req.stallId?._id}</span>
+        <span className="apps-stall-badge" style={{ background: '#fbbf24' }}>{req.contractorEmail}</span>
+      </div>
+      <span className="app-meta">Requested at: {new Date(req.createdAt).toLocaleString()}</span>
+    </div>
+    <div className="apps-action-col">
+      <button className="apps-view-btn" onClick={() => setSelectedStallRequest(req)}>View Details</button>
+      {tab === "Pending" ? (
+        <>
+          <button className="apps-view-btn" onClick={() => handleStallAction(req._id, 'approve')}>Approve</button>
+          <button className="apps-view-btn" onClick={() => handleStallAction(req._id, 'reject')}>Reject</button>
+        </>
+      ) : (
+        <span className={`apps-status-chip apps-status-${req.status}`}>
+          {req.status === "approved" ? "✓ Approved" : "✗ Rejected"}
+        </span>
+      )}
+    </div>
+  </div>
+))
               )
             ) : renderList()}
           </div>
@@ -732,7 +733,130 @@ export default function AdminApplication() {
           </div>
         </div>
       )}
+{/* Stall Request Detail Modal */}
+{selectedStallRequest && (
+  <div className="logout-overlay" onClick={() => setSelectedStallRequest(null)}>
+    <div className="app-detail-modal" style={{ maxWidth: 420 }} onClick={e => e.stopPropagation()}>
+      
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #f3f4f6', paddingBottom: 12 }}>
+        <div>
+          <h2 style={{ fontSize: 18, fontWeight: 800, color: '#111827', margin: 0 }}>
+            Stall #{selectedStallRequest.stallId?.stallNumber || '—'}
+          </h2>
+          <span style={{ fontSize: 11, color: '#6b7280', fontWeight: 600 }}>
+            {selectedStallRequest.stallId?.section} · Zone {selectedStallRequest.stallId?.zone}
+          </span>
+        </div>
+        <span className={`apps-status-chip apps-status-${selectedStallRequest.status}`}>
+          {selectedStallRequest.status === "approved" ? "✓ Approved" : selectedStallRequest.status === "rejected" ? "✗ Rejected" : "⏳ Pending"}
+        </span>
+      </div>
 
+      {/* Stall Info */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+        <div className="app-detail-item">
+          <span className="app-detail-label">Size</span>
+          <span className="app-detail-value">{selectedStallRequest.stallId?.size || 12} {selectedStallRequest.stallId?.sizeUnit || 'sqm'}</span>
+        </div>
+        <div className="app-detail-item">
+          <span className="app-detail-label">Monthly Rate</span>
+          <span className="app-detail-value">₱{selectedStallRequest.stallId?.monthlyRate?.toLocaleString() || '—'}</span>
+        </div>
+        <div className="app-detail-item">
+          <span className="app-detail-label">Location</span>
+          <span className="app-detail-value">{selectedStallRequest.stallId?.location || '—'}</span>
+        </div>
+        <div className="app-detail-item">
+          <span className="app-detail-label">Product Type</span>
+          <span className="app-detail-value">{selectedStallRequest.stallId?.productType || '—'}</span>
+        </div>
+        <div className="app-detail-item">
+          <span className="app-detail-label">Operating Hours</span>
+          <span className="app-detail-value">{selectedStallRequest.stallId?.operatingHours || '—'}</span>
+        </div>
+        <div className="app-detail-item">
+          <span className="app-detail-label">Status</span>
+          <span className="app-detail-value" style={{ textTransform: 'capitalize' }}>{selectedStallRequest.stallId?.status || '—'}</span>
+        </div>
+      </div>
+
+      {/* Amenities */}
+      {selectedStallRequest.stallId?.amenities?.length > 0 && (
+        <div>
+          <span className="app-detail-label" style={{ display: 'block', marginBottom: 6 }}>Amenities</span>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {selectedStallRequest.stallId.amenities.map(a => (
+              <span key={a} style={{ fontSize: 11, fontWeight: 600, background: '#eff6ff', color: '#1d4ed8', padding: '3px 10px', borderRadius: 99, border: '1px solid #bfdbfe' }}>
+                {a}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Contractor Info */}
+      <div style={{ background: '#f9fafb', borderRadius: 12, padding: '12px 14px' }}>
+        <span className="app-detail-label" style={{ display: 'block', marginBottom: 8 }}>Contractor</span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+            <span style={{ color: '#6b7280' }}>Email</span>
+            <strong style={{ color: '#111827' }}>{selectedStallRequest.contractorEmail}</strong>
+          </div>
+          {selectedStallRequest.stallId?.managedBy && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+              <span style={{ color: '#6b7280' }}>Managed By</span>
+              <strong style={{ color: '#111827' }}>{selectedStallRequest.stallId.managedBy}</strong>
+            </div>
+          )}
+          {selectedStallRequest.stallId?.contractorContact && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+              <span style={{ color: '#6b7280' }}>Contact</span>
+              <strong style={{ color: '#111827' }}>{selectedStallRequest.stallId.contractorContact}</strong>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Request Info */}
+      <div style={{ background: '#f9fafb', borderRadius: 12, padding: '12px 14px' }}>
+        <span className="app-detail-label" style={{ display: 'block', marginBottom: 8 }}>Request Info</span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+            <span style={{ color: '#6b7280' }}>Requested At</span>
+            <strong style={{ color: '#111827' }}>{new Date(selectedStallRequest.createdAt).toLocaleString()}</strong>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+            <span style={{ color: '#6b7280' }}>Last Updated</span>
+            <strong style={{ color: '#111827' }}>{new Date(selectedStallRequest.updatedAt).toLocaleString()}</strong>
+          </div>
+        </div>
+      </div>
+
+      {/* Actions for Pending */}
+      {selectedStallRequest.status === "pending" && (
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            className="btn-reject"
+            style={{ flex: 1, justifyContent: 'center' }}
+            onClick={() => { handleStallAction(selectedStallRequest._id, 'reject'); setSelectedStallRequest(null); }}
+          >
+            Reject
+          </button>
+          <button
+            className="btn-approve"
+            style={{ flex: 1, justifyContent: 'center' }}
+            onClick={() => { handleStallAction(selectedStallRequest._id, 'approve'); setSelectedStallRequest(null); }}
+          >
+            Approve
+          </button>
+        </div>
+      )}
+
+      <button className="stall-modal-close" onClick={() => setSelectedStallRequest(null)}>Close</button>
+    </div>
+  </div>
+)}
       <style>{`
         .apps-main { padding-bottom: 80px; }
         .apps-title-block { margin-bottom: 2px; }
