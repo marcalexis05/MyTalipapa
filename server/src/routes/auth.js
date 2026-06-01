@@ -283,9 +283,25 @@ router.post('/login', async (req, res) => {
       if (user.mustChangePassword) {
         return res.status(403).json({ error: 'Password must be changed before proceeding.', mustChangePassword: true });
       }
-      // Check role matches only if role is provided
-      if (role && user.role !== role) {
-        return res.status(403).json({ error: `This account is not registered as a ${role}.` });
+      // Role-based authorization: ensure role mismatch handling for all roles
+      if (role) {
+        // Renters cannot log in as contractor or admin
+        if (user.role === 'renter') {
+          if (role === 'contractor') {
+            return res.status(403).json({ error: 'This account is not a contractor account' });
+          }
+          if (role === 'admin') {
+            return res.status(403).json({ error: 'This account is not an admin account' });
+          }
+        }
+        // Admins or contractors cannot log in as renter
+        if ((user.role === 'admin' || user.role === 'contractor') && role === 'renter') {
+          return res.status(403).json({ error: 'This account is not a renter account' });
+        }
+        // Fallback for any other mismatched roles
+        if (user.role !== role) {
+          return res.status(403).json({ error: `This account is not registered as a ${role}.` });
+        }
       }
 
     let isMatch = await bcrypt.compare(password, user.passwordHash);
