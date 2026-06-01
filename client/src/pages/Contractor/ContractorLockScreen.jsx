@@ -158,7 +158,7 @@ export default function ContractorLockScreen({ children }) {
   // Calculations for re-submit modal
   const totalMonthlyRate = useMemo(() => {
     return selectedStalls.reduce((sum, stallNum) => {
-      const stall = stalls.find(s => s.stallNumber === stallNum)
+      const stall = stalls.find(s => s.location === stallNum)
       return sum + (stall?.monthlyRate || 0)
     }, 0)
   }, [selectedStalls, stalls])
@@ -171,11 +171,11 @@ export default function ContractorLockScreen({ children }) {
   const filteredStalls = useMemo(() => {
     return stalls.filter(stall => {
       // Include stall if it's available OR if it was already selected in their previous application
-      const isSelectable = stall.status === 'available' || selectedStalls.includes(stall.stallNumber)
+      const isSelectable = stall.status === 'available' || selectedStalls.includes(stall.location)
       if (!isSelectable) return false
 
       const matchesSearch = 
-        stall.stallNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        stall.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
         stall.section.toLowerCase().includes(searchQuery.toLowerCase())
       
       const matchesZone = 
@@ -419,16 +419,16 @@ export default function ContractorLockScreen({ children }) {
                 ) : (
                   <div className="grid grid-cols-2 gap-2 max-h-[160px] overflow-y-auto pr-1 scrollbar-thin">
                     {filteredStalls.map(stall => {
-                      const isSelected = selectedStalls.includes(stall.stallNumber)
+                      const isSelected = selectedStalls.includes(stall.location)
                       return (
                         <button
                           key={stall._id}
                           type="button"
                           onClick={() => {
                             if (isSelected) {
-                              setSelectedStalls(selectedStalls.filter(s => s !== stall.stallNumber))
+                              setSelectedStalls(selectedStalls.filter(s => s !== stall.location))
                             } else {
-                              setSelectedStalls([...selectedStalls, stall.stallNumber])
+                              setSelectedStalls([...selectedStalls, stall.location])
                             }
                           }}
                           className={`flex flex-col text-left p-2.5 rounded-xl border transition-all relative ${
@@ -438,7 +438,7 @@ export default function ContractorLockScreen({ children }) {
                           }`}
                         >
                           <div className="flex justify-between items-center w-full mb-1">
-                            <span className="font-extrabold text-[11px] text-gray-800">#{stall.stallNumber}</span>
+                            <span className="font-extrabold text-[11px] text-gray-800">#{stall.location}</span>
                             <span className="text-[8px] bg-gray-100 border border-gray-200 px-1 py-0.2 rounded text-gray-500 font-bold uppercase">
                               {stall.section}
                             </span>
