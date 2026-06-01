@@ -14,10 +14,14 @@ export default function NotificationBell() {
   const token = getToken();
 
   const fetchNotifications = async () => {
-    if (!token) {
-      setNotifications([]);
-      return;
-    }
+    if (!token) return;
+    fetch('/api/contractor/notifications', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+      .then(res => res.json())
+      .then(data => { if (Array.isArray(data)) setNotifications(data); })
+      .catch(err => console.error('Failed to fetch notifications:', err));
+
     try {
       const res = await fetch('/api/contractor/notifications', {
         headers: { Authorization: `Bearer ${token}` },
