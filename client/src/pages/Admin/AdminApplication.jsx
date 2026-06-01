@@ -1,10 +1,9 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronRight, Store } from "lucide-react";
-import { useCurrentUser } from '../../utils/auth';
+import { useCurrentUser, getToken } from '../../utils/auth';
 import AdminSidebar from '../../components/AdminSidebar';
 import NotificationBell from '../../components/NotificationBell';
-import { useCurrentUser, getToken } from '../../utils/auth';
 
 const NAV_ITEMS = [
   {
