@@ -78,4 +78,8 @@ router.get('/records', contractorController.getRecords);
 router.get('/archive-requests', contractorController.getArchiveRequests);
 router.post('/archive-requests/:userId/status', contractorController.updateArchiveRequestStatus);
 
+// Duplicate routes to support client URLs that mistakenly include a second "admin" segment
+router.get('/admin/archive-requests', contractorController.getArchiveRequests);
+router.post('/admin/archive-requests/:userId/status', contractorController.updateArchiveRequestStatus);
+
 module.exports = router;
