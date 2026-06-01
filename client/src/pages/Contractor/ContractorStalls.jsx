@@ -277,7 +277,7 @@ export default function ContractorStalls() {
     try {
       const resp = await fetch('/api/contractor/stall-requests/request', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
         body: JSON.stringify({ stallIds: selectedStallIds }),
       });
       const json = await resp.json();
@@ -474,7 +474,7 @@ export default function ContractorStalls() {
                         onClick={handleSendRequest}
                         className="px-6 py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-lg transition flex items-center gap-2"
                       >
-                        Next: Review
+                        Submit Stall Request
                         <span>→</span>
                       </button>
                     </div>
