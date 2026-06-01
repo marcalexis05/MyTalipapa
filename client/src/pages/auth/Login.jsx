@@ -122,16 +122,18 @@ export default function Login() {
       const result = await response.json()
 
       if (!response.ok) {
-        // If backend requires password change (403), show modal
-        if (response.status === 403) {
+        // Backend may return 403 for two reasons:
+        // 1) mustChangePassword flag (contractor login with password change required)
+        // 2) role‑mismatch errors (e.g., "This is a renter account")
+        if (result.mustChangePassword) {
+          // Show password‑change modal
           setShowModal(true);
-          // Store credentials for later navigation
           setModalEmail(email);
           setModalPassword(password);
           setLoading(false);
           return;
         }
-        // Fallback for other errors
+        // Otherwise treat as a normal error
         setError(result.error || 'Login failed');
         setLoading(false);
         return;
