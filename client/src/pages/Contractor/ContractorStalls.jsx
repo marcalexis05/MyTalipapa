@@ -63,7 +63,16 @@ function sortStalls(list) {
 }
 
 export default function ContractorStalls() {
+  // Toast state for global notifications
+  const [toast, setToast] = useState({ show: false, message: '', type: '' });
   const [activeNav, setActiveNav] = useState('nav-stalls');
+  // Auto‑hide toast after 3 seconds
+  useEffect(() => {
+    if (toast.show) {
+      const timer = setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast.show]);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const navigate = useNavigate();
   const [filterStatus, setFilterStatus] = useState("all");
@@ -288,10 +297,14 @@ const handleSendRequest = async () => {
     const errors = results.filter(r => r.status === 'error');
 
     if (successes.length > 0) {
-      setRequestStatus('success');
+      // Show success toast
+      setToast({ show: true, message: 'Stall request submitted successfully!', type: 'success' });
+      // Reset UI state
       setSelectedStallIds([]);
       setSearchQuery('');
       setSelectedZoneFilter('all');
+      setShowAddModal(false);
+      setRequestStatus(null);
 
       // Refresh contractor's stall list to show new pending stalls
       if (userEmail) {
@@ -300,11 +313,6 @@ const handleSendRequest = async () => {
           .then(data => setStalls(data))
           .catch(() => {});
       }
-
-      setTimeout(() => {
-        setShowAddModal(false);
-        setRequestStatus(null);
-      }, 1200);
     } else {
       const msg = errors.map(e => e.message).join(', ');
       setRequestStatus(msg || 'Failed to send request');
@@ -514,6 +522,12 @@ const handleSendRequest = async () => {
                     )}
                     {requestStatus === 'success' && (
                       <p className="mt-4 text-sm text-green-600 bg-green-50 p-3 rounded-lg">Stall request submitted successfully!</p>
+                    )}
+                    {/* Toast Notification */}
+                    {toast.show && (
+                      <div className={`fixed bottom-4 right-4 px-4 py-2 rounded shadow-lg ${toast.type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>
+                        {toast.message}
+                      </div>
                     )}
 
                   {/* Close Button */}
