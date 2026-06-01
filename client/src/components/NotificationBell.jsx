@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-// import { Bell, X } from 'lucide-react';
 import { Bell, X } from 'lucide-react';
 import { getToken } from '../utils/auth';
 
@@ -13,28 +12,22 @@ export default function NotificationBell() {
   const containerRef = useRef(null);
   const token = getToken();
 
+  // ✅ Fixed: removed duplicate fetch
   const fetchNotifications = async () => {
     if (!token) return;
-    fetch('/api/contractor/notifications', {
-      headers: { 'Authorization': `Bearer ${token}` }
-    })
-      .then(res => res.json())
-      .then(data => { if (Array.isArray(data)) setNotifications(data); })
-      .catch(err => console.error('Failed to fetch notifications:', err));
-
     try {
       const res = await fetch('/api/contractor/notifications', {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (res.ok) {
-        const data = await res.json();
-        setNotifications(data);
-      } else {
+      if (!res.ok) {
         console.error('Failed to fetch notifications', res.status);
         setNotifications([]);
+        return;
       }
+      const data = await res.json();
+      if (Array.isArray(data)) setNotifications(data);
     } catch (err) {
-      console.error('Error fetching notifications', err);
+      console.error('Failed to fetch notifications:', err);
       setNotifications([]);
     }
   };
@@ -89,7 +82,6 @@ export default function NotificationBell() {
 
   const handleModalNavigate = () => {
     closeModal();
-    // Always navigate to records, regardless of the link in notification
     navigate('/contractor/records');
   };
 
@@ -135,8 +127,7 @@ export default function NotificationBell() {
                   <div
                     key={n._id}
                     onClick={() => handleNotifClick(n)}
-                    className={`px-4 py-3 text-left transition-all cursor-pointer ${n.read ? 'bg-white hover:bg-gray-50' : 'bg-green-50/30 hover:bg-green-50/55'
-                      }`}
+                    className={`px-4 py-3 text-left transition-all cursor-pointer ${n.read ? 'bg-white hover:bg-gray-50' : 'bg-green-50/30 hover:bg-green-50/55'}`}
                   >
                     <div className="flex justify-between items-start gap-2 mb-1">
                       <span className={`text-xs font-bold ${n.read ? 'text-gray-700' : 'text-[#1a5c2a]'}`}>
