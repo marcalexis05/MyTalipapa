@@ -121,12 +121,12 @@ export default function Login() {
       const result = await response.json()
 
       if (!response.ok) {
-        if (response.status === 403 && result.mustChangePassword) {
-          setMustChange(true);
-          setError(null);
-          setLoading(false);
-          return;
-        }
+          if (response.status === 403 && result.mustChangePassword) {
+            // Navigate to dedicated password change page, passing credentials
+            navigate('/set-new-password', { state: { email, password } });
+            setLoading(false);
+            return;
+          }
         setError(result.error || 'Login failed')
         setLoading(false)
         return

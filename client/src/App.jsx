@@ -10,7 +10,8 @@ import ContractorApplications from './pages/Contractor/ContractorApplications'
 import ContractorStalls from './pages/Contractor/ContractorStalls'
 import ContractorProfile from './pages/Contractor/ContractorProfile'
 import AdminDashboard from './pages/Admin/AdminDashboard'
-import VerifyEmail from './pages/VerifyEmail'
+import VerifyEmail from './pages/VerifyEmail';
+import SetNewPassword from './pages/auth/SetNewPassword';
 import AdminRecord from './pages/Admin/AdminRecord'
 import AdminApplication from './pages/Admin/AdminApplication'
 import AdminStalls from './pages/Admin/AdminStalls'
@@ -29,6 +30,7 @@ export default function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
+        <Route path="/set-new-password" element={<SetNewPassword />} />
         <Route path="/contractor/dashboard" element={<ContractorDashboard />} />
         <Route path="/contractor/profile" element={<ContractorProfile />} />
         <Route path="/contractor/records" element={<ContractorRecords />} />
