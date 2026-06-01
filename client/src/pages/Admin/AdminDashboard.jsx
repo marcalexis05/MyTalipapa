@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ChevronRight, Store } from 'lucide-react'
 import { useCurrentUser } from '../../utils/auth'
 import marketImage from '../../images/market_live_view.png'
+import tour360Preview from '../../images/tour360_preview.png'
 import AdminSidebar from '../../components/AdminSidebar'
 import NotificationBell from '../../components/NotificationBell'
 
