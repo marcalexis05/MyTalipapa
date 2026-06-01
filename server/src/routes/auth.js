@@ -304,8 +304,18 @@ router.post('/login', async (req, res) => {
       }
     }
 
+    if (!isMatch) {
+      return res.status(401).json({ error: 'Invalid email or password.' });
+    }
+
+    // Auto-verify past users (who registered before email verification was introduced)
+    if (!user.verificationToken && !user.isVerified) {
+      user.isVerified = true;
+      await user.save();
+    }
+
     // After password verification, enforce password change if required
-    if (isMatch && user.mustChangePassword) {
+    if (user.mustChangePassword) {
       return res.status(403).json({ error: 'Password must be changed before proceeding.', mustChangePassword: true });
     }
   
@@ -325,6 +335,7 @@ router.post('/login', async (req, res) => {
         status: user.status || 'approved',
         profilePicture: user.profilePicture || null,
         contact_number: user.contact_number || '',
+        isVerified: user.isVerified,
       },
       token,
     });
@@ -796,6 +807,7 @@ router.post('/change-first-password', async (req, res) => {
         status: user.status || 'approved',
         profilePicture: user.profilePicture || null,
         contact_number: user.contact_number || '',
+        isVerified: user.isVerified,
       },
       token,
     });
