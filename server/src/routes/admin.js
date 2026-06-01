@@ -1,4 +1,5 @@
 const express = require('express');
+const contractorController = require('../controllers/contractorController');
 const router = express.Router();
 const Announcement = require('../models/Announcement');
 
@@ -61,5 +62,10 @@ router.delete('/announcements/:id', async (req, res) => {
     res.status(500).json({ error: 'Failed to delete announcement' });
   }
 });
+
+router.get('/applications', contractorController.getApplications);
+router.post('/applications/:id/status', contractorController.updateApplicationStatus);
+router.get('/contractor-applications', contractorController.getContractorApplications);
+router.post('/contractor-applications/:id/status', contractorController.updateContractorApplicationStatus);
 
 module.exports = router;
