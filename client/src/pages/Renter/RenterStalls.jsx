@@ -368,7 +368,7 @@ export default function RenterStalls({ onNavigate, onOpenStall }) {
                   ))
                 ) : (
                   <div className="no-results col-span-full bg-white border border-gray-100 rounded-2xl py-12 text-center text-xs text-gray-400 font-semibold shadow-sm">
-                    🏪 No stalls match your search or filters.
+                     No stalls match your search or filters.
                   </div>
                 )}
               </div>

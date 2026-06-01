@@ -769,7 +769,7 @@ export default function RenterApplications({ prefill }) {
                   ))
                 ) : (
                   <div className="ra-empty bg-white border border-gray-100 rounded-2xl py-10 px-4 text-center shadow-sm">
-                    <p className="text-2xl mb-2">{activeFilter === 'All' ? '🏪' : filterInfo?.icon}</p>
+                    <p className="text-2xl mb-2">{activeFilter === 'All' ? '' : filterInfo?.icon}</p>
                     <p className="text-sm font-bold text-gray-700 mb-1">
                       {activeFilter === 'All' ? 'No applications yet' : `No ${activeFilter.toLowerCase()} applications`}
                     </p>
@@ -954,11 +954,7 @@ export default function RenterApplications({ prefill }) {
                 ))}
               </div>
 
-              <div className="ra-cta-banner bg-[#1a5c2a] rounded-2xl p-5 text-center mb-2" style={{ animationDelay: '0.36s' }}>
-                <p className="text-white text-sm font-bold leading-snug">
-                  Join our growing community of<br />over 500+ local vendors.
-                </p>
-              </div>
+              
 
             </div>
           )}
