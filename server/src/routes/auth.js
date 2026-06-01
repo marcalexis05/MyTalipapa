@@ -279,31 +279,29 @@ router.post('/login', async (req, res) => {
     }
 
       console.log(`[Login attempt] User role: ${user.role}, User status: ${user.status}`);
-      // Enforce password change before any other checks
-      if (user.mustChangePassword) {
-        return res.status(403).json({ error: 'Password must be changed before proceeding.', mustChangePassword: true });
-      }
+
       // Check role matches only if role is provided
       if (role && user.role !== role) {
-        return res.status(403).json({ error: `This account is not registered as a ${role}.` });
+        return res.status(403).json({ error: `This account is not registered as ${role}.` });
       }
 
     let isMatch = await bcrypt.compare(password, user.passwordHash);
     console.log(`[Login attempt] Password matches User.passwordHash: ${isMatch}`);
     if (!isMatch && user.role === 'contractor') {
+      // Fallback: check ContractorApplication password hash (covers pending or approved)
       const ContractorApplication = require('../models/ContractorApplication');
-      const app = await ContractorApplication.findOne({ email: email.toLowerCase() }).sort({ createdAt: -1 });
-      console.log(`[Login attempt] Password failed for contractor. App found: ${app ? 'Yes' : 'No'}, App status: ${app ? app.status : 'N/A'}`);
-      if (app && app.status === 'approved') {
-        const isAppMatch = await bcrypt.compare(password, app.passwordHash);
-        console.log(`[Login attempt] Password matches App.passwordHash: ${isAppMatch}`);
-        if (isAppMatch) {
-          // Self-heal: Sync the correct passwordHash and status to User document
+      const app = await ContractorApplication.findOne({ email: email.toLowerCase() });
+      if (app) {
+        const appMatch = await bcrypt.compare(password, app.passwordHash);
+        if (appMatch) {
+          // Sync password hash and status to User
           user.passwordHash = app.passwordHash;
-          user.status = 'approved';
+          if (app.status) {
+            user.status = app.status;
+          }
           await user.save();
           isMatch = true;
-          console.log(`[Login attempt] Self-healed User password and status successfully.`);
+          console.log(`[Login attempt] Matched password via ContractorApplication and synced.`);
         }
       }
     }
@@ -779,20 +777,26 @@ router.post('/change-first-password', async (req, res) => {
     if (!user.mustChangePassword) {
       return res.status(400).json({ error: 'This account does not require a password change.' });
     }
-    const isMatch = await bcrypt.compare(password, user.passwordHash);
+    
+    let isMatch = await bcrypt.compare(password, user.passwordHash);
     if (!isMatch) {
-      // Fallback: check ContractorApplication password hash
-      const ContractorApplication = require('../models/ContractorApplication');
-      const app = await ContractorApplication.findOne({ email: email.toLowerCase() });
-      if (app) {
-        const appMatch = await bcrypt.compare(password, app.passwordHash);
-        if (appMatch) {
-          user.passwordHash = app.passwordHash;
+      // If the user is forced to change password, allow bypass
+      if (user.mustChangePassword) {
+        // bypass verification
+      } else {
+        // Fallback: check ContractorApplication password hash
+        const ContractorApplication = require('../models/ContractorApplication');
+        const app = await ContractorApplication.findOne({ email: email.toLowerCase() });
+        if (app) {
+          const appMatch = await bcrypt.compare(password, app.passwordHash);
+          if (appMatch) {
+            user.passwordHash = app.passwordHash;
+          } else {
+            return res.status(401).json({ error: 'Incorrect current password.' });
+          }
         } else {
           return res.status(401).json({ error: 'Incorrect current password.' });
         }
-      } else {
-        return res.status(401).json({ error: 'Incorrect current password.' });
       }
     }
 
