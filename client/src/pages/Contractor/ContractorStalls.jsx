@@ -367,9 +367,20 @@ export default function ContractorStalls() {
               <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50 p-4">
                 <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
                   {/* Modal Header */}
-                  <div className="mb-6">
+                  <div className="flex justify-between items-center mb-6">
                     <h2 className="text-2xl font-bold text-gray-900 mb-2">Choose Your Stalls</h2>
-                    <p className="text-sm text-gray-600">Select the stalls you want to manage from the available below. Each stall represents a physical space in the market grid.</p>
+                    <button
+                      onClick={() => {
+                        setShowAddModal(false);
+                        setRequestStatus(null);
+                        setSelectedStallIds([]);
+                        setSearchQuery('');
+                        setSelectedZoneFilter('all');
+                      }}
+                      className="text-gray-600 hover:text-gray-800 font-medium"
+                    >
+                      ← Back
+                    </button>
                   </div>
 
                   {/* Search Bar */}
