@@ -79,7 +79,11 @@ const TABS = ["Pending", "Approved", "Rejected"];
 
 export default function AdminApplication() {
   const [tab, setTab] = useState("Pending");
-  const [appType, setAppType] = useState("renters"); // "renters" | "contractors"
+  const [appType, setAppType] = useState("renters"); // "renters" | "contractors" | "stalls"
+  const [stallRequests, setStallRequests] = useState([]);
+  const [loadingStalls, setLoadingStalls] = useState(false);
+  const [stallError, setStallError] = useState(null);
+
   
   const [applications, setApplications] = useState([]);
   const [loadingApps, setLoadingApps] = useState(true);
@@ -111,6 +115,7 @@ export default function AdminApplication() {
 
   // ── Fetch applications on mount ──────────────────────────
   const fetchAllApps = () => {
+    // existing fetch for renter and contractor apps
     setLoadingApps(true);
     fetch('/api/admin/applications')
       .then(res => {
@@ -140,11 +145,30 @@ export default function AdminApplication() {
         console.error('Failed to fetch contractor applications:', err);
       })
       .finally(() => setLoadingContractorApps(false));
+
+    // fetch stall requests if in stall management view
+    if (appType === "stalls") {
+      setLoadingStalls(true);
+      fetch('/api/admin/stall-requests/pending')
+        .then(res => {
+          if (!res.ok) throw new Error(`Server error: ${res.status}`);
+          return res.json();
+        })
+        .then(data => {
+          setStallRequests(data);
+          setStallError(null);
+        })
+        .catch(err => {
+          console.error('Failed to fetch stall requests:', err);
+          setStallError('Failed to load stall requests.');
+        })
+        .finally(() => setLoadingStalls(false));
+    }
   };
 
   useEffect(() => {
     fetchAllApps();
-  }, []);
+  }, [appType]);
 
   const handleNav = (item) => {
     setActiveNav(item.id);
@@ -230,6 +254,29 @@ export default function AdminApplication() {
       });
     }
   };
+
+  // ── Approve / Reject Stall Request ────────────────
+  const handleStallAction = async (id, action) => {
+    setProcessingId(id);
+    setAnimating(prev => ({ ...prev, [id]: action }));
+    try {
+      const res = await fetch('/api/admin/stall-requests/review', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requestId: id, action }), // 'approve' | 'reject'
+      });
+      if (!res.ok) throw new Error(`Server error: ${res.status}`);
+      // Remove the request from pending list after successful action
+      setStallRequests(prev => prev.filter(r => r._id !== id));
+    } catch (err) {
+      console.error('Failed to update stall request:', err);
+      alert('Action failed. Please try again.');
+    } finally {
+      setProcessingId(null);
+      setAnimating(prev => { const next = { ...prev }; delete next[id]; return next; });
+    }
+  };
+
 
   const activeApps = appType === "renters" ? applications : contractorApps;
 
@@ -483,9 +530,8 @@ export default function AdminApplication() {
                 : "Review and manage pending applications for market stall contractors."}
             </p>
           </div>
-
-          {/* Premium Segmented Toggle Control */}
-          <div className="flex bg-gray-200/60 p-1.5 rounded-2xl mb-2 w-full max-w-md border border-gray-100">
+          {/* Segmented Toggle Control */}
+          <div className="flex bg-gray-200/60 p-1.5 rounded-2xl mb-4 w-full max-w-lg border border-gray-100">
             <button
               onClick={() => { setAppType("renters"); setTab("Pending"); }}
               className={`flex-1 py-3 text-center text-xs font-bold rounded-xl transition-all relative ${
@@ -516,6 +562,16 @@ export default function AdminApplication() {
                 </span>
               )}
             </button>
+            <button
+              onClick={() => { setAppType("stalls"); setTab("Pending"); }}
+              className={`flex-1 py-3 text-center text-xs font-bold rounded-xl transition-all relative ${
+                appType === "stalls"
+                  ? "bg-white text-green-700 shadow-sm border border-gray-150/40"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              Stall Management
+            </button>
           </div>
 
           {/* Tab Bar */}
@@ -538,7 +594,31 @@ export default function AdminApplication() {
 
           {/* Applications List */}
           <div className="applications-list apps-list-full">
-            {renderList()}
+            {appType === "stalls" ? (
+                loadingStalls ? (
+                  <div className="no-applications"><span style={{ fontSize: 32 }}>⏳</span><span>Loading stall requests…</span></div>
+                ) : stallError ? (
+                  <div className="no-applications" style={{ color: '#dc2626' }}><span style={{ fontSize: 32 }}>⚠️</span><span>{stallError}</span></div>
+                ) : stallRequests.length === 0 ? (
+                  <div className="no-applications"><span style={{ fontSize: 32 }}>📭</span><span>No pending stall requests</span></div>
+                ) : (
+                  stallRequests.map(req => (
+                    <div key={req._id} className="application-row apps-row-full">
+                      <div className="app-info">
+                        <div className="apps-name-row">
+                          <span className="app-name">Stall #{req.stallId?.stallNumber || req.stallId?._id}</span>
+                          <span className="apps-stall-badge" style={{ background: '#fbbf24' }}>{req.contractorEmail}</span>
+                        </div>
+                        <span className="app-meta">Requested at: {new Date(req.createdAt).toLocaleString()}</span>
+                      </div>
+                      <div className="apps-action-col">
+                        <button className="apps-view-btn" onClick={() => handleStallAction(req._id, 'approve')}>Approve</button>
+                        <button className="apps-view-btn" onClick={() => handleStallAction(req._id, 'reject')}>Reject</button>
+                      </div>
+                    </div>
+                  ))
+                )
+              ) : renderList()}
           </div>
         </main>
       </div>

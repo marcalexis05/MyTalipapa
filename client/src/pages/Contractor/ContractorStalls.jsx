@@ -74,6 +74,12 @@ export default function ContractorStalls() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { userName, loading: authLoading } = useCurrentUser();
+  // New state for stall request feature
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [availableStalls, setAvailableStalls] = useState([]);
+  const [selectedStallId, setSelectedStallId] = useState('');
+  const [searchLocation, setSearchLocation] = useState('');
+  const [requestStatus, setRequestStatus] = useState(null);
 
   // Active section tab (Fishes / Meat / Vegetables)
   const [activeSection, setActiveSection] = useState(null);
@@ -248,6 +254,11 @@ export default function ContractorStalls() {
               <h1 className="stalls-page-title">Market Floor Plan</h1>
               <p className="stalls-page-sub">Real-time stall availability and management.</p>
             </div>
+            {/* Add Stall button */}
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
+            >Add Stall</button>
 
             {loading && (
               <div className="stalls-state-msg">
@@ -257,6 +268,70 @@ export default function ContractorStalls() {
             )}
             {error && (
               <div className="stalls-error-msg">⚠️ Failed to load stalls: {error}</div>
+            )}
+
+            {/* Add Stall Modal */}
+            {showAddModal && (
+              <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
+                <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+                  <h2 className="text-xl font-semibold mb-4">Request a Stall</h2>
+                  <div className="mb-3">
+                    <label className="block text-sm font-medium mb-1">Location</label>
+                    <input
+                      type="text"
+                      value={searchLocation}
+                      onChange={e => setSearchLocation(e.target.value)}
+                      className="w-full border rounded px-2 py-1"
+                      placeholder="Enter location keyword"
+                    />
+                    <button
+                      onClick={async () => {
+                        const res = await fetch(`/api/contractor/stall-requests/available?location=${encodeURIComponent(searchLocation)}`);
+                        const data = await res.json();
+                        setAvailableStalls(data);
+                      }}
+                      className="mt-2 px-3 py-1 bg-blue-600 text-white rounded"
+                    >Search</button>
+                  </div>
+                  <div className="mb-3">
+                    <label className="block text-sm font-medium mb-1">Select Stall</label>
+                    <select
+                      value={selectedStallId}
+                      onChange={e => setSelectedStallId(e.target.value)}
+                      className="w-full border rounded px-2 py-1"
+                    >
+                      <option value="">-- choose --</option>
+                      {availableStalls.map(st => (
+                        <option key={st._id} value={st._id}>
+                          {st.section} - {st.zone} ({st.location})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex justify-end space-x-2">
+                    <button onClick={() => setShowAddModal(false)} className="px-3 py-1 border rounded">Cancel</button>
+                    <button
+                      onClick={async () => {
+                        if (!selectedStallId) return setRequestStatus('Please select a stall');
+                        const resp = await fetch('/api/contractor/stall-requests/request', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ stallId: selectedStallId }),
+                        });
+                        const json = await resp.json();
+                        if (resp.ok) {
+                          setRequestStatus('Request sent to admin');
+                          setShowAddModal(false);
+                        } else {
+                          setRequestStatus(json.error || 'Failed to send request');
+                        }
+                      }}
+                      className="px-3 py-1 bg-green-600 text-white rounded"
+                    >Send request to admin</button>
+                  </div>
+                  {requestStatus && <p className="mt-2 text-sm text-red-600">{requestStatus}</p>}
+                </div>
+              </div>
             )}
 
             {!loading && !error && (
