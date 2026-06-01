@@ -13,10 +13,26 @@ export default function NotificationBell() {
   const containerRef = useRef(null);
   const token = getToken();
 
-  const fetchNotifications = () => {
-    // Disabled fetching to avoid 404 errors during development.
-    // If needed, re‑enable and ensure the backend route exists.
-    setNotifications([]);
+  const fetchNotifications = async () => {
+    if (!token) {
+      setNotifications([]);
+      return;
+    }
+    try {
+      const res = await fetch('/api/contractor/notifications', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setNotifications(data);
+      } else {
+        console.error('Failed to fetch notifications', res.status);
+        setNotifications([]);
+      }
+    } catch (err) {
+      console.error('Error fetching notifications', err);
+      setNotifications([]);
+    }
   };
 
   useEffect(() => {
