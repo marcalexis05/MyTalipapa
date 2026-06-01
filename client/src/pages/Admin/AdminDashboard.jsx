@@ -307,14 +307,21 @@ export default function AdminDashboard() {
               </p>
             </div>
 
-            {/* Live View */}
-            <div className="liveview-card">
-              <img src={marketImage} alt="Main Produce Section B live view" className="liveview-img" />
-              <div className="liveview-overlay">
-                <span className="live-badge"><span className="live-dot" /> LIVE VIEW</span>
-                <span className="liveview-label">Main Produce Section B</span>
+           {/* Live View */}
+              <div 
+                className="liveview-card relative overflow-hidden cursor-pointer" 
+                onClick={() => navigate('/tour')}
+                style={{ height: '160px' }}
+              >
+                <img src={tour360Preview} alt="360 Tour Preview" className="absolute inset-0 w-full h-full object-cover opacity-70" />
+                <div ref={liveViewMountRef} style={{ width: '100%', height: '100px' }} className="absolute inset-0 z-0" />
+                <div className="liveview-overlay absolute inset-0 z-10 pointer-events-none flex flex-col justify-between p-3.5">
+                  <span className="live-badge cursor-pointer pointer-events-auto" onClick={(e) => { e.stopPropagation(); navigate('/tour'); }}>
+                    <span className="live-dot" /> MARKET 360 TOUR
+                  </span>
+                 
+                </div>
               </div>
-            </div>
           </section>
 
           {/* Recent Pending Applications — live from DB */}
@@ -355,28 +362,7 @@ export default function AdminDashboard() {
                       )}
                       <span className="app-type" style={{ color: app.typeColor }}>{app.type}</span>
                     </div>
-                    <div className="app-actions">
-                      <button
-                        className="btn-reject"
-                        disabled={processingId === app.id}
-                        onClick={() => handleAction(app.id, 'reject')}
-                      >
-                        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                          <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-                        </svg>
-                        {processingId === app.id ? '…' : 'Reject'}
-                      </button>
-                      <button
-                        className="btn-approve"
-                        disabled={processingId === app.id}
-                        onClick={() => handleAction(app.id, 'approve')}
-                      >
-                        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                          <polyline points="20 6 9 17 4 12" />
-                        </svg>
-                        {processingId === app.id ? '…' : 'Approve'}
-                      </button>
-                    </div>
+                    
                   </div>
                 ))
               )}

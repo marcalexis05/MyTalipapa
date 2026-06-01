@@ -441,12 +441,12 @@ export default function ContractorDashboard() {
                 style={{ height: '160px' }}
               >
                 <img src={tour360Preview} alt="360 Tour Preview" className="absolute inset-0 w-full h-full object-cover opacity-70" />
-                <div ref={liveViewMountRef} style={{ width: '100%', height: '160px' }} className="absolute inset-0 z-0" />
+                <div ref={liveViewMountRef} style={{ width: '100%', height: '100px' }} className="absolute inset-0 z-0" />
                 <div className="liveview-overlay absolute inset-0 z-10 pointer-events-none flex flex-col justify-between p-3.5">
                   <span className="live-badge cursor-pointer pointer-events-auto" onClick={(e) => { e.stopPropagation(); navigate('/tour'); }}>
-                    <span className="live-dot" /> VIRTUAL TOUR
+                    <span className="live-dot" /> MARKET 360 TOUR
                   </span>
-                  <span className="liveview-label">Main Produce Section B</span>
+                  
                 </div>
               </div>
             </section>
