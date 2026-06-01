@@ -122,7 +122,7 @@ export default function Login() {
       const result = await response.json()
 
       if (!response.ok) {
-        // If backend requires password change, show modal instead of direct navigation
+        // If backend requires password change (403) and indicates mustChangePassword, show modal
         if (response.status === 403 && result.mustChangePassword) {
           setShowModal(true);
           // Store credentials for later navigation
@@ -131,9 +131,10 @@ export default function Login() {
           setLoading(false);
           return;
         }
-        setError(result.error || 'Login failed')
-        setLoading(false)
-        return
+        // Fallback for other errors
+        setError(result.error || 'Login failed');
+        setLoading(false);
+        return;
       }
 
       // Store token and user info
@@ -297,7 +298,7 @@ export default function Login() {
                 <div className="bg-white rounded-xl p-6 shadow-xl max-w-sm w-full animate-fadeSlideUp" style={{ animation: 'fadeSlideUp 0.45s cubic-bezier(0.22,1,0.36,1) both' }}>
                   <h2 className="text-lg font-semibold mb-4 text-center" style={{ color: '#1a5c2a' }}>You need to set a new password</h2>
                   <p className="mb-4 text-center text-gray-600">For security reasons, please set a new password before continuing.</p>
-                  <button
+                  <button type="button"
                     onClick={() => {
                       navigate('/set-new-password', { state: { email: modalEmail, password: modalPassword } });
                       setShowModal(false);
