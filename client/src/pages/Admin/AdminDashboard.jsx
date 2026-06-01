@@ -71,8 +71,8 @@ export default function AdminDashboard() {
   // ── Live data from DB ──────────────────────────────────
   const [stalls, setStalls] = useState([])
   const [applications, setApplications] = useState([])
-  const [loadingStalls, setLoadingStalls] = useState(true)
-  const [loadingApps, setLoadingApps] = useState(true)
+  const [loadingStalls, setLoadingStalls] = useState(false)
+  const [loadingApps, setLoadingApps] = useState(false)
 
   // Fetch stalls
   const fetchStalls = () => {
