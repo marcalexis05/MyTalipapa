@@ -40,10 +40,14 @@ router.get('/available', async (req, res) => {
   }
 });
 
-// POST /request — submit stall request(s)
 router.post('/request', async (req, res) => {
   const { stallIds } = req.body;
-  const email = req.contractor.email;
+  
+  // Look up email from DB using id in token (since email isn't in token payload)
+  const User = require('../models/User');
+  const user = await User.findById(req.contractor.id).select('email');
+  if (!user) return res.status(404).json({ error: 'Contractor not found' });
+  const email = user.email;
 
   if (!Array.isArray(stallIds) || stallIds.length === 0) {
     return res.status(400).json({ error: 'Please provide an array of stall IDs' });
