@@ -42,7 +42,7 @@ router.get('/available', async (req, res) => {
 
 router.post('/request', async (req, res) => {
   const { stallIds } = req.body;
-  
+
   // Look up email from DB using id in token (since email isn't in token payload)
   const User = require('../models/User');
   const user = await User.findById(req.contractor.id).select('email');
@@ -88,23 +88,6 @@ router.post('/request', async (req, res) => {
 
   const anySuccess = results.some(r => r.status === 'success');
   res.status(anySuccess ? 201 : 400).json(results);
-});
-
-// Get pending stall requests for this contractor
-router.get('/my-requests', async (req, res) => {
-  const contractorEmail = req.contractor.email;
-  try {
-    const pendingRequests = await StallRequest.find({
-      contractorEmail,
-      status: { $in: ['pending', 'approved', 'rejected'] },
-    })
-      .populate('stallId')
-      .sort({ createdAt: -1 });
-    res.json(pendingRequests);
-  } catch (err) {
-    console.error('Failed to fetch contractor stall requests:', err);
-    res.status(500).json({ error: 'Failed to load requests' });
-  }
 });
 
 module.exports = router;

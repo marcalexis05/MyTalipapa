@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronRight, Store } from "lucide-react";
-import { useCurrentUser, getUser, getToken } from '../../utils/auth';
+import { useCurrentUser, getUser } from '../../utils/auth';
 import ContractorSidebar from '../../components/ContractorSidebar';
 import ContractorLockScreen from './ContractorLockScreen';
 import NotificationBell from '../../components/NotificationBell';
@@ -102,24 +102,18 @@ export default function ContractorApplication() {
   useEffect(() => {
     if (!userEmail) return;
     setLoadingApps(true);
-    // Fetch both normal applications and stall requests
-    Promise.all([
-      fetch(`/api/contractor/applications?email=${userEmail}`),
-      fetch('/api/contractor/stall-requests/my-requests', {
-        headers: { Authorization: `Bearer ${getToken()}` },
-      }),
-    ])
-      .then(async ([appsRes, reqRes]) => {
-        if (!appsRes.ok) throw new Error(`Apps error ${appsRes.status}`);
-        if (!reqRes.ok) throw new Error(`Requests error ${reqRes.status}`);
-        const apps = await appsRes.json();
-        const reqs = await reqRes.json();
-        // Merge both arrays (you may handle separately in UI)
-        setApplications([...apps, ...reqs]);
+    fetch(`/api/contractor/applications?email=${userEmail}`)
+      .then(res => {
+        if (!res.ok) throw new Error(`Server error: ${res.status}`);
+        return res.json();
+      })
+      .then(data => {
+        setApplications(data);
+        setError(null);
       })
       .catch(err => {
-        console.error('Failed to fetch applications or requests:', err);
-        setError('Failed to load data. Please refresh.');
+        console.error('Failed to fetch applications:', err);
+        setError('Failed to load applications. Please refresh.');
       })
       .finally(() => setLoadingApps(false));
   }, [userEmail]);
@@ -168,7 +162,7 @@ export default function ContractorApplication() {
     }
   };
 
-  const pendingCount  = applications.filter(a => a.status === "pending").length;
+  const pendingCount = applications.filter(a => a.status === "pending").length;
   const approvedCount = applications.filter(a => a.status === "approved").length;
   const rejectedCount = applications.filter(a => a.status === "rejected").length;
   const tabCounts = { Pending: pendingCount, Approved: approvedCount, Rejected: rejectedCount };
@@ -204,11 +198,9 @@ export default function ContractorApplication() {
     return filteredApps.map(app => (
       <div
         key={app.id}
-        className={`application-row apps-row-full${
-          animating[app.id] === "approve" ? " action-approved" : ""
-        }${
-          animating[app.id] === "reject" ? " action-rejected" : ""
-        }`}
+        className={`application-row apps-row-full${animating[app.id] === "approve" ? " action-approved" : ""
+          }${animating[app.id] === "reject" ? " action-rejected" : ""
+          }`}
       >
         <div className="app-avatar">
           <span style={{ fontSize: 15, fontWeight: 800, color: "#6b7280" }}>
@@ -232,7 +224,7 @@ export default function ContractorApplication() {
           <div className="apps-meta-row">
             <span className="apps-date">
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: "inline", marginRight: 3 }}>
-                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
               </svg>
               Applied: {app.applied}
             </span>
@@ -251,7 +243,7 @@ export default function ContractorApplication() {
                   aria-label="Reject"
                 >
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
                   </svg>
                 </button>
                 <button
@@ -260,7 +252,7 @@ export default function ContractorApplication() {
                   onClick={() => handleAction(app.id, "approve")}
                 >
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="20 6 9 17 4 12"/>
+                    <polyline points="20 6 9 17 4 12" />
                   </svg>
                   Approve
                 </button>
@@ -282,179 +274,179 @@ export default function ContractorApplication() {
   return (
     <ContractorLockScreen>
       <div className="flex h-screen bg-[#f5f5f0] font-sans overflow-hidden w-full">
-      {/* Logout Modal */}
-      {showLogoutModal && (
-        <div className="logout-overlay" onClick={() => setShowLogoutModal(false)}>
-          <div className="logout-modal" onClick={e => e.stopPropagation()}>
-            <div className="logout-modal-icon"><LogoutIcon /></div>
-            <h3 className="logout-modal-title">Log Out?</h3>
-            <p className="logout-modal-msg">You'll be signed out of your contractor session.</p>
-            <div className="logout-modal-actions">
-              <button className="logout-cancel-btn" onClick={() => setShowLogoutModal(false)}>Cancel</button>
-              <button className="logout-confirm-btn" onClick={handleLogout}>Yes, Log Out</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Sidebar */}
-      <ContractorSidebar active="nav-apps" />
-
-      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-        {/* Header */}
-        <header className="bg-white border-b border-gray-100 px-4 md:px-6 py-3.5 flex items-center justify-between sticky top-0 z-30 shrink-0">
-          <div className="flex items-center gap-3">
-            {/* Mobile logo */}
-            <div className="md:hidden flex items-center gap-2">
-              <div className="w-7 h-7 bg-[#1a5c2a] rounded-lg flex items-center justify-center shrink-0">
-                <Store size={13} color="white" />
+        {/* Logout Modal */}
+        {showLogoutModal && (
+          <div className="logout-overlay" onClick={() => setShowLogoutModal(false)}>
+            <div className="logout-modal" onClick={e => e.stopPropagation()}>
+              <div className="logout-modal-icon"><LogoutIcon /></div>
+              <h3 className="logout-modal-title">Log Out?</h3>
+              <p className="logout-modal-msg">You'll be signed out of your contractor session.</p>
+              <div className="logout-modal-actions">
+                <button className="logout-cancel-btn" onClick={() => setShowLogoutModal(false)}>Cancel</button>
+                <button className="logout-confirm-btn" onClick={handleLogout}>Yes, Log Out</button>
               </div>
-              <span className="font-extrabold text-gray-900 text-sm">MyTalipapa</span>
-            </div>
-            {/* Desktop breadcrumb */}
-            <div className="hidden md:flex items-center gap-1 text-sm text-gray-400">
-              <span>Contractor</span>
-              <ChevronRight size={14} />
-              <span className="text-gray-700 font-semibold">Applications</span>
             </div>
           </div>
-          <div className="header-right">
-            <div className="header-welcome">
-              <span className="welcome-name">
-                {authLoading ? 'Loading…' : userName ? `${userName}` : 'Welcome, Guest'}
-              </span>
-              <span className="welcome-role">Contractor</span>
-            </div>
-            <NotificationBell />
-            <button
-              className="header-logout-btn"
-              aria-label="Log out"
-              onClick={() => setShowLogoutModal(true)}
-            >
-              <LogoutIcon />
-            </button>
-          </div>
-        </header>
+        )}
 
-        <main className="dashboard-main apps-main">
-          <div className="apps-title-block">
-            <h1 className="apps-page-title">Rental Applications</h1>
-            <p className="apps-page-sub">Manage and review new stall requests from vendors.</p>
-          </div>
+        {/* Sidebar */}
+        <ContractorSidebar active="nav-apps" />
 
-          {/* Tab Bar */}
-          <div className="apps-tab-bar">
-            {TABS.map(t => (
+        <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+          {/* Header */}
+          <header className="bg-white border-b border-gray-100 px-4 md:px-6 py-3.5 flex items-center justify-between sticky top-0 z-30 shrink-0">
+            <div className="flex items-center gap-3">
+              {/* Mobile logo */}
+              <div className="md:hidden flex items-center gap-2">
+                <div className="w-7 h-7 bg-[#1a5c2a] rounded-lg flex items-center justify-center shrink-0">
+                  <Store size={13} color="white" />
+                </div>
+                <span className="font-extrabold text-gray-900 text-sm">MyTalipapa</span>
+              </div>
+              {/* Desktop breadcrumb */}
+              <div className="hidden md:flex items-center gap-1 text-sm text-gray-400">
+                <span>Contractor</span>
+                <ChevronRight size={14} />
+                <span className="text-gray-700 font-semibold">Applications</span>
+              </div>
+            </div>
+            <div className="header-right">
+              <div className="header-welcome">
+                <span className="welcome-name">
+                  {authLoading ? 'Loading…' : userName ? `${userName}` : 'Welcome, Guest'}
+                </span>
+                <span className="welcome-role">Contractor</span>
+              </div>
+              <NotificationBell />
               <button
-                key={t}
-                className={`apps-tab${tab === t ? " apps-tab-active" : ""}`}
-                onClick={() => setTab(t)}
+                className="header-logout-btn"
+                aria-label="Log out"
+                onClick={() => setShowLogoutModal(true)}
               >
-                {t}
-                {tabCounts[t] > 0 && (
-                  <span className={`apps-tab-badge${tab === t ? " apps-tab-badge-active" : ""}`}>
-                    {tabCounts[t]}
-                  </span>
-                )}
+                <LogoutIcon />
               </button>
-            ))}
-          </div>
-
-          {/* Applications List */}
-          <div className="applications-list apps-list-full">
-            {renderList()}
-          </div>
-        </main>
-      </div>
-
-      {/* Bottom Navigation */}
-      <nav className="bottom-nav" aria-label="Main Navigation">
-        {NAV_ITEMS.map(item => (
-          <button
-            key={item.id}
-            id={item.id}
-            className={`nav-item ${activeNav === item.id ? 'nav-active' : ''}`}
-            onClick={() => handleNav(item)}
-          >
-            <span className="nav-icon">{item.icon}</span>
-            <span className="nav-label">{item.label}</span>
-          </button>
-        ))}
-      </nav>
-
-      {/* Detail Modal */}
-      {selectedApp && (
-        <div className="logout-overlay" onClick={() => setSelectedApp(null)}>
-          <div className="app-detail-modal" onClick={e => e.stopPropagation()}>
-            <div className="app-detail-header">
-              <div className="app-avatar app-detail-avatar">
-                <span style={{ fontSize: 22, fontWeight: 800, color: "#6b7280" }}>
-                  {selectedApp.initials}
-                </span>
-              </div>
-              <div>
-                <h2 className="app-detail-name">{selectedApp.name}</h2>
-                <span className="app-detail-phone">{selectedApp.phone}</span>
-              </div>
             </div>
-            <div className="app-detail-grid">
-              <div className="app-detail-item">
-                <span className="app-detail-label">Stall Requested</span>
-                <span className="app-detail-value" style={{ color: selectedApp.stallColor, fontWeight: 800 }}>
-                  {selectedApp.stallLocation || selectedApp.stall}
-                </span>
+          </header>
+
+          <main className="dashboard-main apps-main">
+            <div className="apps-title-block">
+              <h1 className="apps-page-title">Rental Applications</h1>
+              <p className="apps-page-sub">Manage and review new stall requests from vendors.</p>
+            </div>
+
+            {/* Tab Bar */}
+            <div className="apps-tab-bar">
+              {TABS.map(t => (
+                <button
+                  key={t}
+                  className={`apps-tab${tab === t ? " apps-tab-active" : ""}`}
+                  onClick={() => setTab(t)}
+                >
+                  {t}
+                  {tabCounts[t] > 0 && (
+                    <span className={`apps-tab-badge${tab === t ? " apps-tab-badge-active" : ""}`}>
+                      {tabCounts[t]}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+
+            {/* Applications List */}
+            <div className="applications-list apps-list-full">
+              {renderList()}
+            </div>
+          </main>
+        </div>
+
+        {/* Bottom Navigation */}
+        <nav className="bottom-nav" aria-label="Main Navigation">
+          {NAV_ITEMS.map(item => (
+            <button
+              key={item.id}
+              id={item.id}
+              className={`nav-item ${activeNav === item.id ? 'nav-active' : ''}`}
+              onClick={() => handleNav(item)}
+            >
+              <span className="nav-icon">{item.icon}</span>
+              <span className="nav-label">{item.label}</span>
+            </button>
+          ))}
+        </nav>
+
+        {/* Detail Modal */}
+        {selectedApp && (
+          <div className="logout-overlay" onClick={() => setSelectedApp(null)}>
+            <div className="app-detail-modal" onClick={e => e.stopPropagation()}>
+              <div className="app-detail-header">
+                <div className="app-avatar app-detail-avatar">
+                  <span style={{ fontSize: 22, fontWeight: 800, color: "#6b7280" }}>
+                    {selectedApp.initials}
+                  </span>
+                </div>
+                <div>
+                  <h2 className="app-detail-name">{selectedApp.name}</h2>
+                  <span className="app-detail-phone">{selectedApp.phone}</span>
+                </div>
               </div>
-              <div className="app-detail-item">
-                <span className="app-detail-label">Application Type</span>
-                <span className="app-detail-value" style={{ color: selectedApp.typeColor }}>{selectedApp.type}</span>
+              <div className="app-detail-grid">
+                <div className="app-detail-item">
+                  <span className="app-detail-label">Stall Requested</span>
+                  <span className="app-detail-value" style={{ color: selectedApp.stallColor, fontWeight: 800 }}>
+                    {selectedApp.stallLocation || selectedApp.stall}
+                  </span>
+                </div>
+                <div className="app-detail-item">
+                  <span className="app-detail-label">Application Type</span>
+                  <span className="app-detail-value" style={{ color: selectedApp.typeColor }}>{selectedApp.type}</span>
+                </div>
+                <div className="app-detail-item">
+                  <span className="app-detail-label">Date Applied</span>
+                  <span className="app-detail-value">{selectedApp.applied}</span>
+                </div>
+                {selectedApp.additionalMessage && (
+                  <div className="app-detail-item" style={{ gridColumn: 'span 2' }}>
+                    <span className="app-detail-label">Message</span>
+                    <p className="app-detail-value" style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{selectedApp.additionalMessage}</p>
+                  </div>
+                )}
+                <div className="app-detail-item">
+                  <span className="app-detail-label">Status</span>
+                  <span className={`apps-status-chip apps-status-${selectedApp.status}`} style={{ alignSelf: "flex-start" }}>
+                    {selectedApp.status.charAt(0).toUpperCase() + selectedApp.status.slice(1)}
+                  </span>
+                </div>
               </div>
-              <div className="app-detail-item">
-                <span className="app-detail-label">Date Applied</span>
-                <span className="app-detail-value">{selectedApp.applied}</span>
-              </div>
-              {selectedApp.additionalMessage && (
-                <div className="app-detail-item" style={{ gridColumn: 'span 2' }}>
-                  <span className="app-detail-label">Message</span>
-                  <p className="app-detail-value" style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{selectedApp.additionalMessage}</p>
+              {selectedApp.status === "pending" && (
+                <div className="app-detail-actions">
+                  <button
+                    className="btn-reject"
+                    style={{ flex: 1, justifyContent: "center", gap: 6 }}
+                    onClick={() => { handleAction(selectedApp.id, "reject"); setSelectedApp(null); }}
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                    Reject
+                  </button>
+                  <button
+                    className="btn-approve"
+                    style={{ flex: 1, justifyContent: "center", gap: 6 }}
+                    onClick={() => { handleAction(selectedApp.id, "approve"); setSelectedApp(null); }}
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    Approve
+                  </button>
                 </div>
               )}
-              <div className="app-detail-item">
-                <span className="app-detail-label">Status</span>
-                <span className={`apps-status-chip apps-status-${selectedApp.status}`} style={{ alignSelf: "flex-start" }}>
-                  {selectedApp.status.charAt(0).toUpperCase() + selectedApp.status.slice(1)}
-                </span>
-              </div>
+              <button className="stall-modal-close" onClick={() => setSelectedApp(null)}>Close</button>
             </div>
-            {selectedApp.status === "pending" && (
-              <div className="app-detail-actions">
-                <button
-                  className="btn-reject"
-                  style={{ flex: 1, justifyContent: "center", gap: 6 }}
-                  onClick={() => { handleAction(selectedApp.id, "reject"); setSelectedApp(null); }}
-                >
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                  </svg>
-                  Reject
-                </button>
-                <button
-                  className="btn-approve"
-                  style={{ flex: 1, justifyContent: "center", gap: 6 }}
-                  onClick={() => { handleAction(selectedApp.id, "approve"); setSelectedApp(null); }}
-                >
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="20 6 9 17 4 12"/>
-                  </svg>
-                  Approve
-                </button>
-              </div>
-            )}
-            <button className="stall-modal-close" onClick={() => setSelectedApp(null)}>Close</button>
           </div>
-        </div>
-      )}
+        )}
 
-      <style>{`
+        <style>{`
         .apps-main { padding-bottom: 80px; }
         .apps-title-block { margin-bottom: 2px; }
         .apps-page-title { font-size: 20px; font-weight: 800; color: var(--color-text); margin: 0 0 4px; letter-spacing: -0.3px; }
