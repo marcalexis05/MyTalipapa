@@ -510,8 +510,11 @@ const handleSendRequest = async () => {
                   </div>
 
                   {requestStatus && requestStatus !== 'success' && (
-                    <p className="mt-4 text-sm text-red-600 bg-red-50 p-3 rounded-lg">{requestStatus}</p>
-                  )}
+                      <p className="mt-4 text-sm text-red-600 bg-red-50 p-3 rounded-lg">{requestStatus}</p>
+                    )}
+                    {requestStatus === 'success' && (
+                      <p className="mt-4 text-sm text-green-600 bg-green-50 p-3 rounded-lg">Stall request submitted successfully!</p>
+                    )}
 
                   {/* Close Button */}
                   <button
