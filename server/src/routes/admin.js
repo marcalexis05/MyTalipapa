@@ -2,6 +2,24 @@ const express = require('express');
 const router = express.Router();
 const Announcement = require('../models/Announcement');
 
+// GET announcements (admin view, optional role filter)
+router.get('/announcements', async (req, res) => {
+  try {
+    const { role } = req.query;
+    let query = {};
+    if (role === 'renter') {
+      query.targetAudience = { $in: ['all', 'renters'] };
+    } else if (role === 'contractor') {
+      query.targetAudience = { $in: ['all', 'contractors'] };
+    }
+    const announcements = await Announcement.find(query).sort({ createdAt: -1 });
+    res.json(announcements);
+  } catch (error) {
+    console.error('Error fetching announcements (admin):', error);
+    res.status(500).json({ error: 'Failed to fetch announcements' });
+  }
+});
+
 // Create a new announcement
 router.post('/announcements', async (req, res) => {
   try {

@@ -202,10 +202,8 @@ const handleDeleteAnnouncement = async (id) => {
   }
 }
   useEffect(() => {
-    fetchStalls()
-    fetchApplications()
-    fetchAnnouncements()
-  }, [])
+  fetchAnnouncements()
+}, [])
 
   // Total monthly revenue from occupied stalls with a monthlyRate
   const totalRevenue = stalls
