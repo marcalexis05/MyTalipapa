@@ -147,30 +147,35 @@ export default function AdminApplication() {
       .finally(() => setLoadingContractorApps(false));
 
     // fetch stall requests if in stall management view
-    if (appType === "stalls") {
-      setLoadingStalls(true);
-      fetch('/api/admin/stall-requests/pending', {
-        headers: { Authorization: `Bearer ${getToken()}` },
-      })
-        .then(res => {
-          if (!res.ok) throw new Error(`Server error: ${res.status}`);
-          return res.json();
-          })
-          .then(data => {
-            setStallRequests(data);
-            setStallError(null);
-          })
-          .catch(err => {
-            console.error('Failed to fetch stall requests:', err);
-            setStallError('Failed to load stall requests.');
-          })
-          .finally(() => setLoadingStalls(false));
-      }
-  };
+   if (appType === "stalls") {
+  setLoadingStalls(true);
+  const endpoint = tab === "Approved" 
+    ? '/api/admin/stall-requests/approved'
+    : tab === "Rejected"
+    ? '/api/admin/stall-requests/rejected'
+    : '/api/admin/stall-requests/pending';
+
+  fetch(endpoint, {
+    headers: { Authorization: `Bearer ${getToken()}` },
+  })
+    .then(res => {
+      if (!res.ok) throw new Error(`Server error: ${res.status}`);
+      return res.json();
+    })
+    .then(data => {
+      setStallRequests(data);
+      setStallError(null);
+    })
+    .catch(err => {
+      console.error('Failed to fetch stall requests:', err);
+      setStallError('Failed to load stall requests.');
+    })
+    .finally(() => setLoadingStalls(false));
+}
 
   useEffect(() => {
     fetchAllApps();
-  }, [appType]);
+  }, [appType, tab]);
 
   const handleNav = (item) => {
     setActiveNav(item.id);
@@ -836,4 +841,5 @@ export default function AdminApplication() {
       `}</style>
     </div>
   );
+}
 }
