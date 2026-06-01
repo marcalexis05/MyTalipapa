@@ -35,8 +35,8 @@ mongoose
   });
 
 app.use('/api', authRoutes);
-app.use('/api/contractor', contractorRoutes);
-app.use('/api/admin', contractorRoutes);
+const adminRoutes = require('./routes/admin');
+app.use('/api/admin', adminRoutes);
 app.use('/api/renter', renterRoutes);
 app.use('/api/public', publicRoutes);
 app.use('/api/stalls', stallsRoutes);
