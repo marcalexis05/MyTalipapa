@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronRight, Store } from "lucide-react";
-import { useCurrentUser, getUser } from '../../utils/auth';
+import { useCurrentUser, getUser, getToken } from '../../utils/auth';
 import ContractorSidebar from '../../components/ContractorSidebar';
 import ContractorLockScreen from './ContractorLockScreen';
 import NotificationBell from '../../components/NotificationBell';
@@ -98,22 +98,38 @@ export default function ContractorApplication() {
   const user = getUser();
   const userEmail = user?.email || '';
 
-  // ── Fetch applications on mount ──────────────────────────
+  // ── Fetch applications and stall requests on mount ──────────────────────────
   useEffect(() => {
     if (!userEmail) return;
     setLoadingApps(true);
-    fetch(`/api/contractor/applications?email=${userEmail}`)
-      .then(res => {
+    // Fetch regular applications and stall requests in parallel, with auth header for stall requests
+    Promise.all([
+      fetch(`/api/contractor/applications?email=${userEmail}`).then(res => {
         if (!res.ok) throw new Error(`Server error: ${res.status}`);
         return res.json();
+      }),
+      fetch(`/api/contractor/stall-requests/my-requests`, {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      }).then(res => {
+        if (!res.ok) throw new Error(`Server error (stall requests): ${res.status}`);
+        return res.json();
       })
-      .then(data => {
-        setApplications(data);
+    ])
+      .then(([appsData, stallsData]) => {
+        // Normalize stall requests to match application shape
+        const normalizedStalls = stallsData.map(req => ({
+          id: req._id || req.id,
+          stall: req.stallId?.stallNumber ? `#${req.stallId.stallNumber}` : 'Unknown',
+          zone: req.stallId?.location || 'Unknown',
+          status: req.status?.toLowerCase() || 'pending',
+          submittedOn: new Date(req.createdAt).toLocaleDateString(),
+        }));
+        setApplications([...appsData, ...normalizedStalls]);
         setError(null);
       })
       .catch(err => {
-        console.error('Failed to fetch applications:', err);
-        setError('Failed to load applications. Please refresh.');
+        console.error('Failed to fetch applications or stall requests:', err);
+        setError('Failed to load data. Please refresh.');
       })
       .finally(() => setLoadingApps(false));
   }, [userEmail]);
