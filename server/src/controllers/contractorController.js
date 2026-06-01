@@ -459,7 +459,7 @@ exports.updateContractorApplicationStatus = async (req, res) => {
 
       if (app.selectedStalls && app.selectedStalls.length > 0) {
         await Stall.updateMany(
-          { stallNumber: { $in: app.selectedStalls } },
+          { location: { $in: app.selectedStalls } },
           { $set: { managedBy: app.email.toLowerCase() } }
         );
       }
