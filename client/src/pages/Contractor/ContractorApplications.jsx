@@ -98,37 +98,22 @@ export default function ContractorApplication() {
   const user = getUser();
   const userEmail = user?.email || '';
 
-// ── Fetch applications and stall requests on mount ──────────────────────────
+  // ── Fetch applications on mount ──────────────────────────
   useEffect(() => {
     if (!userEmail) return;
     setLoadingApps(true);
-    // Fetch regular applications and stall requests in parallel
-    Promise.all([
-      fetch(`/api/contractor/applications?email=${userEmail}`).then(res => {
+    fetch(`/api/contractor/applications?email=${userEmail}`)
+      .then(res => {
         if (!res.ok) throw new Error(`Server error: ${res.status}`);
         return res.json();
-      }),
-      fetch(`/api/contractor/stall-requests/my-requests`).then(res => {
-        if (!res.ok) throw new Error(`Server error (stall requests): ${res.status}`);
-        return res.json();
       })
-    ])
-      .then(([appsData, stallsData]) => {
-        // Normalize stall requests to match application shape if needed
-        const normalizedStalls = stallsData.map(req => ({
-          id: req._id || req.id,
-          stall: req.stallId?.stallNumber ? `#${req.stallId.stallNumber}` : 'Unknown',
-          zone: req.stallId?.location || 'Unknown',
-          status: req.status?.toLowerCase() || 'pending',
-          submittedOn: new Date(req.createdAt).toLocaleDateString(),
-          type: 'stall-request',
-        }));
-        setApplications([...appsData, ...normalizedStalls]);
+      .then(data => {
+        setApplications(data);
         setError(null);
       })
       .catch(err => {
-        console.error('Failed to fetch applications or stall requests:', err);
-        setError('Failed to load data. Please refresh.');
+        console.error('Failed to fetch applications:', err);
+        setError('Failed to load applications. Please refresh.');
       })
       .finally(() => setLoadingApps(false));
   }, [userEmail]);
