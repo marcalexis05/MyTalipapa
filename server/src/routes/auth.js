@@ -278,11 +278,15 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid email or password.' });
     }
 
-    console.log(`[Login attempt] User role: ${user.role}, User status: ${user.status}`);
-    // Check role matches only if role is provide
-    if (role && user.role !== role) {
-      return res.status(403).json({ error: `This account is not registered as a ${role}.` });
-    }
+      console.log(`[Login attempt] User role: ${user.role}, User status: ${user.status}`);
+      // Enforce password change before any other checks
+      if (user.mustChangePassword) {
+        return res.status(403).json({ error: 'Password must be changed before proceeding.', mustChangePassword: true });
+      }
+      // Check role matches only if role is provided
+      if (role && user.role !== role) {
+        return res.status(403).json({ error: `This account is not registered as a ${role}.` });
+      }
 
     let isMatch = await bcrypt.compare(password, user.passwordHash);
     console.log(`[Login attempt] Password matches User.passwordHash: ${isMatch}`);

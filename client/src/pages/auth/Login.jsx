@@ -122,8 +122,8 @@ export default function Login() {
       const result = await response.json()
 
       if (!response.ok) {
-        // If backend requires password change (403) and indicates mustChangePassword, show modal
-        if (response.status === 403 && result.mustChangePassword) {
+        // If backend requires password change (403), show modal
+        if (response.status === 403) {
           setShowModal(true);
           // Store credentials for later navigation
           setModalEmail(email);
