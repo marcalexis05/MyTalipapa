@@ -298,12 +298,8 @@ router.post('/login', async (req, res) => {
           return res.status(403).json({ error: `This account is not registered as a ${role}.` });
         }
       }
-      // Contractor-specific password change enforcement
-      if (role === 'contractor' && user.mustChangePassword) {
-        return res.status(403).json({ error: 'Password must be changed before proceeding.', mustChangePassword: true });
-      }
-      // Enforce password change for other roles
-      if (user.mustChangePassword) {
+      // After role validation, enforce password change if the role matches the user's role
+      if (role && user.role === role && user.mustChangePassword) {
         return res.status(403).json({ error: 'Password must be changed before proceeding.', mustChangePassword: true });
       }
 
