@@ -156,9 +156,11 @@ export default function ArFinder({ onBack }) {
   const [stallPickerSearch, setStallPickerSearch] = useState("");
 
   // ── Step Detection ──────────────────────────────────────
-  const [motionActive, setMotionActive] = useState(false)
-  const [stepCount, setStepCount] = useState(0)
-  const headingRef = useRef(0)
+  const [motionActive, setMotionActive] = useState(false);
+  const [stepCount, setStepCount] = useState(0);
+  const headingRef = useRef(0);
+  // NEW: rolling buffer for averaged compass heading
+  const headingBufferRef = useRef([]);
 
   const handleSearchSubmit = async () => {
     if (!searchQuery.trim()) return;
@@ -288,7 +290,7 @@ export default function ArFinder({ onBack }) {
   const [gpsActive, setGpsActive] = useState(false);
 
   // Keep headingRef in sync so devicemotion can read latest heading
-  useEffect(() => { headingRef.current = heading }, [heading])
+  useEffect(() => { headingRef.current = heading; }, [heading]);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth <= 640);
@@ -304,57 +306,75 @@ export default function ArFinder({ onBack }) {
     }
   }, [toastMsg]);
 
-  // ── Step Detection Effect ───────────────────────────────
+  // ── Step Detection Effect (FIXED) ───────────────────────
   useEffect(() => {
-    if (!motionActive) return
+    if (!motionActive) return;
 
-    let lastMag = 0
-    let lastStepTime = 0
-    const STEP_THRESHOLD = 4      // tune if too sensitive / not sensitive enough
-    const STEP_COOLDOWN = 350     // ms between steps to avoid double-counting
-    const STEP_SIZE = 45          // map units per step
+    let smoothedMag = 0;
+    let wasRising = false;
+    let lastStepTime = 0;
+    const STEP_THRESHOLD = 2.5;  // tune up if too sensitive, down if missing steps
+    const STEP_COOLDOWN = 350;   // ms — prevents double-counting one footfall
+    const STEP_SIZE = 45;        // map units per step
 
     const handleMotion = (e) => {
-      const acc = e.accelerationIncludingGravity
-      if (!acc || acc.x == null) return
-      const mag = Math.sqrt(acc.x ** 2 + acc.y ** 2 + acc.z ** 2)
-      const delta = Math.abs(mag - lastMag)
-      lastMag = mag
-      const now = Date.now()
-      if (delta > STEP_THRESHOLD && now - lastStepTime > STEP_COOLDOWN) {
-        lastStepTime = now
-        const rad = (headingRef.current * Math.PI) / 180
-        setUserX(x => Math.max(30, Math.min(2270, x + Math.round(Math.sin(rad) * STEP_SIZE))))
-        setUserY(y => Math.max(30, Math.min(1790, y - Math.round(Math.cos(rad) * STEP_SIZE))))
-        setStepCount(c => c + 1)
+      // Prefer gravity-free acceleration; fall back to raw if unavailable
+      const acc = e.acceleration?.x != null ? e.acceleration : e.accelerationIncludingGravity;
+      if (!acc || acc.x == null) return;
+
+      // Use vertical axis (z) — most consistent footfall signal regardless of phone orientation
+      const vertMag = Math.abs(acc.z ?? 0);
+
+      // Exponential moving average to smooth out jitter
+      const ALPHA = 0.75;
+      const prevSmoothed = smoothedMag;
+      smoothedMag = ALPHA * smoothedMag + (1 - ALPHA) * vertMag;
+
+      // Peak detection: fire only at the crest of a footfall wave
+      const currentlyRising = vertMag > prevSmoothed;
+      const isPeak = wasRising && !currentlyRising && smoothedMag > STEP_THRESHOLD;
+      wasRising = currentlyRising;
+
+      const now = Date.now();
+      if (isPeak && now - lastStepTime > STEP_COOLDOWN) {
+        lastStepTime = now;
+
+        // Use averaged heading for stable direction
+        const buf = headingBufferRef.current;
+        const avgHeading = buf.length
+          ? buf.reduce((a, b) => a + b, 0) / buf.length
+          : headingRef.current;
+
+        const rad = (avgHeading * Math.PI) / 180;
+        setUserX(x => Math.max(30, Math.min(2270, x + Math.round(Math.sin(rad) * STEP_SIZE))));
+        setUserY(y => Math.max(30, Math.min(1790, y - Math.round(Math.cos(rad) * STEP_SIZE))));
+        setStepCount(c => c + 1);
       }
-    }
+    };
 
     // iOS 13+ requires permission for DeviceMotion
     const requestAndListen = async () => {
       if (typeof DeviceMotionEvent?.requestPermission === 'function') {
         try {
-          const perm = await DeviceMotionEvent.requestPermission()
+          const perm = await DeviceMotionEvent.requestPermission();
           if (perm !== 'granted') {
-            setToastMsg('Motion permission denied.')
-            setMotionActive(false)
-            return
+            setToastMsg('Motion permission denied.');
+            setMotionActive(false);
+            return;
           }
         } catch {
-          setToastMsg('Could not request motion permission.')
-          setMotionActive(false)
-          return
+          setToastMsg('Could not request motion permission.');
+          setMotionActive(false);
+          return;
         }
       }
-      window.addEventListener('devicemotion', handleMotion)
-      setToastMsg('Step detection ON — walk to move!')
-    }
+      window.addEventListener('devicemotion', handleMotion);
+      setToastMsg('Step detection ON — walk to move!');
+    };
 
-    requestAndListen()
-    return () => {
-      window.removeEventListener('devicemotion', handleMotion)
-    }
-  }, [motionActive])
+    requestAndListen();
+    return () => window.removeEventListener('devicemotion', handleMotion);
+  }, [motionActive]);
 
   const toggleGps = () => {
     if (gpsActive) {
@@ -428,10 +448,20 @@ export default function ArFinder({ onBack }) {
 
   useEffect(() => {
     if (cameraEnabled) startCamera(); else stopCamera();
+
+    // FIXED: orientation handler now buffers readings for smooth heading
     const handleOrientation = (e) => {
       let h = e.webkitCompassHeading ?? (360 - e.alpha);
-      if (h !== undefined) { setHeading(Math.round(h)); setHasOrientation(true); }
+      if (h !== undefined) {
+        // Rolling average over last 6 readings to smooth compass jitter
+        headingBufferRef.current.push(h);
+        if (headingBufferRef.current.length > 6) headingBufferRef.current.shift();
+        const avg = headingBufferRef.current.reduce((a, b) => a + b, 0) / headingBufferRef.current.length;
+        setHeading(Math.round(avg));
+        setHasOrientation(true);
+      }
     };
+
     window.addEventListener("deviceorientation", handleOrientation);
     return () => { stopCamera(); window.removeEventListener("deviceorientation", handleOrientation); };
   }, [cameraEnabled]);
@@ -932,7 +962,6 @@ export default function ArFinder({ onBack }) {
           animation: fadeIn 0.15s ease;
         }
 
-        /* Step counter badge */
         .step-badge {
           position: absolute; top: 10px; right: 56px;
           background: rgba(232,98,26,0.92);
@@ -1228,9 +1257,9 @@ export default function ArFinder({ onBack }) {
             {/* Step Detection Button */}
             <button
               onClick={() => {
-                setMotionActive(m => !m)
+                setMotionActive(m => !m);
                 if (motionActive) {
-                  setToastMsg('Step detection OFF.')
+                  setToastMsg('Step detection OFF.');
                 }
               }}
               className={`ctrl-btn${motionActive ? " motion-on" : ""}`}
