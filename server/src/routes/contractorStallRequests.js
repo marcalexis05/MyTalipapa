@@ -4,6 +4,11 @@ const Stall = require('../models/Stall');
 const StallRequest = require('../models/StallRequest');
 const jwt = require('jsonwebtoken');
 
+router.use((req, res, next) => {
+  console.log('ContractorStallRequests route hit:', req.method, req.path);
+  next();
+});
+
 // Contractor auth middleware
 router.use((req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1];
@@ -18,17 +23,43 @@ router.use((req, res, next) => {
   }
 });
 
-// POST a new request for a stall
+// POST a new request for a stall (or multiple)
 router.post('/request', async (req, res) => {
-  const { stallId } = req.body;
+  const { stallIds } = req.body;
   const email = req.contractor.email;
-  const stall = await Stall.findById(stallId);
-  if (!stall) return res.status(404).json({ error: 'Stall not found' });
-  if (stall.managedBy) return res.status(400).json({ error: 'Stall already assigned' });
-  const existing = await StallRequest.findOne({ stallId, contractorEmail: email, status: 'pending' });
-  if (existing) return res.status(400).json({ error: 'Request already pending' });
-  const reqDoc = await StallRequest.create({ stallId, contractorEmail: email });
-  res.status(201).json({ message: 'Request sent', requestId: reqDoc._id });
+  
+  if (!Array.isArray(stallIds) || stallIds.length === 0) {
+    return res.status(400).json({ error: 'Please provide an array of stall IDs' });
+  }
+
+  const results = [];
+  for (const stallId of stallIds) {
+    const stall = await Stall.findById(stallId);
+    if (!stall) {
+      results.push({ stallId, status: 'error', message: 'Stall not found' });
+      continue;
+    }
+    if (stall.managedBy) {
+      results.push({ stallId, status: 'error', message: 'Stall already assigned' });
+      continue;
+    }
+    const existing = await StallRequest.findOne({ stallId, contractorEmail: email, status: 'pending' });
+    if (existing) {
+      results.push({ stallId, status: 'error', message: 'Request already pending' });
+      continue;
+    }
+    const reqDoc = await StallRequest.create({ stallId, contractorEmail: email });
+    results.push({ stallId, status: 'success', requestId: reqDoc._id });
+  }
+  
+  res.status(201).json(results);
+});
+
+// Fallback POST route (accepts direct POST without /request)
+router.post('/', async (req, res) => {
+  // Forward to the same logic as /request
+  req.url = '/request';
+  router.handle(req, res);
 });
 
 // GET available unassigned stalls, optional location filter
