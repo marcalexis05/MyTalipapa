@@ -82,6 +82,7 @@ export default function ContractorStalls() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedZoneFilter, setSelectedZoneFilter] = useState('all');
   const [requestStatus, setRequestStatus] = useState(null);
+  const [loadingStalls, setLoadingStalls] = useState(false);
 
   // Active section tab (Fishes / Meat / Vegetables)
   const [activeSection, setActiveSection] = useState(null);
@@ -111,10 +112,22 @@ export default function ContractorStalls() {
   // Fetch available stalls when modal opens
   useEffect(() => {
     if (showAddModal) {
+      setLoadingStalls(true);
       fetch('/api/contractor/stall-requests/available')
-        .then(res => res.json())
-        .then(data => setAvailableStalls(data))
-        .catch(err => console.error('Failed to fetch available stalls:', err));
+        .then(res => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return res.json();
+        })
+        .then(data => {
+          setAvailableStalls(Array.isArray(data) ? data : []);
+          setLoadingStalls(false);
+        })
+        .catch(err => {
+          console.error('Failed to fetch available stalls:', err);
+          setAvailableStalls([]);
+          setLoadingStalls(false);
+          setRequestStatus('Failed to load available stalls');
+        });
     }
   }, [showAddModal]);
 
@@ -206,6 +219,8 @@ export default function ContractorStalls() {
 
   // Filtered available stalls for modal
   const filteredAvailableStalls = useMemo(() => {
+    if (!Array.isArray(availableStalls)) return [];
+    
     let filtered = availableStalls.filter(s => s.status === 'available');
     
     if (selectedZoneFilter !== 'all') {
@@ -225,6 +240,7 @@ export default function ContractorStalls() {
 
   // Get unique zones from available stalls
   const availableZones = useMemo(() => {
+    if (!Array.isArray(availableStalls)) return [];
     return [...new Set(availableStalls.map(s => s.zone).filter(Boolean))].sort();
   }, [availableStalls]);
 
@@ -399,7 +415,11 @@ export default function ContractorStalls() {
 
                   {/* Stall Grid */}
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6 max-h-[40vh] overflow-y-auto">
-                    {filteredAvailableStalls.length === 0 ? (
+                    {loadingStalls ? (
+                      <div className="col-span-full text-center py-8 text-gray-500">
+                        Loading stalls...
+                      </div>
+                    ) : filteredAvailableStalls.length === 0 ? (
                       <div className="col-span-full text-center py-8 text-gray-500">
                         No stalls available matching your search.
                       </div>
@@ -856,4 +876,4 @@ export default function ContractorStalls() {
       </div>
     </ContractorLockScreen>
   );
-}
+}st
