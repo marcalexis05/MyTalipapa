@@ -4,6 +4,7 @@ import { ChevronRight, Store } from "lucide-react";
 import { useCurrentUser } from '../../utils/auth';
 import AdminSidebar from '../../components/AdminSidebar';
 import NotificationBell from '../../components/NotificationBell';
+import { useCurrentUser, getToken } from '../../utils/auth';
 
 const NAV_ITEMS = [
   {
@@ -149,21 +150,23 @@ export default function AdminApplication() {
     // fetch stall requests if in stall management view
     if (appType === "stalls") {
       setLoadingStalls(true);
-      fetch('/api/admin/stall-requests/pending')
+      fetch('/api/admin/stall-requests/pending', {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      })
         .then(res => {
           if (!res.ok) throw new Error(`Server error: ${res.status}`);
           return res.json();
-        })
-        .then(data => {
-          setStallRequests(data);
-          setStallError(null);
-        })
-        .catch(err => {
-          console.error('Failed to fetch stall requests:', err);
-          setStallError('Failed to load stall requests.');
-        })
-        .finally(() => setLoadingStalls(false));
-    }
+          })
+          .then(data => {
+            setStallRequests(data);
+            setStallError(null);
+          })
+          .catch(err => {
+            console.error('Failed to fetch stall requests:', err);
+            setStallError('Failed to load stall requests.');
+          })
+          .finally(() => setLoadingStalls(false));
+      }
   };
 
   useEffect(() => {
@@ -260,11 +263,14 @@ export default function AdminApplication() {
     setProcessingId(id);
     setAnimating(prev => ({ ...prev, [id]: action }));
     try {
-      const res = await fetch('/api/admin/stall-requests/review', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ requestId: id, action }), // 'approve' | 'reject'
-      });
+          const res = await fetch('/api/admin/stall-requests/review', {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${getToken()}`,
+            },
+            body: JSON.stringify({ requestId: id, action }),
+          });
       if (!res.ok) throw new Error(`Server error: ${res.status}`);
       // Remove the request from pending list after successful action
       setStallRequests(prev => prev.filter(r => r._id !== id));

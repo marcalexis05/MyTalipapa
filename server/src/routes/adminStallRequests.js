@@ -31,19 +31,30 @@ router.get('/pending', async (req, res) => {
 
 // POST review (approve or reject)
 router.post('/review', async (req, res) => {
-  const { requestId, action } = req.body; // action: 'approve' | 'reject'
+  const { requestId, action } = req.body;
   if (!requestId || !action) return res.status(400).json({ error: 'Missing requestId or action' });
+
   try {
     const request = await StallRequest.findById(requestId);
     if (!request) return res.status(404).json({ error: 'Request not found' });
+
     if (action === 'approve') {
-      await Stall.findByIdAndUpdate(request.stallId, { managedBy: request.contractorEmail, status: 'occupied' });
+      await Stall.findByIdAndUpdate(request.stallId, {
+        managedBy: request.contractorEmail,
+        status: 'occupied',
+      });
       request.status = 'approved';
     } else if (action === 'reject') {
+      // Restore stall to available so others can request it
+      await Stall.findByIdAndUpdate(request.stallId, {
+        $unset: { managedBy: '' },
+        status: 'available',
+      });
       request.status = 'rejected';
     } else {
       return res.status(400).json({ error: 'Invalid action' });
     }
+
     request.updatedAt = new Date();
     await request.save();
     res.json({ message: `Request ${action}d` });
@@ -52,5 +63,4 @@ router.post('/review', async (req, res) => {
     res.status(500).json({ error: 'Failed to review request' });
   }
 });
-
 module.exports = router;

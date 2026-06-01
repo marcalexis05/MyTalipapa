@@ -62,13 +62,54 @@ router.post('/', async (req, res) => {
   router.handle(req, res);
 });
 
-// GET available unassigned stalls, optional location filter
+// GET available stalls — filter by status 'available' AND no managedBy
 router.get('/available', async (req, res) => {
   const { location } = req.query;
-  const query = { $or: [{ managedBy: { $exists: false } }, { managedBy: null }] };
+  const query = {
+    status: 'available',
+    $or: [{ managedBy: { $exists: false } }, { managedBy: null }, { managedBy: '' }],
+  };
   if (location) query.location = new RegExp(location, 'i');
-  const stalls = await Stall.find(query);
-  res.json(stalls);
+  try {
+    const stalls = await Stall.find(query);
+    res.json(stalls);
+  } catch (err) {
+    console.error('Failed to fetch available stalls:', err);
+    res.status(500).json({ error: 'Failed to fetch available stalls' });
+  }
 });
 
+// POST /request — submit stall request(s)
+router.post('/request', async (req, res) => {
+  const { stallIds } = req.body;
+  const email = req.contractor.email;
+
+  if (!Array.isArray(stallIds) || stallIds.length === 0) {
+    return res.status(400).json({ error: 'Please provide an array of stall IDs' });
+  }
+
+  const results = [];
+  for (const stallId of stallIds) {
+    try {
+      const stall = await Stall.findById(stallId);
+      if (!stall) { results.push({ stallId, status: 'error', message: 'Stall not found' }); continue; }
+      if (stall.status !== 'available') { results.push({ stallId, status: 'error', message: 'Stall not available' }); continue; }
+      if (stall.managedBy) { results.push({ stallId, status: 'error', message: 'Stall already assigned' }); continue; }
+
+      const existing = await StallRequest.findOne({ stallId, contractorEmail: email, status: 'pending' });
+      if (existing) { results.push({ stallId, status: 'error', message: 'Request already pending' }); continue; }
+
+      // Mark stall as pending so it doesn't appear available to others
+      await Stall.findByIdAndUpdate(stallId, { status: 'pending' });
+
+      const reqDoc = await StallRequest.create({ stallId, contractorEmail: email });
+      results.push({ stallId, status: 'success', requestId: reqDoc._id });
+    } catch (err) {
+      results.push({ stallId, status: 'error', message: err.message });
+    }
+  }
+
+  const anySuccess = results.some(r => r.status === 'success');
+  res.status(anySuccess ? 201 : 400).json(results);
+});
 module.exports = router;

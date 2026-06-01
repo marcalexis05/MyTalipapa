@@ -268,33 +268,51 @@ export default function ContractorStalls() {
     );
   };
 
-  const handleSendRequest = async () => {
-    if (selectedStallIds.length === 0) {
-      setRequestStatus('Please select at least one stall');
-      return;
-    }
+const handleSendRequest = async () => {
+  if (selectedStallIds.length === 0) {
+    setRequestStatus('Please select at least one stall');
+    return;
+  }
 
-    try {
-      const resp = await fetch('/api/contractor/stall-requests/request', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
-        body: JSON.stringify({ stallIds: selectedStallIds }),
-      });
-      const json = await resp.json();
-      if (resp.ok) {
-        setRequestStatus('success');
-        setSelectedStallIds([]);
-        setSearchQuery('');
-        setSelectedZoneFilter('all');
-        setTimeout(() => setShowAddModal(false), 500);
-      } else {
-        setRequestStatus(json.error || 'Failed to send request');
+  try {
+    const resp = await fetch('/api/contractor/stall-requests/request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+      body: JSON.stringify({ stallIds: selectedStallIds }),
+    });
+    const json = await resp.json();
+
+    // Check if any succeeded (API returns array of results)
+    const results = Array.isArray(json) ? json : [];
+    const successes = results.filter(r => r.status === 'success');
+    const errors = results.filter(r => r.status === 'error');
+
+    if (successes.length > 0) {
+      setRequestStatus('success');
+      setSelectedStallIds([]);
+      setSearchQuery('');
+      setSelectedZoneFilter('all');
+
+      // Refresh contractor's stall list to show new pending stalls
+      if (userEmail) {
+        fetch(`/api/contractor/stalls?email=${userEmail}`)
+          .then(r => r.json())
+          .then(data => setStalls(data))
+          .catch(() => {});
       }
-    } catch (err) {
-      setRequestStatus('Error sending request');
-    }
-  };
 
+      setTimeout(() => {
+        setShowAddModal(false);
+        setRequestStatus(null);
+      }, 1200);
+    } else {
+      const msg = errors.map(e => e.message).join(', ');
+      setRequestStatus(msg || 'Failed to send request');
+    }
+  } catch (err) {
+    setRequestStatus('Error sending request');
+  }
+};
   return (
     <ContractorLockScreen>
       <div className="flex h-screen bg-[#f5f5f0] font-sans overflow-hidden w-full">
