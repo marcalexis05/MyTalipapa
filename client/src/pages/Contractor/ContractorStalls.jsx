@@ -243,6 +243,12 @@ export default function ContractorStalls() {
                 <span className="welcome-role">Contractor</span>
               </div>
               <NotificationBell />
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="px-2 py-1 bg-green-600 text-white rounded-md text-sm hover:bg-green-700 transition"
+        >
+          Add Stall
+        </button>
               <button className="header-logout-btn" aria-label="Log out" onClick={() => setShowLogoutModal(true)}>
                 <LogoutIcon />
               </button>
