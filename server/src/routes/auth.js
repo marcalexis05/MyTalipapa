@@ -279,7 +279,7 @@ router.post('/login', async (req, res) => {
     }
 
     console.log(`[Login attempt] User role: ${user.role}, User status: ${user.status}`);
-    // Check role matches only if role is provided
+    // Check role matches only if role is provide
     if (role && user.role !== role) {
       return res.status(403).json({ error: `This account is not registered as a ${role}.` });
     }
