@@ -35,4 +35,33 @@ router.get('/announcements', async (req, res) => {
   }
 });
 
+// PUT /api/admin/announcements/:id
+router.put('/announcements/:id', async (req, res) => {
+  try {
+    const { title, content, targetAudience } = req.body
+    const updated = await Announcement.findByIdAndUpdate(
+      req.params.id,
+      { title, content, targetAudience },
+      { new: true, runValidators: true }
+    )
+    if (!updated) return res.status(404).json({ error: 'Announcement not found' })
+    res.json(updated)
+  } catch (error) {
+    console.error('Error updating announcement:', error)
+    res.status(500).json({ error: 'Failed to update announcement' })
+  }
+})
+
+// DELETE /api/admin/announcements/:id
+router.delete('/announcements/:id', async (req, res) => {
+  try {
+    const deleted = await Announcement.findByIdAndDelete(req.params.id)
+    if (!deleted) return res.status(404).json({ error: 'Announcement not found' })
+    res.json({ message: 'Announcement deleted successfully' })
+  } catch (error) {
+    console.error('Error deleting announcement:', error)
+    res.status(500).json({ error: 'Failed to delete announcement' })
+  }
+})
+
 module.exports = router;
