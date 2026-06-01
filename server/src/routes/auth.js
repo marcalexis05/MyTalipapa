@@ -781,8 +781,21 @@ router.post('/change-first-password', async (req, res) => {
     }
     const isMatch = await bcrypt.compare(password, user.passwordHash);
     if (!isMatch) {
-      return res.status(401).json({ error: 'Incorrect current password.' });
+      // Fallback: check ContractorApplication password hash
+      const ContractorApplication = require('../models/ContractorApplication');
+      const app = await ContractorApplication.findOne({ email: email.toLowerCase() });
+      if (app) {
+        const appMatch = await bcrypt.compare(password, app.passwordHash);
+        if (appMatch) {
+          user.passwordHash = app.passwordHash;
+        } else {
+          return res.status(401).json({ error: 'Incorrect current password.' });
+        }
+      } else {
+        return res.status(401).json({ error: 'Incorrect current password.' });
+      }
     }
+
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(newPassword, salt);
     user.passwordHash = passwordHash;
