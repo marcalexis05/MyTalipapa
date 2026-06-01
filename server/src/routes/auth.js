@@ -279,29 +279,32 @@ router.post('/login', async (req, res) => {
     }
 
       console.log(`[Login attempt] User role: ${user.role}, User status: ${user.status}`);
-      // Enforce password change before any other checks
-      if (user.mustChangePassword) {
-        return res.status(403).json({ error: 'Password must be changed before proceeding.', mustChangePassword: true });
-      }
-      // Role-based authorization: ensure role mismatch handling for all roles
+      // Role-based authorization: check role first
       if (role) {
-        // Renters cannot log in as contractor or admin
-        if (user.role === 'renter') {
-          if (role === 'contractor') {
-            return res.status(403).json({ error: 'This account is not a contractor account' });
-          }
-          if (role === 'admin') {
-            return res.status(403).json({ error: 'This account is not an admin account' });
-          }
+        // Renter trying to login as another role
+        if (user.role === 'renter' && role !== 'renter') {
+          return res.status(403).json({ error: 'This is a renter account' });
         }
-        // Admins or contractors cannot log in as renter
-        if ((user.role === 'admin' || user.role === 'contractor') && role === 'renter') {
-          return res.status(403).json({ error: 'This account is not a renter account' });
+        // Contractor trying to login as another role
+        if (user.role === 'contractor' && role !== 'contractor') {
+          return res.status(403).json({ error: 'This is a contractor account' });
         }
-        // Fallback for any other mismatched roles
+        // Admin trying to login as another role
+        if (user.role === 'admin' && role !== 'admin') {
+          return res.status(403).json({ error: 'this is an admin account' });
+        }
+        // If role provided but does not match (should not happen after above), generic fallback
         if (user.role !== role) {
           return res.status(403).json({ error: `This account is not registered as a ${role}.` });
         }
+      }
+      // Contractor-specific password change enforcement
+      if (role === 'contractor' && user.mustChangePassword) {
+        return res.status(403).json({ error: 'Password must be changed before proceeding.', mustChangePassword: true });
+      }
+      // Enforce password change for other roles
+      if (user.mustChangePassword) {
+        return res.status(403).json({ error: 'Password must be changed before proceeding.', mustChangePassword: true });
       }
 
     let isMatch = await bcrypt.compare(password, user.passwordHash);
