@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronRight, Store } from 'lucide-react'
 import { useCurrentUser } from '../../utils/auth'
@@ -66,6 +66,7 @@ export default function AdminDashboard() {
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const { userName, loading: authLoading } = useCurrentUser()
   const [processingId, setProcessingId] = useState(null)
+  const liveViewMountRef = useRef(null)
 
   // ── Live data from DB ──────────────────────────────────
   const [stalls, setStalls] = useState([])
