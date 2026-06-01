@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronRight, Store } from "lucide-react";
-import { useCurrentUser, getUser } from '../../utils/auth';
+import { useCurrentUser, getUser, getToken } from '../../utils/auth';
 import ContractorSidebar from '../../components/ContractorSidebar';
 import ContractorLockScreen from './ContractorLockScreen';
 import NotificationBell from '../../components/NotificationBell';
