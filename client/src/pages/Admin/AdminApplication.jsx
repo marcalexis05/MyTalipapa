@@ -79,43 +79,35 @@ const TABS = ["Pending", "Approved", "Rejected"];
 
 export default function AdminApplication() {
   const [tab, setTab] = useState("Pending");
-  const [appType, setAppType] = useState("renters"); // "renters" | "contractors" | "stalls"
+  const [appType, setAppType] = useState("renters");
   const [stallRequests, setStallRequests] = useState([]);
   const [loadingStalls, setLoadingStalls] = useState(false);
   const [stallError, setStallError] = useState(null);
 
-  
   const [applications, setApplications] = useState([]);
   const [loadingApps, setLoadingApps] = useState(true);
   const [contractorApps, setContractorApps] = useState([]);
   const [loadingContractorApps, setLoadingContractorApps] = useState(true);
-  
+
   const [error, setError] = useState(null);
   const navigate = useNavigate();
   const [activeNav, setActiveNav] = useState('nav-apps');
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const { userName, loading: authLoading } = useCurrentUser();
   const [processingId, setProcessingId] = useState(null);
-  
+
   const [selectedApp, setSelectedApp] = useState(null);
   const [selectedContractorApp, setSelectedContractorApp] = useState(null);
   const [animating, setAnimating] = useState({});
 
-  const filteredApps = applications.filter(
-    a => a.status === tab.toLowerCase()
-  );
-
-  const filteredContractorApps = contractorApps.filter(
-    a => a.status === tab.toLowerCase()
-  );
+  const filteredApps = applications.filter(a => a.status === tab.toLowerCase());
+  const filteredContractorApps = contractorApps.filter(a => a.status === tab.toLowerCase());
 
   const pendingRentersCount = applications.filter(a => a.status === "pending").length;
   const pendingContractorsCount = contractorApps.filter(a => a.status === "pending").length;
-  const totalPendingApps = pendingRentersCount + pendingContractorsCount;
 
-  // ── Fetch applications on mount ──────────────────────────
+  // ── Fetch applications ──────────────────────────
   const fetchAllApps = () => {
-    // existing fetch for renter and contractor apps
     setLoadingApps(true);
     fetch('/api/admin/applications')
       .then(res => {
@@ -146,32 +138,33 @@ export default function AdminApplication() {
       })
       .finally(() => setLoadingContractorApps(false));
 
-    // fetch stall requests if in stall management view
-   if (appType === "stalls") {
-  setLoadingStalls(true);
-  const endpoint = tab === "Approved" 
-    ? '/api/admin/stall-requests/approved'
-    : tab === "Rejected"
-    ? '/api/admin/stall-requests/rejected'
-    : '/api/admin/stall-requests/pending';
+    if (appType === "stalls") {
+      setLoadingStalls(true);
+      const endpoint =
+        tab === "Approved"
+          ? '/api/admin/stall-requests/approved'
+          : tab === "Rejected"
+          ? '/api/admin/stall-requests/rejected'
+          : '/api/admin/stall-requests/pending';
 
-  fetch(endpoint, {
-    headers: { Authorization: `Bearer ${getToken()}` },
-  })
-    .then(res => {
-      if (!res.ok) throw new Error(`Server error: ${res.status}`);
-      return res.json();
-    })
-    .then(data => {
-      setStallRequests(data);
-      setStallError(null);
-    })
-    .catch(err => {
-      console.error('Failed to fetch stall requests:', err);
-      setStallError('Failed to load stall requests.');
-    })
-    .finally(() => setLoadingStalls(false));
-}
+      fetch(endpoint, {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      })
+        .then(res => {
+          if (!res.ok) throw new Error(`Server error: ${res.status}`);
+          return res.json();
+        })
+        .then(data => {
+          setStallRequests(data);
+          setStallError(null);
+        })
+        .catch(err => {
+          console.error('Failed to fetch stall requests:', err);
+          setStallError('Failed to load stall requests.');
+        })
+       .finally(() => setLoadingStalls(false));
+  }
+  };  // ← closes fetchAllApps here
 
   useEffect(() => {
     fetchAllApps();
@@ -190,22 +183,16 @@ export default function AdminApplication() {
   const handleAction = async (id, action) => {
     setProcessingId(id);
     setAnimating(prev => ({ ...prev, [id]: action }));
-
     try {
       const res = await fetch(`/api/admin/applications/${id}/status`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action }), // "approve" | "reject"
+        body: JSON.stringify({ action }),
       });
-
       if (!res.ok) throw new Error(`Server error: ${res.status}`);
-
-      // Update UI only after backend confirms
       setApplications(prev =>
         prev.map(a =>
-          a.id === id
-            ? { ...a, status: action === 'approve' ? 'approved' : 'rejected' }
-            : a
+          a.id === id ? { ...a, status: action === 'approve' ? 'approved' : 'rejected' } : a
         )
       );
     } catch (err) {
@@ -213,11 +200,7 @@ export default function AdminApplication() {
       alert('Action failed. Please try again.');
     } finally {
       setProcessingId(null);
-      setAnimating(prev => {
-        const next = { ...prev };
-        delete next[id];
-        return next;
-      });
+      setAnimating(prev => { const next = { ...prev }; delete next[id]; return next; });
     }
   };
 
@@ -226,27 +209,20 @@ export default function AdminApplication() {
     let rejectionReason = "";
     if (action === 'reject') {
       rejectionReason = window.prompt("Please enter a reason for rejection (optional):");
-      if (rejectionReason === null) return; // User cancelled prompt
+      if (rejectionReason === null) return;
     }
-
     setProcessingId(id);
     setAnimating(prev => ({ ...prev, [id]: action }));
-
     try {
       const res = await fetch(`/api/admin/contractor-applications/${id}/status`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, rejectionReason }), // "approve" | "reject"
+        body: JSON.stringify({ action, rejectionReason }),
       });
-
       if (!res.ok) throw new Error(`Server error: ${res.status}`);
-
-      // Update UI only after backend confirms
       setContractorApps(prev =>
         prev.map(a =>
-          a.id === id
-            ? { ...a, status: action === 'approve' ? 'approved' : 'rejected', rejectionReason }
-            : a
+          a.id === id ? { ...a, status: action === 'approve' ? 'approved' : 'rejected', rejectionReason } : a
         )
       );
     } catch (err) {
@@ -254,11 +230,7 @@ export default function AdminApplication() {
       alert('Action failed. Please try again.');
     } finally {
       setProcessingId(null);
-      setAnimating(prev => {
-        const next = { ...prev };
-        delete next[id];
-        return next;
-      });
+      setAnimating(prev => { const next = { ...prev }; delete next[id]; return next; });
     }
   };
 
@@ -267,16 +239,15 @@ export default function AdminApplication() {
     setProcessingId(id);
     setAnimating(prev => ({ ...prev, [id]: action }));
     try {
-          const res = await fetch('/api/admin/stall-requests/review', {
-            method: 'POST',
-            headers: { 
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${getToken()}`,
-            },
-            body: JSON.stringify({ requestId: id, action }),
-          });
+      const res = await fetch('/api/admin/stall-requests/review', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${getToken()}`,
+        },
+        body: JSON.stringify({ requestId: id, action }),
+      });
       if (!res.ok) throw new Error(`Server error: ${res.status}`);
-      // Remove the request from pending list after successful action
       setStallRequests(prev => prev.filter(r => r._id !== id));
     } catch (err) {
       console.error('Failed to update stall request:', err);
@@ -287,10 +258,8 @@ export default function AdminApplication() {
     }
   };
 
-
   const activeApps = appType === "renters" ? applications : contractorApps;
-
-  const pendingCount  = activeApps.filter(a => a.status === "pending").length;
+  const pendingCount = activeApps.filter(a => a.status === "pending").length;
   const approvedCount = activeApps.filter(a => a.status === "approved").length;
   const rejectedCount = activeApps.filter(a => a.status === "rejected").length;
   const tabCounts = { Pending: pendingCount, Approved: approvedCount, Rejected: rejectedCount };
@@ -327,16 +296,10 @@ export default function AdminApplication() {
       return filteredApps.map(app => (
         <div
           key={app.id}
-          className={`application-row apps-row-full${
-            animating[app.id] === "approve" ? " action-approved" : ""
-          }${
-            animating[app.id] === "reject" ? " action-rejected" : ""
-          }`}
+          className={`application-row apps-row-full${animating[app.id] === "approve" ? " action-approved" : ""}${animating[app.id] === "reject" ? " action-rejected" : ""}`}
         >
           <div className="app-avatar">
-            <span style={{ fontSize: 15, fontWeight: 800, color: "#6b7280" }}>
-              {app.initials}
-            </span>
+            <span style={{ fontSize: 15, fontWeight: 800, color: "#6b7280" }}>{app.initials}</span>
           </div>
           <div className="app-info">
             <div className="apps-name-row">
@@ -393,16 +356,10 @@ export default function AdminApplication() {
       return filteredContractorApps.map(app => (
         <div
           key={app.id}
-          className={`application-row apps-row-full${
-            animating[app.id] === "approve" ? " action-approved" : ""
-          }${
-            animating[app.id] === "reject" ? " action-rejected" : ""
-          }`}
+          className={`application-row apps-row-full${animating[app.id] === "approve" ? " action-approved" : ""}${animating[app.id] === "reject" ? " action-rejected" : ""}`}
         >
           <div className="app-avatar">
-            <span style={{ fontSize: 15, fontWeight: 800, color: "#6b7280" }}>
-              {app.initials}
-            </span>
+            <span style={{ fontSize: 15, fontWeight: 800, color: "#6b7280" }}>{app.initials}</span>
           </div>
           <div className="app-info">
             <div className="apps-name-row">
@@ -497,14 +454,12 @@ export default function AdminApplication() {
         {/* Header */}
         <header className="bg-white border-b border-gray-100 px-4 md:px-6 py-3.5 flex items-center justify-between sticky top-0 z-30 shrink-0">
           <div className="flex items-center gap-3">
-            {/* Mobile logo */}
             <div className="md:hidden flex items-center gap-2">
               <div className="w-7 h-7 bg-[#1a5c2a] rounded-lg flex items-center justify-center shrink-0">
                 <Store size={13} color="white" />
               </div>
               <span className="font-extrabold text-gray-900 text-sm">MyTalipapa</span>
             </div>
-            {/* Desktop breadcrumb */}
             <div className="hidden md:flex items-center gap-1 text-sm text-gray-400">
               <span>Admin</span>
               <ChevronRight size={14} />
@@ -519,11 +474,7 @@ export default function AdminApplication() {
               <span className="welcome-role">Market Supervisor</span>
             </div>
             <NotificationBell />
-            <button
-              className="header-logout-btn"
-              aria-label="Log out"
-              onClick={() => setShowLogoutModal(true)}
-            >
+            <button className="header-logout-btn" aria-label="Log out" onClick={() => setShowLogoutModal(true)}>
               <LogoutIcon />
             </button>
           </div>
@@ -532,22 +483,23 @@ export default function AdminApplication() {
         <main className="dashboard-main apps-main">
           <div className="apps-title-block">
             <h1 className="apps-page-title">
-              {appType === "renters" ? "Rental Applications" : "Contractor Registrations"}
+              {appType === "renters" ? "Rental Applications" : appType === "contractors" ? "Contractor Registrations" : "Stall Management"}
             </h1>
             <p className="apps-page-sub">
-              {appType === "renters" 
-                ? "Manage and review new stall requests from vendors." 
-                : "Review and manage pending applications for market stall contractors."}
+              {appType === "renters"
+                ? "Manage and review new stall requests from vendors."
+                : appType === "contractors"
+                ? "Review and manage pending applications for market stall contractors."
+                : "Review and manage stall requests from contractors."}
             </p>
           </div>
+
           {/* Segmented Toggle Control */}
           <div className="flex bg-gray-200/60 p-1.5 rounded-2xl mb-4 w-full max-w-lg border border-gray-100">
             <button
               onClick={() => { setAppType("renters"); setTab("Pending"); }}
               className={`flex-1 py-3 text-center text-xs font-bold rounded-xl transition-all relative ${
-                appType === "renters"
-                  ? "bg-white text-green-700 shadow-sm border border-gray-150/40"
-                  : "text-gray-500 hover:text-gray-700"
+                appType === "renters" ? "bg-white text-green-700 shadow-sm border border-gray-150/40" : "text-gray-500 hover:text-gray-700"
               }`}
             >
               Renter Applications
@@ -560,9 +512,7 @@ export default function AdminApplication() {
             <button
               onClick={() => { setAppType("contractors"); setTab("Pending"); }}
               className={`flex-1 py-3 text-center text-xs font-bold rounded-xl transition-all relative ${
-                appType === "contractors"
-                  ? "bg-white text-green-700 shadow-sm border border-gray-150/40"
-                  : "text-gray-500 hover:text-gray-700"
+                appType === "contractors" ? "bg-white text-green-700 shadow-sm border border-gray-150/40" : "text-gray-500 hover:text-gray-700"
               }`}
             >
               Contractor Registrations
@@ -575,9 +525,7 @@ export default function AdminApplication() {
             <button
               onClick={() => { setAppType("stalls"); setTab("Pending"); }}
               className={`flex-1 py-3 text-center text-xs font-bold rounded-xl transition-all relative ${
-                appType === "stalls"
-                  ? "bg-white text-green-700 shadow-sm border border-gray-150/40"
-                  : "text-gray-500 hover:text-gray-700"
+                appType === "stalls" ? "bg-white text-green-700 shadow-sm border border-gray-150/40" : "text-gray-500 hover:text-gray-700"
               }`}
             >
               Stall Management
@@ -605,30 +553,41 @@ export default function AdminApplication() {
           {/* Applications List */}
           <div className="applications-list apps-list-full">
             {appType === "stalls" ? (
-                loadingStalls ? (
-                  <div className="no-applications"><span style={{ fontSize: 32 }}>⏳</span><span>Loading stall requests…</span></div>
-                ) : stallError ? (
-                  <div className="no-applications" style={{ color: '#dc2626' }}><span style={{ fontSize: 32 }}>⚠️</span><span>{stallError}</span></div>
-                ) : stallRequests.length === 0 ? (
-                  <div className="no-applications"><span style={{ fontSize: 32 }}>📭</span><span>No pending stall requests</span></div>
-                ) : (
-                  stallRequests.map(req => (
-                    <div key={req._id} className="application-row apps-row-full">
-                      <div className="app-info">
-                        <div className="apps-name-row">
-                          <span className="app-name">Stall #{req.stallId?.stallNumber || req.stallId?._id}</span>
-                          <span className="apps-stall-badge" style={{ background: '#fbbf24' }}>{req.contractorEmail}</span>
-                        </div>
-                        <span className="app-meta">Requested at: {new Date(req.createdAt).toLocaleString()}</span>
+              loadingStalls ? (
+                <div className="no-applications"><span style={{ fontSize: 32 }}>⏳</span><span>Loading stall requests…</span></div>
+              ) : stallError ? (
+                <div className="no-applications" style={{ color: '#dc2626' }}><span style={{ fontSize: 32 }}>⚠️</span><span>{stallError}</span></div>
+              ) : stallRequests.length === 0 ? (
+                <div className="no-applications">
+                  <span style={{ fontSize: 32 }}>📭</span>
+                  <span>No {tab.toLowerCase()} stall requests</span>
+                </div>
+              ) : (
+                stallRequests.map(req => (
+                  <div key={req._id} className="application-row apps-row-full">
+                    <div className="app-info">
+                      <div className="apps-name-row">
+                        <span className="app-name">Stall #{req.stallId?.stallNumber || req.stallId?._id}</span>
+                        <span className="apps-stall-badge" style={{ background: '#fbbf24' }}>{req.contractorEmail}</span>
                       </div>
-                      <div className="apps-action-col">
-                        <button className="apps-view-btn" onClick={() => handleStallAction(req._id, 'approve')}>Approve</button>
-                        <button className="apps-view-btn" onClick={() => handleStallAction(req._id, 'reject')}>Reject</button>
-                      </div>
+                      <span className="app-meta">Requested at: {new Date(req.createdAt).toLocaleString()}</span>
                     </div>
-                  ))
-                )
-              ) : renderList()}
+                    <div className="apps-action-col">
+                      {tab === "Pending" ? (
+                        <>
+                          <button className="apps-view-btn" onClick={() => handleStallAction(req._id, 'approve')}>Approve</button>
+                          <button className="apps-view-btn" onClick={() => handleStallAction(req._id, 'reject')}>Reject</button>
+                        </>
+                      ) : (
+                        <span className={`apps-status-chip apps-status-${req.status}`}>
+                          {req.status === "approved" ? "✓ Approved" : "✗ Rejected"}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )
+            ) : renderList()}
           </div>
         </main>
       </div>
@@ -654,9 +613,7 @@ export default function AdminApplication() {
           <div className="app-detail-modal" onClick={e => e.stopPropagation()}>
             <div className="app-detail-header">
               <div className="app-avatar app-detail-avatar">
-                <span style={{ fontSize: 22, fontWeight: 800, color: "#6b7280" }}>
-                  {selectedApp.initials}
-                </span>
+                <span style={{ fontSize: 22, fontWeight: 800, color: "#6b7280" }}>{selectedApp.initials}</span>
               </div>
               <div>
                 <h2 className="app-detail-name">{selectedApp.name}</h2>
@@ -709,7 +666,6 @@ export default function AdminApplication() {
                 <span className="app-detail-phone text-xs text-gray-400 font-bold uppercase tracking-wider">{selectedContractorApp.businessName}</span>
               </div>
             </div>
-            
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-gray-50 p-3 rounded-xl">
@@ -737,14 +693,12 @@ export default function AdminApplication() {
                   </span>
                 </div>
               </div>
-
               {selectedContractorApp.status === "rejected" && selectedContractorApp.rejectionReason && (
                 <div className="bg-red-50 border border-red-100 p-3.5 rounded-xl">
                   <span className="block text-[10px] text-red-700 font-bold uppercase tracking-wider mb-1">Rejection Reason</span>
                   <p className="text-xs text-red-800 font-semibold">{selectedContractorApp.rejectionReason}</p>
                 </div>
               )}
-
               <div>
                 <span className="block text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-2">Selected Stalls</span>
                 <div className="flex flex-wrap gap-1.5 max-h-[120px] overflow-y-auto pr-1">
@@ -756,30 +710,22 @@ export default function AdminApplication() {
                 </div>
               </div>
             </div>
-
             {selectedContractorApp.status === "pending" && (
               <div className="flex gap-2 mt-6">
                 <button
                   className="btn-reject flex-1 justify-center gap-1.5"
-                  onClick={() => {
-                    handleContractorAction(selectedContractorApp.id, "reject");
-                    setSelectedContractorApp(null);
-                  }}
+                  onClick={() => { handleContractorAction(selectedContractorApp.id, "reject"); setSelectedContractorApp(null); }}
                 >
                   Reject
                 </button>
                 <button
                   className="btn-approve flex-1 justify-center gap-1.5"
-                  onClick={() => {
-                    handleContractorAction(selectedContractorApp.id, "approve");
-                    setSelectedContractorApp(null);
-                  }}
+                  onClick={() => { handleContractorAction(selectedContractorApp.id, "approve"); setSelectedContractorApp(null); }}
                 >
                   Approve
                 </button>
               </div>
             )}
-            
             <button className="stall-modal-close mt-4 w-full py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200" onClick={() => setSelectedContractorApp(null)}>
               Close
             </button>
@@ -841,5 +787,4 @@ export default function AdminApplication() {
       `}</style>
     </div>
   );
-}
 }

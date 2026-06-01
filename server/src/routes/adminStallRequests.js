@@ -63,4 +63,26 @@ router.post('/review', async (req, res) => {
     res.status(500).json({ error: 'Failed to review request' });
   }
 });
+// GET approved requests
+router.get('/approved', async (req, res) => {
+  try {
+    const approved = await StallRequest.find({ status: 'approved' }).populate('stallId');
+    res.json(approved);
+  } catch (err) {
+    console.error('Error fetching approved stall requests:', err);
+    res.status(500).json({ error: 'Failed to fetch approved requests' });
+  }
+});
+
+// GET rejected requests
+router.get('/rejected', async (req, res) => {
+  try {
+    const rejected = await StallRequest.find({ status: 'rejected' }).populate('stallId');
+    res.json(rejected);
+  } catch (err) {
+    console.error('Error fetching rejected stall requests:', err);
+    res.status(500).json({ error: 'Failed to fetch rejected requests' });
+  }
+});
+
 module.exports = router;
