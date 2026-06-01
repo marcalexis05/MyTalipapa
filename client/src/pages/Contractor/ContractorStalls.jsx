@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronRight, Store } from "lucide-react";
-import { useCurrentUser, getUser } from '../../utils/auth';
+import { useCurrentUser, getUser, getToken } from '../../utils/auth';
 import ContractorLockScreen from './ContractorLockScreen';
 import ContractorSidebar from '../../components/ContractorSidebar';
 import NotificationBell from '../../components/NotificationBell';
@@ -113,7 +113,9 @@ export default function ContractorStalls() {
   useEffect(() => {
     if (showAddModal) {
       setLoadingStalls(true);
-      fetch('/api/contractor/stall-requests/available')
+      fetch('/api/contractor/stall-requests/available', {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      })
         .then(res => {
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           return res.json();
