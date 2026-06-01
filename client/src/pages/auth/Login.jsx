@@ -102,9 +102,10 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [mustChange, setMustChange] = useState(false);
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showModal, setShowModal] = useState(false);
+  const [modalEmail, setModalEmail] = useState('');
+  const [modalPassword, setModalPassword] = useState('');
+  
 
   async function handleLogin(e) {
     e.preventDefault()
@@ -121,12 +122,15 @@ export default function Login() {
       const result = await response.json()
 
       if (!response.ok) {
-          if (response.status === 403 && result.mustChangePassword) {
-            // Navigate to dedicated password change page, passing credentials
-            navigate('/set-new-password', { state: { email, password } });
-            setLoading(false);
-            return;
-          }
+        // If backend requires password change, show modal instead of direct navigation
+        if (response.status === 403 && result.mustChangePassword) {
+          setShowModal(true);
+          // Store credentials for later navigation
+          setModalEmail(email);
+          setModalPassword(password);
+          setLoading(false);
+          return;
+        }
         setError(result.error || 'Login failed')
         setLoading(false)
         return
@@ -156,35 +160,6 @@ export default function Login() {
       setError('Network error: ' + err.message)
     }
 
-    setLoading(false)
-  }
-
-  async function handleChangePassword(e) {
-    e.preventDefault()
-    if (newPassword !== confirmPassword) {
-      setError('Passwords do not match.')
-      return
-    }
-    setLoading(true)
-    setError(null)
-    try {
-      const response = await fetch('/api/change-first-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, newPassword }),
-      })
-      const result = await response.json()
-      if (!response.ok) {
-        setError(result.error || 'Failed to update password')
-        setLoading(false)
-        return
-      }
-      localStorage.setItem('authToken', result.token)
-      localStorage.setItem('user', JSON.stringify(result.user))
-      window.location.href = '/contractor/dashboard'
-    } catch (err) {
-      setError('Network error: ' + err.message)
-    }
     setLoading(false)
   }
 
@@ -227,7 +202,6 @@ export default function Login() {
               {['renter', 'contractor', 'admin'].map((r) => (
                 <button
                   key={r}
-                  disabled={mustChange}
                   onClick={() => setRole(r)}
                   className="role-btn flex-1 py-2.5 text-sm font-semibold disabled:opacity-50"
                   style={{
@@ -244,126 +218,65 @@ export default function Login() {
               <div className="login-error mb-4 p-3 rounded-xl bg-red-50 text-red-600 text-sm">{error}</div>
             )}
 
-            {mustChange ? (
-              <form onSubmit={handleChangePassword} className="space-y-4">
-                <div className="text-center mb-2">
-                  <p className="text-sm font-medium text-gray-600">Please choose a new password to secure your account after your resubmission approval.</p>
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-600 mb-1.5">Email Address</label>
+                <div className="input-field flex items-center gap-2 px-4 py-3 rounded-xl border border-gray-200 bg-gray-50">
+                  <Mail size={16} className="text-gray-400" />
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    placeholder="name@example.com"
+                    required
+                    className="flex-1 bg-transparent text-sm focus:outline-none"
+                  />
                 </div>
+              </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1.5">New Password</label>
-                  <div className="input-field flex items-center gap-2 px-4 py-3 rounded-xl border border-gray-200 bg-gray-50">
-                    <Lock size={16} className="text-gray-400" />
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      value={newPassword}
-                      onChange={e => setNewPassword(e.target.value)}
-                      placeholder="••••••••"
-                      required
-                      className="flex-1 bg-transparent text-sm focus:outline-none"
-                    />
-                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="clear-btn text-gray-400">
-                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
-                  </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-600 mb-1.5">Password</label>
+                <div className="input-field flex items-center gap-2 px-4 py-3 rounded-xl border border-gray-200 bg-gray-50">
+                  <Lock size={16} className="text-gray-400" />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    required
+                    className="flex-1 bg-transparent text-sm focus:outline-none"
+                  />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="clear-btn text-gray-400">
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1.5">Confirm New Password</label>
-                  <div className="input-field flex items-center gap-2 px-4 py-3 rounded-xl border border-gray-200 bg-gray-50">
-                    <Lock size={16} className="text-gray-400" />
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      value={confirmPassword}
-                      onChange={e => setConfirmPassword(e.target.value)}
-                      placeholder="••••••••"
-                      required
-                      className="flex-1 bg-transparent text-sm focus:outline-none"
-                    />
-                  </div>
+                <div className="text-right mt-1.5">
+                  <Link to="/forgot-password" className="text-xs font-medium" style={{ color: '#f97316' }}>Forgot Password?</Link>
                 </div>
+              </div>
 
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="submit-btn w-full py-3.5 rounded-xl text-white font-bold text-sm disabled:opacity-60 flex items-center justify-center gap-2"
-                  style={{ backgroundColor: '#1a5c2a' }}
-                >
-                  {loading ? 'Updating Password...' : 'Update Password & Login'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setMustChange(false); setError(null); }}
-                  className="w-full text-center text-xs font-semibold text-gray-500 mt-2 hover:underline"
-                >
-                  Cancel
-                </button>
-              </form>
-            ) : (
-              <form onSubmit={handleLogin} className="space-y-4">
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1.5">Email Address</label>
-                  <div className="input-field flex items-center gap-2 px-4 py-3 rounded-xl border border-gray-200 bg-gray-50">
-                    <Mail size={16} className="text-gray-400" />
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={e => setEmail(e.target.value)}
-                      placeholder={role === 'renter' ? 'vendor@mytalipapa.com' : role === 'admin' ? 'admin@mytalipapa.com' : 'name@contractor.com'}
-                      required
-                      className="flex-1 bg-transparent text-sm focus:outline-none"
-                    />
-                    {email && (
-                      <button type="button" onClick={() => setEmail('')} className="clear-btn text-gray-400 hover:text-gray-600">✕</button>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1.5">Password</label>
-                  <div className="input-field flex items-center gap-2 px-4 py-3 rounded-xl border border-gray-200 bg-gray-50">
-                    <Lock size={16} className="text-gray-400" />
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      value={password}
-                      onChange={e => setPassword(e.target.value)}
-                      placeholder="••••••••"
-                      required
-                      className="flex-1 bg-transparent text-sm focus:outline-none"
-                    />
-                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="clear-btn text-gray-400">
-                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
-                  </div>
-                  <div className="text-right mt-1.5">
-                    <Link to="/forgot-password" className="text-xs font-medium" style={{ color: '#f97316' }}>Forgot Password?</Link>
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="submit-btn w-full py-3.5 rounded-xl text-white font-bold text-sm disabled:opacity-60 flex items-center justify-center gap-2"
-                  style={{ backgroundColor: '#1a5c2a' }}
-                >
-                  {loading ? (
-                    <>
-                      <svg className="animate-spin h-4 w-4 text-white" viewBox="0 0 24 24" fill="none">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                      </svg>
-                      Signing in...
-                    </>
-                  ) : (
-                    <>
-                      {role === 'renter' ? 'Login' : 'Login to Dashboard'}
-                      <span>→</span>
-                    </>
-                  )}
-                </button>
-              </form>
-            )}
+              <button
+                type="submit"
+                disabled={loading}
+                className="submit-btn w-full py-3.5 rounded-xl text-white font-bold text-sm disabled:opacity-60 flex items-center justify-center gap-2"
+                style={{ backgroundColor: '#1a5c2a' }}
+              >
+                {loading ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4 text-white" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                    </svg>
+                    Signing in...
+                  </>
+                ) : (
+                  <>
+                    {role === 'renter' ? 'Login' : 'Login to Dashboard'}
+                    <span>→</span>
+                  </>
+                )}
+              </button>
+            </form>
 
             <div className="flex items-center gap-3 my-5">
               <div className="flex-1 h-px bg-gray-200" />
@@ -379,6 +292,23 @@ export default function Login() {
           <div className="flex justify-center gap-6 mt-6">
             <a href="#" className="footer-link text-xs text-gray-300 hover:text-white transition">Help Center</a>
             <a href="#" className="footer-link text-xs text-gray-300 hover:text-white transition">Privacy Policy</a>
+            {showModal && (
+              <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+                <div className="bg-white rounded-xl p-6 shadow-xl max-w-sm w-full animate-fadeSlideUp" style={{ animation: 'fadeSlideUp 0.45s cubic-bezier(0.22,1,0.36,1) both' }}>
+                  <h2 className="text-lg font-semibold mb-4 text-center" style={{ color: '#1a5c2a' }}>You need to set a new password</h2>
+                  <p className="mb-4 text-center text-gray-600">For security reasons, please set a new password before continuing.</p>
+                  <button
+                    onClick={() => {
+                      navigate('/set-new-password', { state: { email: modalEmail, password: modalPassword } });
+                      setShowModal(false);
+                    }}
+                    className="w-full py-2 rounded bg-[#1a5c2a] text-white hover:bg-[#163721] transition"
+                  >
+                    Set New Password
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
