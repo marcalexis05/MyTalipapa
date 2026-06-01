@@ -119,7 +119,7 @@ const [deletingAnnId, setDeletingAnnId] = useState(null)
   const fetchAnnouncements = async () => {
     setLoadingAnnouncements(true)
     try {
-      const res = await fetch('/api/public/announcements')
+      const res = await fetch('/api/admin/announcements')
       if (res.ok) {
         const data = await res.json()
         setRecentAnnouncements(data)
@@ -202,8 +202,10 @@ const handleDeleteAnnouncement = async (id) => {
   }
 }
   useEffect(() => {
-  fetchAnnouncements()
-}, [])
+    fetchAnnouncements();
+    fetchStalls();
+    fetchApplications();
+  }, []);
 
   // Total monthly revenue from occupied stalls with a monthlyRate
   const totalRevenue = stalls
