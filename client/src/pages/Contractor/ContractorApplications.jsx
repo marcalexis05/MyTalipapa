@@ -102,18 +102,24 @@ export default function ContractorApplication() {
   useEffect(() => {
     if (!userEmail) return;
     setLoadingApps(true);
-    fetch(`/api/contractor/applications?email=${userEmail}`)
-      .then(res => {
-        if (!res.ok) throw new Error(`Server error: ${res.status}`);
-        return res.json();
-      })
-      .then(data => {
-        setApplications(data);
-        setError(null);
+    // Fetch both normal applications and stall requests
+    Promise.all([
+      fetch(`/api/contractor/applications?email=${userEmail}`),
+      fetch('/api/contractor/stall-requests/my-requests', {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      }),
+    ])
+      .then(async ([appsRes, reqRes]) => {
+        if (!appsRes.ok) throw new Error(`Apps error ${appsRes.status}`);
+        if (!reqRes.ok) throw new Error(`Requests error ${reqRes.status}`);
+        const apps = await appsRes.json();
+        const reqs = await reqRes.json();
+        // Merge both arrays (you may handle separately in UI)
+        setApplications([...apps, ...reqs]);
       })
       .catch(err => {
-        console.error('Failed to fetch applications:', err);
-        setError('Failed to load applications. Please refresh.');
+        console.error('Failed to fetch applications or requests:', err);
+        setError('Failed to load data. Please refresh.');
       })
       .finally(() => setLoadingApps(false));
   }, [userEmail]);
