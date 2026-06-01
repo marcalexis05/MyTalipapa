@@ -66,6 +66,9 @@ export default function ContractorStalls() {
   // Toast state for global notifications
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
   const [activeNav, setActiveNav] = useState('nav-stalls');
+  // ✅ FIX: Success modal state
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+
   // Auto‑hide toast after 3 seconds
   useEffect(() => {
     if (toast.show) {
@@ -277,50 +280,53 @@ export default function ContractorStalls() {
     );
   };
 
-const handleSendRequest = async () => {
-  if (selectedStallIds.length === 0) {
-    setRequestStatus('Please select at least one stall');
-    return;
-  }
-
-  try {
-    const resp = await fetch('/api/contractor/stall-requests/request', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
-      body: JSON.stringify({ stallIds: selectedStallIds }),
-    });
-    const json = await resp.json();
-
-    // Check if any succeeded (API returns array of results)
-    const results = Array.isArray(json) ? json : [];
-    const successes = results.filter(r => r.status === 'success');
-    const errors = results.filter(r => r.status === 'error');
-
-    if (successes.length > 0) {
-      // Show success toast
-      setToast({ show: true, message: 'Stall request submitted successfully!', type: 'success' });
-      // Reset UI state
-      setSelectedStallIds([]);
-      setSearchQuery('');
-      setSelectedZoneFilter('all');
-      setShowAddModal(false);
-      setRequestStatus(null);
-
-      // Refresh contractor's stall list to show new pending stalls
-      if (userEmail) {
-        fetch(`/api/contractor/stalls?email=${userEmail}`)
-          .then(r => r.json())
-          .then(data => setStalls(data))
-          .catch(() => {});
-      }
-    } else {
-      const msg = errors.map(e => e.message).join(', ');
-      setRequestStatus(msg || 'Failed to send request');
+  // ✅ FIX: Updated handleSendRequest — shows success modal instead of toast
+  const handleSendRequest = async () => {
+    if (selectedStallIds.length === 0) {
+      setRequestStatus('Please select at least one stall');
+      return;
     }
-  } catch (err) {
-    setRequestStatus('Error sending request');
-  }
-};
+
+    try {
+      const resp = await fetch('/api/contractor/stall-requests/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify({ stallIds: selectedStallIds }),
+      });
+      const json = await resp.json();
+
+      // Check if any succeeded (API returns array of results)
+      const results = Array.isArray(json) ? json : [];
+      const successes = results.filter(r => r.status === 'success');
+      const errors = results.filter(r => r.status === 'error');
+
+      if (successes.length > 0) {
+        // Close the stall picker modal first
+        setShowAddModal(false);
+        // Reset UI state
+        setSelectedStallIds([]);
+        setSearchQuery('');
+        setSelectedZoneFilter('all');
+        setRequestStatus(null);
+        // Show the success modal
+        setShowSuccessModal(true);
+
+        // Refresh contractor's stall list to show new pending stalls
+        if (userEmail) {
+          fetch(`/api/contractor/stalls?email=${userEmail}`)
+            .then(r => r.json())
+            .then(data => setStalls(data))
+            .catch(() => {});
+        }
+      } else {
+        const msg = errors.map(e => e.message).join(', ');
+        setRequestStatus(msg || 'Failed to send request');
+      }
+    } catch (err) {
+      setRequestStatus('Error sending request');
+    }
+  };
+
   return (
     <ContractorLockScreen>
       <div className="flex h-screen bg-[#f5f5f0] font-sans overflow-hidden w-full">
@@ -335,6 +341,44 @@ const handleSendRequest = async () => {
                 <button className="logout-cancel-btn" onClick={() => setShowLogoutModal(false)}>Cancel</button>
                 <button className="logout-confirm-btn" onClick={handleLogout}>Yes, Log Out</button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* ✅ FIX: Success Modal */}
+        {showSuccessModal && (
+          <div
+            style={{
+              position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999,
+            }}
+            onClick={() => setShowSuccessModal(false)}
+          >
+            <div
+              style={{
+                background: 'white', borderRadius: 20, padding: '2.5rem 2rem',
+                maxWidth: 380, width: '90%', textAlign: 'center',
+                boxShadow: '0 12px 40px rgba(0,0,0,0.2)',
+              }}
+              onClick={e => e.stopPropagation()}
+            >
+              <div style={{ fontSize: 56, marginBottom: 12 }}>✅</div>
+              <h2 style={{ fontSize: 22, fontWeight: 800, color: '#111827', marginBottom: 8 }}>
+                Request Submitted!
+              </h2>
+              <p style={{ color: '#6b7280', fontSize: 14, lineHeight: 1.6, marginBottom: 28 }}>
+                Your stall request has been sent successfully. Please wait for the admin to review and approve it. You'll be notified once a decision is made.
+              </p>
+              <button
+                onClick={() => setShowSuccessModal(false)}
+                style={{
+                  background: '#16a34a', color: 'white', border: 'none',
+                  borderRadius: 10, padding: '12px 40px', fontWeight: 700,
+                  fontSize: 15, cursor: 'pointer', width: '100%',
+                }}
+              >
+                Got it!
+              </button>
             </div>
           </div>
         )}

@@ -23,45 +23,6 @@ router.use((req, res, next) => {
   }
 });
 
-// POST a new request for a stall (or multiple)
-router.post('/request', async (req, res) => {
-  const { stallIds } = req.body;
-  const email = req.contractor.email;
-  
-  if (!Array.isArray(stallIds) || stallIds.length === 0) {
-    return res.status(400).json({ error: 'Please provide an array of stall IDs' });
-  }
-
-  const results = [];
-  for (const stallId of stallIds) {
-    const stall = await Stall.findById(stallId);
-    if (!stall) {
-      results.push({ stallId, status: 'error', message: 'Stall not found' });
-      continue;
-    }
-    if (stall.managedBy) {
-      results.push({ stallId, status: 'error', message: 'Stall already assigned' });
-      continue;
-    }
-    const existing = await StallRequest.findOne({ stallId, contractorEmail: email, status: 'pending' });
-    if (existing) {
-      results.push({ stallId, status: 'error', message: 'Request already pending' });
-      continue;
-    }
-    const reqDoc = await StallRequest.create({ stallId, contractorEmail: email });
-    results.push({ stallId, status: 'success', requestId: reqDoc._id });
-  }
-  
-  res.status(201).json(results);
-});
-
-// Fallback POST route (accepts direct POST without /request)
-router.post('/', async (req, res) => {
-  // Forward to the same logic as /request
-  req.url = '/request';
-  router.handle(req, res);
-});
-
 // GET available stalls — filter by status 'available' AND no managedBy
 router.get('/available', async (req, res) => {
   const { location } = req.query;
@@ -92,12 +53,24 @@ router.post('/request', async (req, res) => {
   for (const stallId of stallIds) {
     try {
       const stall = await Stall.findById(stallId);
-      if (!stall) { results.push({ stallId, status: 'error', message: 'Stall not found' }); continue; }
-      if (stall.status !== 'available') { results.push({ stallId, status: 'error', message: 'Stall not available' }); continue; }
-      if (stall.managedBy) { results.push({ stallId, status: 'error', message: 'Stall already assigned' }); continue; }
+      if (!stall) {
+        results.push({ stallId, status: 'error', message: 'Stall not found' });
+        continue;
+      }
+      if (stall.status !== 'available') {
+        results.push({ stallId, status: 'error', message: 'Stall not available' });
+        continue;
+      }
+      if (stall.managedBy) {
+        results.push({ stallId, status: 'error', message: 'Stall already assigned' });
+        continue;
+      }
 
       const existing = await StallRequest.findOne({ stallId, contractorEmail: email, status: 'pending' });
-      if (existing) { results.push({ stallId, status: 'error', message: 'Request already pending' }); continue; }
+      if (existing) {
+        results.push({ stallId, status: 'error', message: 'Request already pending' });
+        continue;
+      }
 
       // Mark stall as pending so it doesn't appear available to others
       await Stall.findByIdAndUpdate(stallId, { status: 'pending' });
@@ -112,4 +85,5 @@ router.post('/request', async (req, res) => {
   const anySuccess = results.some(r => r.status === 'success');
   res.status(anySuccess ? 201 : 400).json(results);
 });
+
 module.exports = router;
