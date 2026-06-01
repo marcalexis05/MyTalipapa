@@ -56,17 +56,17 @@ const stallsStyles = `
   .stall-card {
     transition: transform 0.2s ease, box-shadow 0.2s ease;
   }
-  .stall-card:hover {
+  .stall-card.clickable:hover {
     transform: translateY(-4px) scale(1.01);
     box-shadow: 0 10px 28px rgba(0,0,0,0.11);
   }
-  .stall-card:active {
+  .stall-card.clickable:active {
     transform: scale(0.98);
   }
-  .stall-card img {
+  .stall-card.clickable img {
     transition: transform 0.35s ease;
   }
-  .stall-card:hover img {
+  .stall-card.clickable:hover img {
     transform: scale(1.04);
   }
   .toggle-btn {
@@ -176,7 +176,7 @@ const getStallImage = (section) => {
   return stallImages.dryGoods;
 };
 
-const StallCard = ({ stall, onClick, animDelay = "0s" }) => {
+const StallCard = ({ stall, onClick, animDelay = "0s", isBlocked = false }) => {
   const displayId = stall.stallNumber || stall.id || stall._id?.toString() || "";
   const displayCategory = stall.section || stall.category || "";
   const displayZone = stall.zone ? `Zone ${stall.zone}` : (stall.floorArea ? (stall.floorArea === 'upper' ? 'Upper Floor' : 'Lower Floor') : "");
@@ -186,13 +186,23 @@ const StallCard = ({ stall, onClick, animDelay = "0s" }) => {
 
   return (
     <div
-      onClick={onClick}
-      className="stall-card bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 cursor-pointer"
+      onClick={isBlocked ? undefined : onClick}
+      className={`stall-card bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 ${
+        isBlocked ? 'cursor-not-allowed opacity-60' : 'clickable cursor-pointer'
+      }`}
       style={{ animation: `cardPop 0.45s cubic-bezier(0.22, 1, 0.36, 1) ${animDelay} both` }}
+      title={isBlocked ? "This stall is occupied" : undefined}
     >
       <div className="relative h-36 overflow-hidden">
         <img src={displayImg} className="w-full h-full object-cover" alt={displayCategory} />
         <StatusBadge status={stall.status} />
+        {isBlocked && (
+          <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+            <span className="bg-black/60 text-white text-[10px] font-bold px-3 py-1 rounded-full">
+              Not Available
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="p-3">
@@ -262,6 +272,10 @@ export default function RenterStalls({ onNavigate, onOpenStall }) {
 
     return matchSearch && matchFilter;
   });
+
+  const isBlocked = (stall) =>
+    stall.status === 'occupied' &&
+    stall.tenant?.email?.toLowerCase() !== userEmail;
 
   return (
     <>
@@ -362,7 +376,12 @@ export default function RenterStalls({ onNavigate, onOpenStall }) {
                     <StallCard
                       key={stall.id || stall._id}
                       stall={stall}
-                      onClick={() => onOpenStall && onOpenStall(stall)}
+                      isBlocked={isBlocked(stall)}
+                      onClick={() => {
+                        if (!isBlocked(stall)) {
+                          onOpenStall && onOpenStall(stall);
+                        }
+                      }}
                       animDelay={`${0.22 + idx * 0.07}s`}
                     />
                   ))
