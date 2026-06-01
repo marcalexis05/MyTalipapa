@@ -68,4 +68,14 @@ router.post('/applications/:id/status', contractorController.updateApplicationSt
 router.get('/contractor-applications', contractorController.getContractorApplications);
 router.post('/contractor-applications/:id/status', contractorController.updateContractorApplicationStatus);
 
+// Admin stalls endpoint
+router.get('/stalls', contractorController.getStalls);
+
+// Admin records endpoint (approved renter records)
+router.get('/records', contractorController.getRecords);
+
+// Admin archive request handling
+router.get('/archive-requests', contractorController.getArchiveRequests);
+router.post('/archive-requests/:userId/status', contractorController.updateArchiveRequestStatus);
+
 module.exports = router;
