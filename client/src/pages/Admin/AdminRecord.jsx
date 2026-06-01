@@ -206,14 +206,7 @@ export default function AdminRecord() {
     navigate('/login');
   };
 
-  // Loading and error states
-  if (loading) {
-    return (
-      <div className="dashboard-root">
-        <p style={{ padding: '24px', textAlign: 'center', color: 'var(--color-text)' }}>Loading records...</p>
-      </div>
-    );
-  }
+ 
   if (error) {
     return (
       <div className="dashboard-root">
