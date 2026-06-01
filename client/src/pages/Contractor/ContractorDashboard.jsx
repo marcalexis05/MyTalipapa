@@ -438,7 +438,7 @@ export default function ContractorDashboard() {
               <div 
                 className="liveview-card relative overflow-hidden cursor-pointer" 
                 onClick={() => navigate('/tour')}
-                style={{ height: '160px' }}
+                style={{ height: '100%' }}
               >
                 <img src={tour360Preview} alt="360 Tour Preview" className="absolute inset-0 w-full h-full object-cover opacity-70" />
                 <div ref={liveViewMountRef} style={{ width: '100%', height: '100px' }} className="absolute inset-0 z-0" />
