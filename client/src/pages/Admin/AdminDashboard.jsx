@@ -107,8 +107,6 @@ export default function AdminDashboard() {
   const [announceContent, setAnnounceContent] = useState('')
   const [announceTarget, setAnnounceTarget] = useState('all')
   const [submittingAnnounce, setSubmittingAnnounce] = useState(false)
-  // New state for edit mode
-  const [editingAnnouncement, setEditingAnnouncement] = useState(null) // holds announcement object when editing
 
   const fetchAnnouncements = async () => {
     setLoadingAnnouncements(true)
@@ -125,53 +123,27 @@ export default function AdminDashboard() {
     }
   }
 
-  // Handles both create and update based on editingAnnouncement state
   const handlePostAnnouncement = async (e) => {
     e.preventDefault()
     setSubmittingAnnounce(true)
     try {
-      // If editingAnnouncement is set, perform update (PUT)
-      if (editingAnnouncement) {
-        const res = await fetch(`/api/admin/announcements/${editingAnnouncement._id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            title: announceTitle,
-            content: announceContent,
-            targetAudience: announceTarget
-          })
+      const res = await fetch('/api/admin/announcements', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: announceTitle,
+          content: announceContent,
+          targetAudience: announceTarget
         })
-        if (res.ok) {
-          // Clear edit mode
-          setEditingAnnouncement(null)
-          setShowAnnounceForm(false)
-          setAnnounceTitle('')
-          setAnnounceContent('')
-          setAnnounceTarget('all')
-          fetchAnnouncements()
-        } else {
-          alert('Failed to update announcement')
-        }
+      })
+      if (res.ok) {
+        setAnnounceTitle('')
+        setAnnounceContent('')
+        setAnnounceTarget('all')
+        setShowAnnounceForm(false)
+        fetchAnnouncements()
       } else {
-        // Normal create (POST)
-        const res = await fetch('/api/admin/announcements', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            title: announceTitle,
-            content: announceContent,
-            targetAudience: announceTarget
-          })
-        })
-        if (res.ok) {
-          setAnnounceTitle('')
-          setAnnounceContent('')
-          setAnnounceTarget('all')
-          setShowAnnounceForm(false)
-          fetchAnnouncements()
-        } else {
-          alert('Failed to post announcement')
-        }
+        alert('Failed to post announcement')
       }
     } catch (err) {
       console.error(err)
@@ -337,21 +309,21 @@ export default function AdminDashboard() {
               </p>
             </div>
 
-           {/* Live View */}
-              <div 
-                className="liveview-card relative overflow-hidden cursor-pointer" 
-                onClick={() => navigate('/tour')}
-                style={{ height: '100%' }}
-              >
-                <img src={tour360Preview} alt="360 Tour Preview" className="absolute inset-0 w-full h-full object-cover opacity-70" />
-                <div ref={liveViewMountRef} style={{ width: '100%', height: '100px' }} className="absolute inset-0 z-0" />
-                <div className="liveview-overlay absolute inset-0 z-10 pointer-events-none flex flex-col justify-between p-3.5">
-                  <span className="live-badge cursor-pointer pointer-events-auto" onClick={(e) => { e.stopPropagation(); navigate('/tour'); }}>
-                    <span className="live-dot" /> MARKET 360 TOUR
-                  </span>
-                 
-                </div>
+            {/* Live View */}
+            <div
+              className="liveview-card relative overflow-hidden cursor-pointer"
+              onClick={() => navigate('/tour')}
+              style={{ height: '100%' }}
+            >
+              <img src={tour360Preview} alt="360 Tour Preview" className="absolute inset-0 w-full h-full object-cover opacity-70" />
+              <div ref={liveViewMountRef} style={{ width: '100%', height: '100px' }} className="absolute inset-0 z-0" />
+              <div className="liveview-overlay absolute inset-0 z-10 pointer-events-none flex flex-col justify-between p-3.5">
+                <span className="live-badge cursor-pointer pointer-events-auto" onClick={(e) => { e.stopPropagation(); navigate('/tour'); }}>
+                  <span className="live-dot" /> MARKET 360 TOUR
+                </span>
+
               </div>
+            </div>
           </section>
 
           {/* Recent Pending Applications — live from DB */}
@@ -392,7 +364,7 @@ export default function AdminDashboard() {
                       )}
                       <span className="app-type" style={{ color: app.typeColor }}>{app.type}</span>
                     </div>
-                    
+
                   </div>
                 ))
               )}
@@ -407,19 +379,10 @@ export default function AdminDashboard() {
                 <p className="text-xs text-gray-400">Broadcast updates to Renters and Contractors</p>
               </div>
               <button
-                onClick={() => {
-                  // If currently editing, cancel edit mode
-                  if (editingAnnouncement) {
-                    setEditingAnnouncement(null)
-                    setAnnounceTitle('')
-                    setAnnounceContent('')
-                    setAnnounceTarget('all')
-                  }
-                  setShowAnnounceForm(!showAnnounceForm)
-                }}
+                onClick={() => setShowAnnounceForm(!showAnnounceForm)}
                 className="px-4 py-2 bg-[#1a5c2a] text-white text-xs font-bold rounded-xl hover:bg-[#154d23] transition-colors"
               >
-                {showAnnounceForm ? (editingAnnouncement ? 'Cancel Edit' : 'Cancel') : '+ Post New'}
+                {showAnnounceForm ? 'Cancel' : '+ Post New'}
               </button>
             </div>
 
@@ -467,7 +430,7 @@ export default function AdminDashboard() {
                     disabled={submittingAnnounce}
                     className="px-5 py-2.5 bg-[#1a5c2a] text-white text-xs font-bold rounded-xl hover:bg-[#154d23] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                   >
-                    {submittingAnnounce ? 'Posting...' : (editingAnnouncement ? 'Update Announcement' : 'Post Announcement')}
+                    {submittingAnnounce ? 'Posting...' : 'Post Announcement'}
                   </button>
                 </div>
               </form>
@@ -487,44 +450,12 @@ export default function AdminDashboard() {
                     <div className="space-y-1 text-left">
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-sm text-gray-800">{ann.title}</span>
-                        <span className={`px-2 py-0.5 rounded text-[9px] font-extrabold uppercase tracking-wider text-white ${
-                          ann.targetAudience === 'all' ? 'bg-[#1a5c2a]' : ann.targetAudience === 'renters' ? 'bg-[#e07b00]' : 'bg-blue-600'
-                        }`}>
+                        <span className={`px-2 py-0.5 rounded text-[9px] font-extrabold uppercase tracking-wider text-white ${ann.targetAudience === 'all' ? 'bg-[#1a5c2a]' : ann.targetAudience === 'renters' ? 'bg-[#e07b00]' : 'bg-blue-600'
+                          }`}>
                           {ann.targetAudience === 'all' ? 'Everyone' : ann.targetAudience === 'renters' ? 'Renters' : 'Contractors'}
                         </span>
                       </div>
                       <p className="text-xs text-gray-500">{ann.content}</p>
-                    </div>
-                    {/* Edit / Delete actions */}
-                    <div className="flex items-center space-x-3">
-                      <button
-                        onClick={() => {
-                          setEditingAnnouncement(ann)
-                          setAnnounceTitle(ann.title)
-                          setAnnounceContent(ann.content)
-                          setAnnounceTarget(ann.targetAudience)
-                          setShowAnnounceForm(true)
-                        }}
-                        className="text-sm text-blue-600 hover:underline"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => {
-                          if (window.confirm('Are you sure you want to delete this announcement?')) {
-                            // Delete request
-                            fetch(`/api/admin/announcements/${ann._id}`, { method: 'DELETE' })
-                              .then(res => {
-                                if (res.ok) fetchAnnouncements()
-                                else alert('Failed to delete announcement')
-                              })
-                              .catch(() => alert('Error deleting announcement'))
-                          }
-                        }}
-                        className="text-sm text-red-600 hover:underline"
-                      >
-                        Delete
-                      </button>
                     </div>
                     <span className="text-[10px] text-gray-400 font-bold whitespace-nowrap">
                       {new Date(ann.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
