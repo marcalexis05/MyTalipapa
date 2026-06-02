@@ -819,7 +819,7 @@ export default function ContractorStalls() {
               )}
               {selectedStall.status === "occupied" && !selectedStall.tenant && (
                 <div className="stall-modal-info">
-                  <div className="stall-modal-row"><span>Vendor</span><strong>Juan Dela Cruz</strong></div>
+                  <div className="stall-modal-row"><span>Vendor</span></div>
                   <div className="stall-modal-row"><span>Lease Since</span><strong>Jan 2023</strong></div>
                   <div className="stall-modal-row"><span>Monthly Rent</span><strong>₱{selectedStall.monthlyRate?.toLocaleString() || '3,500'}</strong></div>
                 </div>
