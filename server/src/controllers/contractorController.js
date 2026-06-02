@@ -13,7 +13,7 @@ async function findStallByAppStallNumber(raw, intendedBusinessUse = '') {
     const stall = await Stall.findById(clean);
     if (stall) return stall;
   }
-  
+
   const use = (intendedBusinessUse || '').toLowerCase();
   let productType = '';
   if (use.includes('fish') || use.includes('sea')) productType = 'fish';
@@ -137,8 +137,8 @@ exports.getApplications = async (req, res) => {
       const stall = await findStallByAppStallNumber(app.preferredStall, app.intendedBusinessUse);
 
       if (email && (!stall || stall.managedBy?.trim().toLowerCase() !== email.trim().toLowerCase())) {
-  return null;
-}
+        return null;
+      }
 
       let stallDisplay = '';
       if (app.stallLabel) {
@@ -205,15 +205,10 @@ exports.updateApplicationStatus = async (req, res) => {
           stall._id,
           {
             $set: {
-              // Keep contractor as manager and mark stall as occupied by renter
-              status: 'occupied',
-              tenant: {
-                name: app.fullName,
-                contact: app.contactNumber,
-                email: app.email,
-                leaseStart: new Date(),
-                leaseEnd: null,
-              },
+              // Assign the contractor as manager but keep stall available for renters
+              managedBy: app.email,
+              status: 'available',
+              tenant: null,
               updatedAt: new Date(),
             },
           },
@@ -285,8 +280,8 @@ exports.getRecords = async (req, res) => {
       const stall = await findStallByAppStallNumber(app.preferredStall, app.intendedBusinessUse);
 
       if (email && (!stall || stall.managedBy?.trim().toLowerCase() !== email.trim().toLowerCase())) {
-  return null;
-}
+        return null;
+      }
 
       const payments = await Payment.find({ renter: app._id }).sort({ date: -1 });
       const history = payments.map(p => ({
