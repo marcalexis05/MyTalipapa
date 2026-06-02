@@ -464,7 +464,7 @@ export default function Register() {
                         <label className="block text-sm font-medium text-gray-600 mb-1.5">Full Name</label>
                         <div className="input-field flex items-center gap-2 px-4 py-3 rounded-xl border border-gray-200 bg-gray-50">
                           <User size={16} className="text-gray-400 shrink-0" />
-                          <input type="text" name="full_name" value={form.full_name} onChange={handleChange} placeholder="Juan Dela Cruz" required className="flex-1 bg-transparent text-sm focus:outline-none" />
+                          <input type="text" name="full_name" value={form.full_name} onChange={handleChange} placeholder="" required className="flex-1 bg-transparent text-sm focus:outline-none" />
                           {form.full_name && <button type="button" onClick={() => setForm({ ...form, full_name: '' })} className="text-gray-400 transition-transform hover:scale-110">✕</button>}
                         </div>
                       </div>

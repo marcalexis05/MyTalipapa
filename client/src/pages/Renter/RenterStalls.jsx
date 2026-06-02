@@ -232,14 +232,8 @@ export default function RenterStalls({ onNavigate, onOpenStall }) {
       .then((res) => res.json())
       .then((data) => setStalls(data))
       .catch(() => {
-        setStalls([
-          { id: "042", zone: "A", category: "Produce", status: "available", size: 12.5, price: 3200, img: stallImages.produce },
-          { id: "089", zone: "D", category: "Fruits", status: "occupied", size: 15.0, price: 4500, img: stallImages.fruits, tenant: { email: "vendor@mytalipapa.com", name: "Juan Dela Cruz" } },
-          { id: "112", zone: "C", category: "Seafood", status: "available", size: 10.0, price: 2800, img: stallImages.seafood },
-          { id: "055", zone: "A", category: "Dry Goods", status: "available", size: 12.5, price: 3200, img: stallImages.dryGoods },
-          { id: "031", zone: "B", category: "Meat", status: "occupied", size: 18.0, price: 5100, img: stallImages.meat, tenant: { email: "vendor@mytalipapa.com", name: "Juan Dela Cruz" } },
-          { id: "077", zone: "B", category: "Vegetables", status: "available", size: 9.5, price: 2500, img: stallImages.veggies },
-        ]);
+        setStalls([]);
+        setError('Failed to load stalls.');
       });
   }, []);
 

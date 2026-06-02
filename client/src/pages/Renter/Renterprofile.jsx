@@ -724,7 +724,7 @@ export default function RenterProfile({ onLogout }) {
                     onChange={(e) => setEditForm(f => ({ ...f, fullName: e.target.value }))}
                     required
                     className="w-full bg-[#f5f5f0] border border-transparent rounded-xl px-4 py-3 text-sm text-gray-800 focus:outline-none focus:border-[#1a5c2a] focus:bg-white transition-all duration-200"
-                    placeholder="Juan Dela Cruz"
+                    placeholder=""
                   />
                 </div>
                 <div style={{ animation: 'fadeSlideUp 0.32s ease 0.1s both' }}>

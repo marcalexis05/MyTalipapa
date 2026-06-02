@@ -261,7 +261,7 @@ export default function RenterDashboard({ onNavigate, onOpenStall }) {
     )
   }
 
-  const firstName = currentUser?.full_name?.split(' ')[0] || 'Juan'
+  const firstName = currentUser?.full_name?.split(' ')[0] || ''
 
   return (
     <>

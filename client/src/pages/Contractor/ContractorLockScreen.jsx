@@ -365,7 +365,7 @@ export default function ContractorLockScreen({ children }) {
                     type="text"
                     value={businessName}
                     onChange={e => setBusinessName(e.target.value)}
-                    placeholder="Juan's Organic Produce"
+                    placeholder=""
                     required
                     className="flex-1 bg-transparent text-xs focus:outline-none"
                   />

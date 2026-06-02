@@ -829,7 +829,7 @@ export default function RenterApplications({ prefill }) {
 
                 <div>
                   <label className={fieldLabel}>Full Name</label>
-                  <input className={inputCls} placeholder="e.g. Juan Dela Cruz"
+                  <input className={inputCls} placeholder=""
                     value={form.fullName} onChange={setField('fullName')} />
                 </div>
 
@@ -841,7 +841,7 @@ export default function RenterApplications({ prefill }) {
                   </div>
                   <div>
                     <label className={fieldLabel}>Email Address</label>
-                    <input className={inputCls} placeholder="juan@example.com" type="email"
+                    <input className={inputCls} placeholder="" type="email"
                       value={form.emailAddress} onChange={setField('emailAddress')} />
                   </div>
                 </div>
