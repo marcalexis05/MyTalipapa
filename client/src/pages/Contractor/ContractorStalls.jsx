@@ -817,21 +817,15 @@ export default function ContractorStalls() {
                   )}
                 </div>
               )}
-              {selectedStall.status === "occupied" && !selectedStall.tenant && (
-                <div className="stall-modal-info">
-                  <div className="stall-modal-row"><span>Vendor</span></div>
-                  <div className="stall-modal-row"><span>Lease Since</span><strong>Jan 2023</strong></div>
-                  <div className="stall-modal-row"><span>Monthly Rent</span><strong>₱{selectedStall.monthlyRate?.toLocaleString() || '3,500'}</strong></div>
-                </div>
-              )}
+              {(selectedStall.status === "available" || (selectedStall.status === "occupied" && !selectedStall.tenant)) && (
+  <p className="stall-modal-avail">This stall is available for rent.</p>
+)}
               {selectedStall.status === "pending" && (
                 <div className="stall-modal-info">
                   <div className="stall-modal-row"><span>Status</span><strong>Awaiting Approval</strong></div>
                 </div>
               )}
-              {selectedStall.status === "available" && (
-                <p className="stall-modal-avail">This stall is available for rent.</p>
-              )}
+              
 
               <button className="stall-modal-close" onClick={() => setSelectedStall(null)}>Close</button>
             </div>
