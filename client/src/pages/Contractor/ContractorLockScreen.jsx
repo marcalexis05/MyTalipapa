@@ -1,15 +1,15 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { 
-  CheckCircle2, 
-  XCircle, 
-  Clock, 
-  RefreshCw, 
-  LogOut, 
-  ShieldAlert, 
-  Store, 
-  Search, 
-  Check, 
+import {
+  CheckCircle2,
+  XCircle,
+  Clock,
+  RefreshCw,
+  LogOut,
+  ShieldAlert,
+  Store,
+  Search,
+  Check,
   ArrowRight,
   Loader2,
   FileText
@@ -47,12 +47,12 @@ export default function ContractorLockScreen({ children }) {
       const response = await fetch(`/api/contractor/contractor-applications?email=${userEmail}`)
       if (!response.ok) throw new Error('Failed to fetch status')
       const data = await response.json()
-      
+
       if (data && data.length > 0) {
         const app = data[0] // Latest application
         setApplication(app)
         setStatus(app.status)
-        
+
         // Update user status in localStorage if different
         const storedUser = getUser()
         if (storedUser && storedUser.status !== app.status) {
@@ -174,14 +174,14 @@ export default function ContractorLockScreen({ children }) {
       const isSelectable = stall.status === 'available' || selectedStalls.includes(stall.location)
       if (!isSelectable) return false
 
-      const matchesSearch = 
+      const matchesSearch =
         stall.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
         stall.section.toLowerCase().includes(searchQuery.toLowerCase())
-      
-      const matchesZone = 
-        selectedZone === 'All' || 
+
+      const matchesZone =
+        selectedZone === 'All' ||
         stall.section.toLowerCase() === selectedZone.toLowerCase()
-        
+
       return matchesSearch && matchesZone
     })
   }, [stalls, searchQuery, selectedZone, selectedStalls])
@@ -210,7 +210,7 @@ export default function ContractorLockScreen({ children }) {
       <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-orange-200/30 rounded-full blur-3xl -z-10" />
 
       <div className="w-full max-w-lg bg-white/70 backdrop-blur-xl border border-white/40 rounded-3xl shadow-xl p-8 relative overflow-hidden text-center">
-        
+
         {/* Header Branding */}
         <div className="flex items-center justify-center gap-2 mb-6">
           <span className="text-3xl">🏪</span>
@@ -223,7 +223,7 @@ export default function ContractorLockScreen({ children }) {
             <div className="w-20 h-20 bg-amber-50 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-amber-100 shadow-sm animate-pulse">
               <Clock className="w-10 h-10 text-amber-500" />
             </div>
-            
+
             <h2 className="text-2xl font-black text-gray-800 mb-2">Application Under Review</h2>
             <p className="text-sm text-gray-500 mb-6 leading-relaxed max-w-sm mx-auto">
               Welcome, <strong className="text-gray-700">{user?.full_name || 'Contractor'}</strong>. Your application is currently pending admin verification. You will gain full dashboard access once approved.
@@ -232,7 +232,7 @@ export default function ContractorLockScreen({ children }) {
             {/* Live Progress Timeline */}
             <div className="bg-gray-50/80 rounded-2xl p-5 border border-gray-100 text-left mb-6 space-y-4">
               <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block mb-2">Application Timeline</span>
-              
+
               <div className="relative pl-6 border-l-2 border-green-200 space-y-5">
                 {/* Step 1: Submitted */}
                 <div className="relative">
@@ -321,7 +321,7 @@ export default function ContractorLockScreen({ children }) {
             <LogOut className="w-4 h-4" />
             Log Out
           </button>
-          
+
           {status === 'rejected' ? (
             <button
               onClick={handleOpenResubmit}
@@ -355,7 +355,7 @@ export default function ContractorLockScreen({ children }) {
             )}
 
             <form onSubmit={handleResubmit} className="space-y-4 overflow-y-auto pr-1 pb-4 flex-1 scrollbar-thin">
-              
+
               {/* Business Name */}
               <div>
                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Business Name</label>
@@ -365,7 +365,7 @@ export default function ContractorLockScreen({ children }) {
                     type="text"
                     value={businessName}
                     onChange={e => setBusinessName(e.target.value)}
-                    placeholder=""
+                    placeholder="Juan's Organic Produce"
                     required
                     className="flex-1 bg-transparent text-xs focus:outline-none"
                   />
@@ -375,7 +375,7 @@ export default function ContractorLockScreen({ children }) {
               {/* Stall Picker */}
               <div>
                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Select Stalls</label>
-                
+
                 {/* Search */}
                 <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-gray-200 bg-gray-50 mb-2">
                   <Search size={14} className="text-gray-400 shrink-0" />
@@ -395,11 +395,10 @@ export default function ContractorLockScreen({ children }) {
                       key={zone}
                       type="button"
                       onClick={() => setSelectedZone(zone)}
-                      className={`px-3 py-1 rounded-full text-[10px] font-semibold whitespace-nowrap border ${
-                        selectedZone === zone
+                      className={`px-3 py-1 rounded-full text-[10px] font-semibold whitespace-nowrap border ${selectedZone === zone
                           ? 'bg-green-700 border-green-700 text-white'
                           : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
-                      }`}
+                        }`}
                     >
                       {zone}
                     </button>
@@ -431,11 +430,10 @@ export default function ContractorLockScreen({ children }) {
                               setSelectedStalls([...selectedStalls, stall.location])
                             }
                           }}
-                          className={`flex flex-col text-left p-2.5 rounded-xl border transition-all relative ${
-                            isSelected
+                          className={`flex flex-col text-left p-2.5 rounded-xl border transition-all relative ${isSelected
                               ? 'border-green-700 bg-green-50/50'
                               : 'border-gray-200 bg-white hover:border-gray-300'
-                          }`}
+                            }`}
                         >
                           <div className="flex justify-between items-center w-full mb-1">
                             <span className="font-extrabold text-[11px] text-gray-800">#{stall.location}</span>

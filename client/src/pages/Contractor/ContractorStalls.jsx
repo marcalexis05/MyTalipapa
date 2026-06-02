@@ -86,7 +86,7 @@ export default function ContractorStalls() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { userName, loading: authLoading } = useCurrentUser();
-  
+
   // New state for stall request feature
   const [showAddModal, setShowAddModal] = useState(false);
   const [availableStalls, setAvailableStalls] = useState([]);
@@ -234,21 +234,21 @@ export default function ContractorStalls() {
   // Filtered available stalls for modal
   const filteredAvailableStalls = useMemo(() => {
     if (!Array.isArray(availableStalls)) return [];
-    
+
     let filtered = availableStalls.filter(s => s.status === 'available');
-    
+
     if (selectedZoneFilter !== 'all') {
       filtered = filtered.filter(s => s.zone === selectedZoneFilter);
     }
-    
+
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      filtered = filtered.filter(s => 
-        s.location.toLowerCase().includes(q) || 
+      filtered = filtered.filter(s =>
+        s.location.toLowerCase().includes(q) ||
         s.zone.toLowerCase().includes(q)
       );
     }
-    
+
     return sortStalls(filtered);
   }, [availableStalls, selectedZoneFilter, searchQuery]);
 
@@ -316,7 +316,7 @@ export default function ContractorStalls() {
           fetch(`/api/contractor/stalls?email=${userEmail}`)
             .then(r => r.json())
             .then(data => setStalls(data))
-            .catch(() => {});
+            .catch(() => { });
         }
       } else {
         const msg = errors.map(e => e.message).join(', ');
@@ -473,11 +473,10 @@ export default function ContractorStalls() {
                   <div className="mb-6 flex gap-2 overflow-x-auto pb-2">
                     <button
                       onClick={() => setSelectedZoneFilter('all')}
-                      className={`px-4 py-2 rounded-full font-semibold text-sm whitespace-nowrap transition ${
-                        selectedZoneFilter === 'all'
+                      className={`px-4 py-2 rounded-full font-semibold text-sm whitespace-nowrap transition ${selectedZoneFilter === 'all'
                           ? 'bg-green-600 text-white'
                           : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                      }`}
+                        }`}
                     >
                       All
                     </button>
@@ -485,11 +484,10 @@ export default function ContractorStalls() {
                       <button
                         key={zone}
                         onClick={() => setSelectedZoneFilter(zone)}
-                        className={`px-4 py-2 rounded-full font-semibold text-sm whitespace-nowrap transition ${
-                          selectedZoneFilter === zone
+                        className={`px-4 py-2 rounded-full font-semibold text-sm whitespace-nowrap transition ${selectedZoneFilter === zone
                             ? 'bg-green-600 text-white'
                             : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                        }`}
+                          }`}
                       >
                         Zone {zone}
                       </button>
@@ -511,11 +509,10 @@ export default function ContractorStalls() {
                         <button
                           key={stall._id}
                           onClick={() => handleSelectStall(stall._id)}
-                          className={`p-4 rounded-xl border-2 transition ${
-                            selectedStallIds.includes(stall._id)
+                          className={`p-4 rounded-xl border-2 transition ${selectedStallIds.includes(stall._id)
                               ? 'border-green-500 bg-green-50'
                               : 'border-gray-200 bg-white hover:border-green-400'
-                          }`}
+                            }`}
                         >
                           <div className="flex items-start justify-between mb-3">
                             <div className="text-left">
@@ -562,17 +559,17 @@ export default function ContractorStalls() {
                   </div>
 
                   {requestStatus && requestStatus !== 'success' && (
-                      <p className="mt-4 text-sm text-red-600 bg-red-50 p-3 rounded-lg">{requestStatus}</p>
-                    )}
-                    {requestStatus === 'success' && (
-                      <p className="mt-4 text-sm text-green-600 bg-green-50 p-3 rounded-lg">Stall request submitted successfully!</p>
-                    )}
-                    {/* Toast Notification */}
-                    {toast.show && (
-                      <div className={`fixed bottom-4 right-4 px-4 py-2 rounded shadow-lg ${toast.type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>
-                        {toast.message}
-                      </div>
-                    )}
+                    <p className="mt-4 text-sm text-red-600 bg-red-50 p-3 rounded-lg">{requestStatus}</p>
+                  )}
+                  {requestStatus === 'success' && (
+                    <p className="mt-4 text-sm text-green-600 bg-green-50 p-3 rounded-lg">Stall request submitted successfully!</p>
+                  )}
+                  {/* Toast Notification */}
+                  {toast.show && (
+                    <div className={`fixed bottom-4 right-4 px-4 py-2 rounded shadow-lg ${toast.type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>
+                      {toast.message}
+                    </div>
+                  )}
 
                   {/* Close Button */}
                   <button
@@ -822,7 +819,7 @@ export default function ContractorStalls() {
               )}
               {selectedStall.status === "occupied" && !selectedStall.tenant && (
                 <div className="stall-modal-info">
-                  <div className="stall-modal-row"><span>Vendor</span></div>
+                  <div className="stall-modal-row"><span>Vendor</span><strong>Juan Dela Cruz</strong></div>
                   <div className="stall-modal-row"><span>Lease Since</span><strong>Jan 2023</strong></div>
                   <div className="stall-modal-row"><span>Monthly Rent</span><strong>₱{selectedStall.monthlyRate?.toLocaleString() || '3,500'}</strong></div>
                 </div>

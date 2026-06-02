@@ -261,7 +261,7 @@ export default function RenterDashboard({ onNavigate, onOpenStall }) {
     )
   }
 
-  const firstName = currentUser?.full_name?.split(' ')[0] || ''
+  const firstName = currentUser?.full_name?.split(' ')[0] || 'Juan'
 
   return (
     <>
@@ -380,7 +380,7 @@ export default function RenterDashboard({ onNavigate, onOpenStall }) {
               </div>
             ) : (
               <div className="dash-card bg-white rounded-2xl p-6 text-center shadow-sm border border-gray-100 text-xs text-gray-400">
-                 No active announcements from management.
+                No active announcements from management.
               </div>
             )}
           </div>

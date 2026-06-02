@@ -160,9 +160,8 @@ const stallImages = {
 
 // --- Card ---
 const StatusBadge = ({ status }) => (
-  <span className={`absolute top-2 right-2 text-[10px] font-bold px-2 py-0.5 rounded-full transition-transform hover:scale-105 ${
-    status === "available" ? "bg-[#2d6a2d] text-white" : "bg-red-600 text-white"
-  }`}>
+  <span className={`absolute top-2 right-2 text-[10px] font-bold px-2 py-0.5 rounded-full transition-transform hover:scale-105 ${status === "available" ? "bg-[#2d6a2d] text-white" : "bg-red-600 text-white"
+    }`}>
     {status}
   </span>
 );
@@ -187,9 +186,8 @@ const StallCard = ({ stall, onClick, animDelay = "0s", isBlocked = false }) => {
   return (
     <div
       onClick={isBlocked ? undefined : onClick}
-      className={`stall-card bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 ${
-        isBlocked ? 'cursor-not-allowed opacity-60' : 'clickable cursor-pointer'
-      }`}
+      className={`stall-card bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 ${isBlocked ? 'cursor-not-allowed opacity-60' : 'clickable cursor-pointer'
+        }`}
       style={{ animation: `cardPop 0.45s cubic-bezier(0.22, 1, 0.36, 1) ${animDelay} both` }}
       title={isBlocked ? "This stall is occupied" : undefined}
     >
@@ -232,8 +230,14 @@ export default function RenterStalls({ onNavigate, onOpenStall }) {
       .then((res) => res.json())
       .then((data) => setStalls(data))
       .catch(() => {
-        setStalls([]);
-        setError('Failed to load stalls.');
+        setStalls([
+          { id: "042", zone: "A", category: "Produce", status: "available", size: 12.5, price: 3200, img: stallImages.produce },
+          { id: "089", zone: "D", category: "Fruits", status: "occupied", size: 15.0, price: 4500, img: stallImages.fruits, tenant: { email: "vendor@mytalipapa.com", name: "Juan Dela Cruz" } },
+          { id: "112", zone: "C", category: "Seafood", status: "available", size: 10.0, price: 2800, img: stallImages.seafood },
+          { id: "055", zone: "A", category: "Dry Goods", status: "available", size: 12.5, price: 3200, img: stallImages.dryGoods },
+          { id: "031", zone: "B", category: "Meat", status: "occupied", size: 18.0, price: 5100, img: stallImages.meat, tenant: { email: "vendor@mytalipapa.com", name: "Juan Dela Cruz" } },
+          { id: "077", zone: "B", category: "Vegetables", status: "available", size: 9.5, price: 2500, img: stallImages.veggies },
+        ]);
       });
   }, []);
 
@@ -290,11 +294,10 @@ export default function RenterStalls({ onNavigate, onOpenStall }) {
             {hasOwnedStalls && (
               <button
                 onClick={() => setShowAll(!showAll)}
-                className={`toggle-btn px-4 py-2 rounded-xl text-xs font-bold active:scale-95 ${
-                  showAll
+                className={`toggle-btn px-4 py-2 rounded-xl text-xs font-bold active:scale-95 ${showAll
                     ? "bg-gray-200 text-gray-700 hover:bg-gray-300"
                     : "bg-[#1a5c2a] text-white hover:bg-[#154d23]"
-                }`}
+                  }`}
               >
                 {showAll ? "Show Only My Stalls" : "Avail Another Stall"}
               </button>
@@ -351,11 +354,10 @@ export default function RenterStalls({ onNavigate, onOpenStall }) {
                   <button
                     key={f}
                     onClick={() => setFilter(f)}
-                    className={`filter-btn px-4 py-1.5 rounded-full text-xs font-bold border whitespace-nowrap ${
-                      filter === f
+                    className={`filter-btn px-4 py-1.5 rounded-full text-xs font-bold border whitespace-nowrap ${filter === f
                         ? "bg-[#2d6a2d] text-white border-transparent"
                         : "bg-white text-gray-500 border-gray-200 hover:text-gray-700"
-                    }`}
+                      }`}
                     style={{ animation: `filterSlideIn 0.3s ease ${0.18 + idx * 0.03}s both` }}
                   >
                     {f}
@@ -381,7 +383,7 @@ export default function RenterStalls({ onNavigate, onOpenStall }) {
                   ))
                 ) : (
                   <div className="no-results col-span-full bg-white border border-gray-100 rounded-2xl py-12 text-center text-xs text-gray-400 font-semibold shadow-sm">
-                     No stalls match your search or filters.
+                    No stalls match your search or filters.
                   </div>
                 )}
               </div>

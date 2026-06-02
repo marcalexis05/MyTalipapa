@@ -724,7 +724,7 @@ export default function RenterProfile({ onLogout }) {
                     onChange={(e) => setEditForm(f => ({ ...f, fullName: e.target.value }))}
                     required
                     className="w-full bg-[#f5f5f0] border border-transparent rounded-xl px-4 py-3 text-sm text-gray-800 focus:outline-none focus:border-[#1a5c2a] focus:bg-white transition-all duration-200"
-                    placeholder=""
+                    placeholder="Juan Dela Cruz"
                   />
                 </div>
                 <div style={{ animation: 'fadeSlideUp 0.32s ease 0.1s both' }}>
@@ -798,9 +798,8 @@ export default function RenterProfile({ onLogout }) {
                       value={passwordForm.currentPassword}
                       onChange={handlePasswordInputChange}
                       required
-                      className={`w-full border rounded-xl pl-4 pr-24 py-3 text-sm text-gray-800 focus:outline-none transition-all ${
-                        currentPasswordValid === true ? 'border-green-600 bg-green-50/20' : currentPasswordValid === false ? 'border-red-500 bg-red-50/20' : 'border-gray-200 focus:ring-2 focus:ring-[#1a5c2a] focus:border-transparent'
-                      }`}
+                      className={`w-full border rounded-xl pl-4 pr-24 py-3 text-sm text-gray-800 focus:outline-none transition-all ${currentPasswordValid === true ? 'border-green-600 bg-green-50/20' : currentPasswordValid === false ? 'border-red-500 bg-red-50/20' : 'border-gray-200 focus:ring-2 focus:ring-[#1a5c2a] focus:border-transparent'
+                        }`}
                     />
                     <div className="absolute right-3.5 top-1/2 -translate-y-1/2 flex items-center gap-2">
                       {checkingCurrentPassword && <span className="text-gray-400 text-xs">Checking…</span>}
@@ -865,9 +864,8 @@ export default function RenterProfile({ onLogout }) {
                       value={passwordForm.confirmPassword}
                       onChange={handlePasswordInputChange}
                       required
-                      className={`w-full border rounded-xl pl-4 pr-24 py-3 text-sm text-gray-800 focus:outline-none transition-all ${
-                        passwordForm.confirmPassword.length === 0 ? 'border-gray-200 focus:ring-2 focus:ring-[#1a5c2a] focus:border-transparent' : (passwordForm.confirmPassword === passwordForm.newPassword) ? 'border-green-600 bg-green-50/20' : 'border-red-500 bg-red-50/20'
-                      }`}
+                      className={`w-full border rounded-xl pl-4 pr-24 py-3 text-sm text-gray-800 focus:outline-none transition-all ${passwordForm.confirmPassword.length === 0 ? 'border-gray-200 focus:ring-2 focus:ring-[#1a5c2a] focus:border-transparent' : (passwordForm.confirmPassword === passwordForm.newPassword) ? 'border-green-600 bg-green-50/20' : 'border-red-500 bg-red-50/20'
+                        }`}
                     />
                     <div className="absolute right-3.5 top-1/2 -translate-y-1/2 flex items-center gap-2">
                       {passwordForm.confirmPassword.length > 0 && (
@@ -944,11 +942,10 @@ export default function RenterProfile({ onLogout }) {
                 <button
                   type="button"
                   onClick={() => setActiveContactTab('send')}
-                  className={`flex-1 pb-2.5 text-center text-xs font-extrabold border-b-2 transition-all ${
-                    activeContactTab === 'send'
+                  className={`flex-1 pb-2.5 text-center text-xs font-extrabold border-b-2 transition-all ${activeContactTab === 'send'
                       ? 'border-[#1a5c2a] text-[#1a5c2a]'
                       : 'border-transparent text-gray-400 hover:text-gray-600'
-                  }`}
+                    }`}
                 >
                   Send Message
                 </button>
@@ -958,11 +955,10 @@ export default function RenterProfile({ onLogout }) {
                     setActiveContactTab('inbox');
                     fetchRenterMessages();
                   }}
-                  className={`flex-1 pb-2.5 text-center text-xs font-extrabold border-b-2 transition-all relative ${
-                    activeContactTab === 'inbox'
+                  className={`flex-1 pb-2.5 text-center text-xs font-extrabold border-b-2 transition-all relative ${activeContactTab === 'inbox'
                       ? 'border-[#1a5c2a] text-[#1a5c2a]'
                       : 'border-transparent text-gray-400 hover:text-gray-600'
-                  }`}
+                    }`}
                 >
                   Message History
                   {renterMessages.some(m => m.reply && m.status === 'unread') && (
@@ -1093,9 +1089,8 @@ export default function RenterProfile({ onLogout }) {
                         return (
                           <div
                             key={msg._id}
-                            className={`border border-gray-100 rounded-2xl overflow-hidden transition-all duration-200 ${
-                              isExpanded ? 'bg-gray-50 border-gray-200' : 'bg-white hover:bg-gray-50'
-                            }`}
+                            className={`border border-gray-100 rounded-2xl overflow-hidden transition-all duration-200 ${isExpanded ? 'bg-gray-50 border-gray-200' : 'bg-white hover:bg-gray-50'
+                              }`}
                           >
                             <button
                               type="button"

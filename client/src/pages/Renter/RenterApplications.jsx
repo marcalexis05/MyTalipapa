@@ -155,29 +155,29 @@ const MARKET_IMAGES = [
 /* ── Status config ───────────────────────────────────────────── */
 const STATUS_CFG = {
   Approved: { pill: 'bg-[#1a5c2a] text-white', Icon: CheckCircle, label: 'APPROVED' },
-  Pending:  { pill: 'bg-[#e8621a] text-white', Icon: AlertCircle, label: 'PENDING'  },
-  Rejected: { pill: 'bg-red-600 text-white',   Icon: XCircle,     label: 'REJECTED' },
+  Pending: { pill: 'bg-[#e8621a] text-white', Icon: AlertCircle, label: 'PENDING' },
+  Rejected: { pill: 'bg-red-600 text-white', Icon: XCircle, label: 'REJECTED' },
 }
 
 /* ── Section classifier ──────────────────────────────────────── */
 const SECTIONS = ['Meat', 'Fishes', 'Vegetables', 'Other']
 const SECTION_META = {
-  Meat:       { color: 'bg-red-50 text-red-700',     border: 'border-red-100',    dot: 'bg-red-400',   cls: 'ra-section-meat'  },
-  Fishes:     { color: 'bg-blue-50 text-blue-700',   border: 'border-blue-100',   dot: 'bg-blue-400',  cls: 'ra-section-fish'  },
-  Vegetables: { color: 'bg-green-50 text-green-700', border: 'border-green-100',  dot: 'bg-green-500', cls: 'ra-section-veg'   },
-  Other:      { color: 'bg-gray-50 text-gray-600',   border: 'border-gray-100',   dot: 'bg-gray-400',  cls: 'ra-section-other' },
+  Meat: { color: 'bg-red-50 text-red-700', border: 'border-red-100', dot: 'bg-red-400', cls: 'ra-section-meat' },
+  Fishes: { color: 'bg-blue-50 text-blue-700', border: 'border-blue-100', dot: 'bg-blue-400', cls: 'ra-section-fish' },
+  Vegetables: { color: 'bg-green-50 text-green-700', border: 'border-green-100', dot: 'bg-green-500', cls: 'ra-section-veg' },
+  Other: { color: 'bg-gray-50 text-gray-600', border: 'border-gray-100', dot: 'bg-gray-400', cls: 'ra-section-other' },
 }
 const SectionIcon = ({ sec, size = 14 }) => {
-  if (sec === 'Fishes')     return <Fish     size={size} />
-  if (sec === 'Meat')       return <Beef     size={size} />
-  if (sec === 'Vegetables') return <Leaf     size={size} />
+  if (sec === 'Fishes') return <Fish size={size} />
+  if (sec === 'Meat') return <Beef size={size} />
+  if (sec === 'Vegetables') return <Leaf size={size} />
   return <Store size={size} />
 }
 
 function getStallSection(s) {
   const sec = (s.section || s.location || '').toLowerCase()
-  if (sec.includes('fish') || sec.includes('sea'))                       return 'Fishes'
-  if (sec.includes('meat'))                                               return 'Meat'
+  if (sec.includes('fish') || sec.includes('sea')) return 'Fishes'
+  if (sec.includes('meat')) return 'Meat'
   if (sec.includes('veg') || sec.includes('produce') || sec.includes('vegetable')) return 'Vegetables'
   return 'Other'
 }
@@ -193,7 +193,7 @@ const inputCls =
    StallPickerModal — grouped, searchable stall selector
    ════════════════════════════════════════════════════════════════ */
 function StallPickerModal({ stallsList, value, onChange, onClose }) {
-  const [search, setSearch]       = useState('')
+  const [search, setSearch] = useState('')
   const [activeTab, setActiveTab] = useState('All')
   const searchRef = useRef(null)
 
@@ -206,8 +206,8 @@ function StallPickerModal({ stallsList, value, onChange, onClose }) {
   const filterStalls = (list) =>
     search
       ? list.filter(s =>
-          (s.location || `Stall #${s.stallNumber}`)
-            .toLowerCase().includes(search.toLowerCase()))
+        (s.location || `Stall #${s.stallNumber}`)
+          .toLowerCase().includes(search.toLowerCase()))
       : list
 
   const tabSections = activeTab === 'All' ? visibleSections : [activeTab]
@@ -264,13 +264,12 @@ function StallPickerModal({ stallsList, value, onChange, onClose }) {
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
-                    className={`ra-status-chip shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold border transition-all ${
-                      isActive
+                    className={`ra-status-chip shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold border transition-all ${isActive
                         ? tab === 'All'
                           ? 'bg-gray-800 text-white border-gray-800'
                           : `${meta.color} border-transparent`
                         : 'bg-white text-gray-500 border-gray-100 hover:border-gray-200'
-                    }`}
+                      }`}
                   >
                     {tab !== 'All' && <SectionIcon sec={tab} size={11} />}
                     {tab}
@@ -313,9 +312,8 @@ function StallPickerModal({ stallsList, value, onChange, onClose }) {
                       key={s._id}
                       disabled={isUnavailable}
                       onClick={() => { onChange(s); onClose() }}
-                      className={`ra-stall-item w-full flex items-center justify-between px-5 py-3 border-b border-gray-50 text-left transition-colors ${
-                        isSelected ? 'selected' : ''
-                      } ${isUnavailable ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}
+                      className={`ra-stall-item w-full flex items-center justify-between px-5 py-3 border-b border-gray-50 text-left transition-colors ${isSelected ? 'selected' : ''
+                        } ${isUnavailable ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
                         <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${isSelected ? 'bg-[#1a5c2a] text-white' : meta.color}`}>
@@ -356,10 +354,10 @@ function StallPickerModal({ stallsList, value, onChange, onClose }) {
    FilterSheet — bottom-sheet filter for application status
    ════════════════════════════════════════════════════════════════ */
 const FILTER_OPTIONS = [
-  { key: 'All',      label: 'All Applications', desc: 'Show everything',            icon: '📋', activeClass: 'border-gray-700 bg-gray-50' },
-  { key: 'Approved', label: 'Approved',          desc: 'Accepted by management',     icon: '✅', activeClass: 'border-[#1a5c2a] bg-[#edf5ed]' },
-  { key: 'Pending',  label: 'Pending Review',    desc: 'Awaiting a decision',        icon: '⏳', activeClass: 'border-[#e8621a] bg-[#fff4ee]' },
-  { key: 'Rejected', label: 'Rejected',          desc: 'Not approved this time',     icon: '❌', activeClass: 'border-red-400 bg-red-50' },
+  { key: 'All', label: 'All Applications', desc: 'Show everything', icon: '📋', activeClass: 'border-gray-700 bg-gray-50' },
+  { key: 'Approved', label: 'Approved', desc: 'Accepted by management', icon: '✅', activeClass: 'border-[#1a5c2a] bg-[#edf5ed]' },
+  { key: 'Pending', label: 'Pending Review', desc: 'Awaiting a decision', icon: '⏳', activeClass: 'border-[#e8621a] bg-[#fff4ee]' },
+  { key: 'Rejected', label: 'Rejected', desc: 'Not approved this time', icon: '❌', activeClass: 'border-red-400 bg-red-50' },
 ]
 
 function FilterSheet({ activeFilter, counts, onSelect, onClose }) {
@@ -398,9 +396,8 @@ function FilterSheet({ activeFilter, counts, onSelect, onClose }) {
               <button
                 key={key}
                 onClick={() => { onSelect(key); onClose() }}
-                className={`ra-sheet-option w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl border-2 transition-all text-left ${
-                  isActive ? activeClass : 'border-gray-100 bg-white hover:border-gray-200 hover:bg-gray-50'
-                }`}
+                className={`ra-sheet-option w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl border-2 transition-all text-left ${isActive ? activeClass : 'border-gray-100 bg-white hover:border-gray-200 hover:bg-gray-50'
+                  }`}
               >
                 <span className="text-lg leading-none shrink-0">{icon}</span>
                 <div className="flex-1 min-w-0">
@@ -409,9 +406,8 @@ function FilterSheet({ activeFilter, counts, onSelect, onClose }) {
                   </p>
                   <p className="text-[11px] text-gray-400 mt-0.5">{desc}</p>
                 </div>
-                <span className={`text-xs font-extrabold px-2.5 py-1 rounded-full shrink-0 ${
-                  isActive ? 'bg-white/70 text-gray-800' : 'bg-gray-100 text-gray-500'
-                }`}>
+                <span className={`text-xs font-extrabold px-2.5 py-1 rounded-full shrink-0 ${isActive ? 'bg-white/70 text-gray-800' : 'bg-gray-100 text-gray-500'
+                  }`}>
                   {count}
                 </span>
                 {isActive && <CheckCircle size={16} className="text-[#1a5c2a] shrink-0" />}
@@ -493,24 +489,24 @@ function TopBar({ showBack, onBack }) {
    Main export
    ════════════════════════════════════════════════════════════════ */
 export default function RenterApplications({ prefill }) {
-  const [view, setView]               = useState('list')
-  const [submitted, setSubmitted]     = useState(false)
-  const [loading, setLoading]         = useState(false)
+  const [view, setView] = useState('list')
+  const [submitted, setSubmitted] = useState(false)
+  const [loading, setLoading] = useState(false)
   const [applications, setApplications] = useState([])
   const [selectedApp, setSelectedApp] = useState(null)
-  const [stallsList, setStallsList]   = useState([])
+  const [stallsList, setStallsList] = useState([])
   const [activeFilter, setActiveFilter] = useState('All')
   const [showFilterSheet, setShowFilterSheet] = useState(false)
-  const [showStallPicker, setShowStallPicker]  = useState(false)
+  const [showStallPicker, setShowStallPicker] = useState(false)
 
   const [form, setForm] = useState({
-    fullName:           getUser()?.full_name || getUser()?.name || '',
-    contactNumber:      getUser()?.contact_number || '',
-    emailAddress:       getUser()?.email || '',
-    preferredStall:     '',
-    preferredStallLabel:'',
-    intendedBusinessUse:'',
-    additionalMessage:  '',
+    fullName: getUser()?.full_name || getUser()?.name || '',
+    contactNumber: getUser()?.contact_number || '',
+    emailAddress: getUser()?.email || '',
+    preferredStall: '',
+    preferredStallLabel: '',
+    intendedBusinessUse: '',
+    additionalMessage: '',
   })
 
   /* ── Fetch helpers ── */
@@ -523,7 +519,7 @@ export default function RenterApplications({ prefill }) {
       .catch(() => {
         setApplications([
           { id: 'app-1', stall: '#042', zone: 'Zone A', status: 'Approved', submittedOn: 'Oct 24, 2023' },
-          { id: 'app-2', stall: '#115', zone: 'Zone C', status: 'Pending',  submittedOn: 'Nov 02, 2023' },
+          { id: 'app-2', stall: '#115', zone: 'Zone C', status: 'Pending', submittedOn: 'Nov 02, 2023' },
           { id: 'app-3', stall: '#009', zone: 'Zone B', status: 'Rejected', submittedOn: 'Sep 15, 2023' },
         ])
       })
@@ -581,12 +577,12 @@ export default function RenterApplications({ prefill }) {
   }, [prefill, stallsList])
 
   /* ── Derived counts ── */
-  const totalActive  = applications.filter(a => a.status !== 'Rejected').length
+  const totalActive = applications.filter(a => a.status !== 'Rejected').length
   const totalPending = applications.filter(a => a.status === 'Pending').length
   const counts = {
-    All:      applications.length,
+    All: applications.length,
     Approved: applications.filter(a => a.status === 'Approved').length,
-    Pending:  applications.filter(a => a.status === 'Pending').length,
+    Pending: applications.filter(a => a.status === 'Pending').length,
     Rejected: applications.filter(a => a.status === 'Rejected').length,
   }
 
@@ -702,11 +698,10 @@ export default function RenterApplications({ prefill }) {
                 {/* Filter button */}
                 <button
                   onClick={() => setShowFilterSheet(true)}
-                  className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl border font-bold text-xs transition-all shrink-0 ${
-                    activeFilter !== 'All'
+                  className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl border font-bold text-xs transition-all shrink-0 ${activeFilter !== 'All'
                       ? 'bg-[#1a5c2a] text-white border-[#1a5c2a]'
                       : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
-                  }`}
+                    }`}
                 >
                   <SlidersHorizontal size={13} />
                   Filter
@@ -719,18 +714,17 @@ export default function RenterApplications({ prefill }) {
                 <div className="flex-1 flex items-center gap-2 overflow-x-auto scrollbar-none">
                   {activeFilter === 'All' ? (
                     <div className="flex gap-1.5">
-                      {(['Approved','Pending','Rejected']).map(s => (
+                      {(['Approved', 'Pending', 'Rejected']).map(s => (
                         <button
                           key={s}
                           onClick={() => setActiveFilter(s)}
-                          className={`ra-status-chip flex items-center gap-1 px-2.5 py-1.5 rounded-xl border text-[11px] font-bold transition-all whitespace-nowrap ${
-                            s === 'Approved' ? 'border-[#c3dfc3] bg-white text-[#1a5c2a] hover:bg-[#edf5ed]'
-                            : s === 'Pending'  ? 'border-orange-200 bg-white text-[#e8621a] hover:bg-[#fff4ee]'
-                            : 'border-red-200 bg-white text-red-600 hover:bg-red-50'
-                          }`}
+                          className={`ra-status-chip flex items-center gap-1 px-2.5 py-1.5 rounded-xl border text-[11px] font-bold transition-all whitespace-nowrap ${s === 'Approved' ? 'border-[#c3dfc3] bg-white text-[#1a5c2a] hover:bg-[#edf5ed]'
+                              : s === 'Pending' ? 'border-orange-200 bg-white text-[#e8621a] hover:bg-[#fff4ee]'
+                                : 'border-red-200 bg-white text-red-600 hover:bg-red-50'
+                            }`}
                         >
                           {s === 'Approved' && <CheckCircle size={10} />}
-                          {s === 'Pending'  && <AlertCircle size={10} />}
+                          {s === 'Pending' && <AlertCircle size={10} />}
                           {s === 'Rejected' && <XCircle size={10} />}
                           {s}
                           <span className="text-[9px] font-extrabold opacity-70 ml-0.5">{counts[s]}</span>
@@ -740,11 +734,10 @@ export default function RenterApplications({ prefill }) {
                   ) : (
                     <div className="flex items-center gap-2 bg-white border border-gray-100 rounded-xl px-3 py-2 shadow-sm">
                       <span className="text-xs font-bold text-gray-700">{filterInfo?.label}</span>
-                      <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded-full ${
-                        activeFilter === 'Approved' ? 'bg-[#edf5ed] text-[#1a5c2a]'
-                        : activeFilter === 'Pending'  ? 'bg-[#fff4ee] text-[#e8621a]'
-                        : 'bg-red-50 text-red-600'
-                      }`}>{counts[activeFilter]}</span>
+                      <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded-full ${activeFilter === 'Approved' ? 'bg-[#edf5ed] text-[#1a5c2a]'
+                          : activeFilter === 'Pending' ? 'bg-[#fff4ee] text-[#e8621a]'
+                            : 'bg-red-50 text-red-600'
+                        }`}>{counts[activeFilter]}</span>
                       <button
                         onClick={() => setActiveFilter('All')}
                         className="ml-1 text-gray-400 hover:text-gray-700 transition-colors"
@@ -829,7 +822,7 @@ export default function RenterApplications({ prefill }) {
 
                 <div>
                   <label className={fieldLabel}>Full Name</label>
-                  <input className={inputCls} placeholder=""
+                  <input className={inputCls} placeholder="e.g. Juan Dela Cruz"
                     value={form.fullName} onChange={setField('fullName')} />
                 </div>
 
@@ -841,7 +834,7 @@ export default function RenterApplications({ prefill }) {
                   </div>
                   <div>
                     <label className={fieldLabel}>Email Address</label>
-                    <input className={inputCls} placeholder="" type="email"
+                    <input className={inputCls} placeholder="juan@example.com" type="email"
                       value={form.emailAddress} onChange={setField('emailAddress')} />
                   </div>
                 </div>
@@ -858,9 +851,8 @@ export default function RenterApplications({ prefill }) {
                       {form.preferredStall ? (
                         <div className="flex items-center gap-2 min-w-0">
                           {form.intendedBusinessUse && (
-                            <div className={`w-6 h-6 rounded-md flex items-center justify-center shrink-0 ${
-                              SECTION_META[form.intendedBusinessUse]?.color || 'bg-gray-100 text-gray-500'
-                            }`}>
+                            <div className={`w-6 h-6 rounded-md flex items-center justify-center shrink-0 ${SECTION_META[form.intendedBusinessUse]?.color || 'bg-gray-100 text-gray-500'
+                              }`}>
                               <SectionIcon sec={form.intendedBusinessUse} size={12} />
                             </div>
                           )}
@@ -878,11 +870,10 @@ export default function RenterApplications({ prefill }) {
                   {/* ── Intended Business Use (read-only, auto-filled) ── */}
                   <div>
                     <label className={fieldLabel}>Intended Business Use</label>
-                    <div className={`flex items-center gap-2.5 px-4 py-3 rounded-xl border ${
-                      form.intendedBusinessUse
+                    <div className={`flex items-center gap-2.5 px-4 py-3 rounded-xl border ${form.intendedBusinessUse
                         ? `${SECTION_META[form.intendedBusinessUse]?.border || 'border-gray-100'} bg-white`
                         : 'border-transparent bg-[#f5f5f0]'
-                    }`}>
+                      }`}>
                       {form.intendedBusinessUse ? (
                         <>
                           <div className={`w-6 h-6 rounded-md flex items-center justify-center shrink-0 ${SECTION_META[form.intendedBusinessUse]?.color}`}>
@@ -954,7 +945,7 @@ export default function RenterApplications({ prefill }) {
                 ))}
               </div>
 
-              
+
 
             </div>
           )}
@@ -1014,13 +1005,12 @@ export default function RenterApplications({ prefill }) {
               <div className="p-6 space-y-5 overflow-y-auto flex-1 min-h-0">
                 <div className="flex items-center justify-between bg-[#f9fafb] rounded-xl px-4 py-3" style={{ animation: 'fadeSlideUp 0.3s ease both' }}>
                   <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Application Status</span>
-                  <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase ${
-                    selectedApp.status === 'Approved' ? 'bg-green-100 text-green-700' :
-                    selectedApp.status === 'Rejected' ? 'bg-red-100 text-red-600' : 'bg-orange-100 text-orange-700'
-                  }`}>
+                  <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase ${selectedApp.status === 'Approved' ? 'bg-green-100 text-green-700' :
+                      selectedApp.status === 'Rejected' ? 'bg-red-100 text-red-600' : 'bg-orange-100 text-orange-700'
+                    }`}>
                     {selectedApp.status === 'Approved' && <CheckCircle size={10} />}
                     {selectedApp.status === 'Rejected' && <XCircle size={10} />}
-                    {selectedApp.status === 'Pending'  && <AlertCircle size={10} />}
+                    {selectedApp.status === 'Pending' && <AlertCircle size={10} />}
                     {selectedApp.status}
                   </span>
                 </div>
@@ -1029,12 +1019,12 @@ export default function RenterApplications({ prefill }) {
                   <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-2 px-1">Stall Information</p>
                   <div className="grid grid-cols-2 gap-2">
                     {[
-                      { label: 'Stall Number',       value: selectedApp.stall },
-                      { label: 'Zone / Floor',       value: selectedApp.zone || selectedApp.section || 'N/A' },
-                      { label: 'Section',            value: selectedApp.section || selectedApp.category || 'N/A' },
-                      { label: 'Size',               value: selectedApp.size ? `${selectedApp.size} sqm` : 'N/A' },
-                      { label: 'Monthly Rate',       value: selectedApp.monthlyRate ? `₱${Number(selectedApp.monthlyRate).toLocaleString()}` : 'N/A' },
-                      { label: 'Contractor Manager', value: selectedApp.contractorName    || 'N/A' },
+                      { label: 'Stall Number', value: selectedApp.stall },
+                      { label: 'Zone / Floor', value: selectedApp.zone || selectedApp.section || 'N/A' },
+                      { label: 'Section', value: selectedApp.section || selectedApp.category || 'N/A' },
+                      { label: 'Size', value: selectedApp.size ? `${selectedApp.size} sqm` : 'N/A' },
+                      { label: 'Monthly Rate', value: selectedApp.monthlyRate ? `₱${Number(selectedApp.monthlyRate).toLocaleString()}` : 'N/A' },
+                      { label: 'Contractor Manager', value: selectedApp.contractorName || 'N/A' },
                       { label: 'Contractor Contact', value: selectedApp.contractorContact || 'N/A' },
                     ].map(({ label, value }, i) => (
                       <div key={label} className="bg-[#f9fafb] rounded-xl p-3 flex flex-col gap-0.5" style={{ animation: 'fadeSlideUp 0.3s ease both', animationDelay: `${0.04 + i * 0.05}s` }}>
@@ -1049,10 +1039,10 @@ export default function RenterApplications({ prefill }) {
                   <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-2 px-1">Applicant Information</p>
                   <div className="grid grid-cols-2 gap-2">
                     {[
-                      { label: 'Full Name',     value: selectedApp.fullName            || 'N/A' },
-                      { label: 'Contact',       value: selectedApp.contactNumber       || 'N/A' },
+                      { label: 'Full Name', value: selectedApp.fullName || 'N/A' },
+                      { label: 'Contact', value: selectedApp.contactNumber || 'N/A' },
                       { label: 'Business Type', value: selectedApp.intendedBusinessUse || 'N/A' },
-                      { label: 'Submitted On',  value: selectedApp.submittedOn || selectedApp.date || 'N/A' },
+                      { label: 'Submitted On', value: selectedApp.submittedOn || selectedApp.date || 'N/A' },
                     ].map(({ label, value }, i) => (
                       <div key={label} className="bg-[#f9fafb] rounded-xl p-3 flex flex-col gap-0.5" style={{ animation: 'fadeSlideUp 0.3s ease both', animationDelay: `${0.28 + i * 0.05}s` }}>
                         <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">{label}</span>

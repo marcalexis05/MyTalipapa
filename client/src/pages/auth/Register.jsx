@@ -384,7 +384,7 @@ export default function Register() {
                 <div className="mb-4 p-3 rounded-xl bg-red-50 text-red-600 text-sm">{error}</div>
               )}
 
-              
+
 
               {success === 'immediate' && (
                 <div className="text-center py-6">
@@ -392,13 +392,13 @@ export default function Register() {
                   <div className="success-text">
                     <h3 className="font-bold text-gray-800 text-lg mb-2">Account created! Please check your email for verification link.</h3>
                     <p className="text-sm text-gray-500 mb-6">Welcome, <strong>{form.full_name}</strong>!</p>
-                     <button
-                       onClick={() => navigate('/login')}
-                       className="success-btn inline-block px-6 py-3 rounded-xl text-white text-sm font-semibold w-full"
-                       style={{ backgroundColor: '#1a5c2a' }}
-                     >
-                       Go to Login
-                     </button>
+                    <button
+                      onClick={() => navigate('/login')}
+                      className="success-btn inline-block px-6 py-3 rounded-xl text-white text-sm font-semibold w-full"
+                      style={{ backgroundColor: '#1a5c2a' }}
+                    >
+                      Go to Login
+                    </button>
                   </div>
                 </div>
               )}
@@ -464,7 +464,7 @@ export default function Register() {
                         <label className="block text-sm font-medium text-gray-600 mb-1.5">Full Name</label>
                         <div className="input-field flex items-center gap-2 px-4 py-3 rounded-xl border border-gray-200 bg-gray-50">
                           <User size={16} className="text-gray-400 shrink-0" />
-                          <input type="text" name="full_name" value={form.full_name} onChange={handleChange} placeholder="" required className="flex-1 bg-transparent text-sm focus:outline-none" />
+                          <input type="text" name="full_name" value={form.full_name} onChange={handleChange} placeholder="Juan Dela Cruz" required className="flex-1 bg-transparent text-sm focus:outline-none" />
                           {form.full_name && <button type="button" onClick={() => setForm({ ...form, full_name: '' })} className="text-gray-400 transition-transform hover:scale-110">✕</button>}
                         </div>
                       </div>
