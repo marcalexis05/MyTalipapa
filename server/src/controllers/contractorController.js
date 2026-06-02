@@ -128,6 +128,7 @@ exports.updateStallStatus = async (req, res) => {
 };
 
 // ── GET /api/contractor/applications ─────────────────────
+// FIXED VERSION: Properly fetches stall location instead of showing ObjectId
 exports.getApplications = async (req, res) => {
   try {
     const { email } = req.query;
@@ -136,16 +137,21 @@ exports.getApplications = async (req, res) => {
       query.contractorEmail = email.toLowerCase();
     }
     const apps = await Application.find(query).sort({ appliedAt: -1 });
-    const mapped = apps.map(app => {
-      const stallId = app.stallId;
+    
+    const mapped = await Promise.all(apps.map(async (app) => {
+      // Fetch the stall data using the helper function
+      const stall = await findStallByAppStallNumber(app.preferredStall, app.intendedBusinessUse);
+      
       return {
         id: app._id.toString(),
         name: app.fullName,
         phone: app.contactNumber,
         email: app.email,
-        stall: stallId ? `Stall #${stallId}` : app.preferredStall,
-        stallId: stallId ? stallId.toString() : null,
-        stallLocation: null,
+        // Use stall.stallNumber instead of ObjectId, fallback to preferredStall
+        stall: stall ? `Stall #${stall.stallNumber}` : `Stall #${app.preferredStall}`,
+        stallId: stall ? stall._id.toString() : null,
+        // Now properly populated with stall.coordinates.location
+        stallLocation: stall ? (stall.coordinates?.location || stall.section || '') : '',
         stallColor: app.avatarColor || '#f97316',
         applied: app.appliedAt ? new Date(app.appliedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '',
         type: app.intendedBusinessUse,
@@ -157,7 +163,8 @@ exports.getApplications = async (req, res) => {
         reviewedAt: app.reviewedAt,
         preferredStall: app.preferredStall,
       };
-    });
+    }));
+    
     res.json(mapped);
   } catch (err) {
     console.error('getApplications error:', err);
