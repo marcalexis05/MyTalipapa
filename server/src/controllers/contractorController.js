@@ -205,14 +205,10 @@ exports.updateApplicationStatus = async (req, res) => {
           stall._id,
           {
             $set: {
-              status: 'occupied',
-              tenant: {
-                name: app.fullName,
-                contact: app.contactNumber,
-                email: app.email,
-                leaseStart: new Date(),
-                leaseEnd: null,
-              },
+              // Assign the contractor as manager but keep stall available for renters
+              managedBy: app.email,
+              status: 'available',
+              tenant: null,
               updatedAt: new Date(),
             },
           },
