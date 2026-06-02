@@ -41,7 +41,7 @@ router.post('/review', async (req, res) => {
     if (action === 'approve') {
       await Stall.findByIdAndUpdate(request.stallId, {
         managedBy: request.contractorEmail,
-        status: 'occupied',
+        status: 'available',
       });
       request.status = 'approved';
     } else if (action === 'reject') {
