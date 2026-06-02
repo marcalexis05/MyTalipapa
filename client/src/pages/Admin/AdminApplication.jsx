@@ -258,10 +258,10 @@ export default function AdminApplication() {
     }
   };
 
-  const activeApps = appType === "renters" ? applications : contractorApps;
-  const pendingCount = activeApps.filter(a => a.status === "pending").length;
-  const approvedCount = activeApps.filter(a => a.status === "approved").length;
-  const rejectedCount = activeApps.filter(a => a.status === "rejected").length;
+ const activeApps = appType === "renters" ? applications : appType === "contractors" ? contractorApps : stallRequests;
+const pendingCount = activeApps.filter(a => a.status === "pending").length;
+const approvedCount = activeApps.filter(a => a.status === "approved").length;
+const rejectedCount = activeApps.filter(a => a.status === "rejected").length;
   const tabCounts = { Pending: pendingCount, Approved: approvedCount, Rejected: rejectedCount };
 
   // ── Shared list renderer ─────────────────────────────────
