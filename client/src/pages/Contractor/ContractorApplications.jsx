@@ -119,8 +119,8 @@ export default function ContractorApplication() {
         // Normalize stall requests to match application shape
         const normalizedStalls = stallsData.map(req => ({
           id: req._id || req.id,
-          stall: req.stallId?.stallNumber ? `#${req.stallId.stallNumber}` : 'Unknown',
-          zone: req.stallId?.location || 'Unknown',
+          stall: req.stallId?.location ? `${req.stallId.location}` : 'Unknown',
+          zone: req.stallId?.zone || 'Unknown',
           status: req.status?.toLowerCase() || 'pending',
           submittedOn: new Date(req.createdAt).toLocaleDateString(),
         }));
