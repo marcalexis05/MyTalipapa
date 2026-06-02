@@ -117,15 +117,15 @@ export default function ContractorApplication() {
     ])
       .then(([appsData, stallsData]) => {
         // Normalize stall requests to match application shape
-        const normalizedStalls = stallsData.map(req => ({
-          id: req._id || req.id,
-          stallLocation: req.stallId?.location || 'Unknown',
-          stall: req.stallId?.location ? `${req.stallId.location}` : 'Unknown',
-          zone: req.stallId?.zone || 'Unknown',
-          status: req.status?.toLowerCase() || 'pending',
-          submittedOn: new Date(req.createdAt).toLocaleDateString(),
-        }));
-        setApplications([...appsData, ...normalizedStalls]);
+const normalizedStalls = stallsData.map(req => ({
+  id: req._id || req.id,
+  stall: req.stallId?.location || `#${req.stallId?.stallNumber}` || 'Unknown',
+  stallLocation: req.stallId?.location || 'Unknown',
+  zone: req.stallId?.zone || 'Unknown',
+  status: req.status?.toLowerCase() || 'pending',
+  applied: new Date(req.createdAt).toLocaleDateString(),
+  submittedOn: new Date(req.createdAt).toLocaleDateString(),
+}));        setApplications([...appsData, ...normalizedStalls]);
         setError(null);
       })
       .catch(err => {
