@@ -66,16 +66,9 @@ exports.getStalls = async (req, res) => {
     }
     const stalls = await Stall.find(query).sort({ section: 1, floorArea: 1, floorCol: 1, floorRow: 1 });
 
-    const User = require('../models/User');
-    const contractors = await User.find({ role: 'contractor' }, 'email full_name contact_number');
-    const contractorMap = {};
-    const contractorContactMap = {};
-    contractors.forEach(c => {
-      if (c.email) {
-        contractorMap[c.email.toLowerCase()] = c.full_name;
-        contractorContactMap[c.email.toLowerCase()] = c.contact_number || 'N/A';
-      }
-    });
+    // Fetch approved applications to infer occupancy if stall status not updated
+    const approvedApps = await Application.find({ status: 'approved', archived: { $ne: true } }, 'stallId');
+    const occupiedStallIds = new Set(approvedApps.map(app => app.stallId?.toString()).filter(Boolean));
 
     const stallsWithContractor = stalls.map(stall => {
       const stallObj = stall.toObject();
@@ -85,6 +78,10 @@ exports.getStalls = async (req, res) => {
       } else {
         stallObj.contractorName = 'None';
         stallObj.contractorContact = 'N/A';
+      }
+      // Override status to 'occupied' if there is an approved application for this stall
+      if (occupiedStallIds.has(stallObj._id.toString())) {
+        stallObj.status = 'occupied';
       }
       return stallObj;
     });
@@ -179,8 +176,10 @@ exports.updateApplicationStatus = async (req, res) => {
     if (!app) return res.status(404).json({ error: 'Application not found' });
 
     const stall = await findStallByAppStallNumber(app.preferredStall, app.intendedBusinessUse);
-    if (!stall) {
-      console.warn(`[updateApplicationStatus] No stall found for preferredStall="${app.preferredStall}"`);
+    // Ensure application has contractorEmail before proceeding
+    if (!app.contractorEmail && stall && stall.managedBy) {
+      app.contractorEmail = stall.managedBy;
+      await app.save();
     }
 
     if (stall) {
