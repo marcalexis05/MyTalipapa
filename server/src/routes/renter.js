@@ -264,18 +264,20 @@
       // Generate initials
       const initials = fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 
-      const newApp = await Application.create({
-        fullName,
-        contactNumber,
-        email: email.toLowerCase(),
-        preferredStall: stall ? stall._id.toString() : cleanedStall,
-        stallLabel: stall ? `${stall.section} (${stall.floorArea === 'upper' ? 'Upper' : 'Lower'} Floor)` : 'Market Stall',
-        intendedBusinessUse,
-        additionalMessage: additionalMessage || '',
-        status: 'pending',
-        initials,
-        avatarColor: randomColor,
-      });
+        const newApp = await Application.create({
+          fullName,
+          contactNumber,
+          email: email.toLowerCase(),
+          preferredStall: cleanedStall,
+          stallLabel: stall ? `${stall.section} (${stall.floorArea === 'upper' ? 'Upper' : 'Lower'} Floor)` : 'Market Stall',
+          intendedBusinessUse,
+          additionalMessage: additionalMessage || '',
+          status: 'pending',
+          initials,
+          avatarColor: randomColor,
+          stallId: stall ? stall._id : null,
+          contractorEmail: stall && stall.managedBy ? stall.managedBy.toLowerCase() : null,
+        });
 
       // Update Stall status to pending so it reflects immediately in Floor Plan!
       if (stall && stall.status === 'available') {

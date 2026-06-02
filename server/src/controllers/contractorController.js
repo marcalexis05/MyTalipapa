@@ -131,38 +131,20 @@ exports.updateStallStatus = async (req, res) => {
 exports.getApplications = async (req, res) => {
   try {
     const { email } = req.query;
-    const apps = await Application.find({}).sort({ appliedAt: -1 });
-
-    const mapped = await Promise.all(apps.map(async (app) => {
-      const stall = await findStallByAppStallNumber(app.preferredStall, app.intendedBusinessUse);
-
-      if (email && (!stall || stall.managedBy?.trim().toLowerCase() !== email.trim().toLowerCase())) {
-        return null;
-      }
-
-      let stallDisplay = '';
-      if (app.stallLabel) {
-        stallDisplay = app.stallLabel;
-      } else if (stall) {
-        stallDisplay = `Stall #${stall.stallNumber}`;
-      } else {
-        stallDisplay = `Stall #${app.preferredStall}`;
-      }
-
+    if (!email) return res.status(400).json({ error: 'Contractor email required' });
+    const apps = await Application.find({ contractorEmail: email.toLowerCase(), archived: { $ne: true } }).sort({ appliedAt: -1 });
+    const mapped = apps.map(app => {
+      const stallId = app.stallId;
       return {
         id: app._id.toString(),
         name: app.fullName,
         phone: app.contactNumber,
         email: app.email,
-        stall: stallDisplay,
-        stallId: stall ? stall._id.toString() : null,
-        stallLocation: stall ? stall.location : null,
+        stall: stallId ? `Stall #${stallId}` : app.preferredStall,
+        stallId: stallId ? stallId.toString() : null,
+        stallLocation: null,
         stallColor: app.avatarColor || '#f97316',
-        applied: app.appliedAt
-          ? new Date(app.appliedAt).toLocaleDateString('en-US', {
-            month: 'short', day: 'numeric', year: 'numeric',
-          })
-          : '',
+        applied: app.appliedAt ? new Date(app.appliedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '',
         type: app.intendedBusinessUse,
         typeColor: '#2563eb',
         status: app.status,
@@ -172,9 +154,8 @@ exports.getApplications = async (req, res) => {
         reviewedAt: app.reviewedAt,
         preferredStall: app.preferredStall,
       };
-    }));
-
-    res.json(mapped.filter(Boolean));
+    });
+    res.json(mapped);
   } catch (err) {
     console.error('getApplications error:', err);
     res.status(500).json({ error: 'Failed to fetch applications' });
@@ -200,24 +181,32 @@ exports.updateApplicationStatus = async (req, res) => {
     }
 
     if (stall) {
-      if (action === 'approve') {
-        await Stall.findByIdAndUpdate(
-          stall._id,
-          {
+        if (action === 'approve') {
+          // Update stall to occupied and record tenant info
+          await Stall.findByIdAndUpdate(stall._id, {
             $set: {
-              // Assign the contractor as manager but keep stall available for renters
-              managedBy: app.email,
-              status: 'available',
-              tenant: null,
+              status: 'occupied',
+              tenant: {
+                name: app.fullName,
+                contact: app.contactNumber,
+                email: app.email,
+                leaseStart: new Date(),
+                leaseEnd: null,
+              },
               updatedAt: new Date(),
             },
-          },
-          { new: true }
-        );
-      } else {
-        await Stall.findByIdAndUpdate(
-          stall._id,
-          {
+          }, { new: true });
+          // Create occupancy record
+          const OccupancyRecord = require('../models/OccupancyRecord');
+          await OccupancyRecord.create({
+            stallId: stall._id,
+            renterId: app._id,
+            contractorEmail: stall.managedBy,
+            startedAt: new Date(),
+          });
+        } else {
+          // Rejection: ensure stall is available and tenant cleared
+          await Stall.findByIdAndUpdate(stall._id, {
             $set: {
               status: 'available',
               tenant: {

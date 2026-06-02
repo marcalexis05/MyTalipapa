@@ -9,7 +9,7 @@ const stallSchema = new mongoose.Schema({
   hasStallNumber: { type: Boolean, default: true },
   managedBy:      { type: String, default: null }, // Contractor email
   contractorContact: { type: String, default: null }, // Contractor phone number
-  status:         { type: String, enum: ['available', 'occupied', 'pending'], default: 'available' },
+  status:         { type: String, enum: ['available', 'occupied', 'pending', 'assigned'], default: 'available' },
   size:           { type: Number, default: 12 },
   sizeUnit:       { type: String, default: 'sqm' },
   monthlyRate:    { type: Number },
@@ -42,5 +42,7 @@ const stallSchema = new mongoose.Schema({
     leaseEnd:   { type: Date,   default: null },
   },
 }, { timestamps: true });
+stallSchema.index({ managedBy: 1 });
+stallSchema.index({ status: 1 });
 
 module.exports = mongoose.model('Stall', stallSchema);

@@ -9,7 +9,8 @@ const applicationSchema = new mongoose.Schema({
   preferredStall:      { type: String, required: true },  // stallNumber ref
   stallLabel:          { type: String },                  // e.g. "STALL #045"
   intendedBusinessUse: { type: String, required: true },  // dropdown selection
-  additionalMessage:   { type: String, default: '' },
+  stallId: { type: require('mongoose').Schema.Types.ObjectId, ref: 'Stall' },
+  contractorEmail: { type: String },  additionalMessage:   { type: String, default: '' },
 
   // Status managed by contractor (Image 1)
   status: {
@@ -28,5 +29,7 @@ const applicationSchema = new mongoose.Schema({
   archived:    { type: Boolean, default: false },
   archivedAt:  { type: Date },
 }, { timestamps: true });
+applicationSchema.index({ stallId: 1 });
+applicationSchema.index({ contractorEmail: 1 });
 
 module.exports = mongoose.model('Application', applicationSchema);
