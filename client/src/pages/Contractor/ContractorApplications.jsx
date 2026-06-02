@@ -92,45 +92,27 @@ export default function ContractorApplication() {
   const [animating, setAnimating] = useState({});
 
   const filteredApps = applications.filter(
-    a => a.status === tab.toLowerCase()
+    a => a.status?.toLowerCase() === tab.toLowerCase()
   );
 
   const user = getUser();
   const userEmail = user?.email || '';
 
-  // ── Fetch applications and stall requests on mount ──────────────────────────
+  // ── Fetch renter applications on mount ──────────────────────────
   useEffect(() => {
     if (!userEmail) return;
     setLoadingApps(true);
-    // Fetch regular applications and stall requests in parallel, with auth header for stall requests
-    Promise.all([
-      fetch(`/api/contractor/applications?email=${userEmail}`).then(res => {
+    fetch(`/api/contractor/applications?email=${userEmail}`)
+      .then(res => {
         if (!res.ok) throw new Error(`Server error: ${res.status}`);
         return res.json();
-      }),
-      fetch(`/api/contractor/stall-requests/my-requests`, {
-        headers: { Authorization: `Bearer ${getToken()}` },
-      }).then(res => {
-        if (!res.ok) throw new Error(`Server error (stall requests): ${res.status}`);
-        return res.json();
       })
-    ])
-      .then(([appsData, stallsData]) => {
-        // Normalize stall requests to match application shape
-const normalizedStalls = stallsData.map(req => ({
-  id: req._id || req.id,
-  stall: req.stallId?.location || `#${req.stallId?.stallNumber}` || 'Unknown',
-  stallLocation: req.stallId?.location || 'Unknown',
-  zone: req.stallId?.zone || 'Unknown',
-  status: req.status?.toLowerCase() || 'pending',
-  applied: new Date(req.createdAt).toLocaleDateString(),
-  submittedOn: new Date(req.createdAt).toLocaleDateString(),
-}));       
- setApplications([...appsData, ...normalizedStalls]);
+      .then(appsData => {
+        setApplications(appsData);
         setError(null);
       })
       .catch(err => {
-        console.error('Failed to fetch applications or stall requests:', err);
+        console.error('Failed to fetch applications:', err);
         setError('Failed to load data. Please refresh.');
       })
       .finally(() => setLoadingApps(false));
@@ -163,7 +145,7 @@ const normalizedStalls = stallsData.map(req => ({
       setApplications(prev =>
         prev.map(a =>
           a.id === id
-            ? { ...a, status: action === 'approve' ? 'approved' : 'rejected' }
+            ? { ...a, status: action === 'approve' ? 'Approved' : 'Rejected' }
             : a
         )
       );
@@ -180,9 +162,9 @@ const normalizedStalls = stallsData.map(req => ({
     }
   };
 
-  const pendingCount = applications.filter(a => a.status === "pending").length;
-  const approvedCount = applications.filter(a => a.status === "approved").length;
-  const rejectedCount = applications.filter(a => a.status === "rejected").length;
+  const pendingCount = applications.filter(a => a.status?.toLowerCase() === "pending").length;
+  const approvedCount = applications.filter(a => a.status?.toLowerCase() === "approved").length;
+  const rejectedCount = applications.filter(a => a.status?.toLowerCase() === "rejected").length;
   const tabCounts = { Pending: pendingCount, Approved: approvedCount, Rejected: rejectedCount };
 
   // ── Shared list renderer ─────────────────────────────────
@@ -227,12 +209,12 @@ const normalizedStalls = stallsData.map(req => ({
         </div>
         <div className="app-info">
           <div className="apps-name-row">
-            <span className="app-name">{app.name}</span>
-            <span className="apps-stall-badge" style={{ background: app.stallColor }}>
+            <span className="app-name">{app.fullName || app.name}</span>
+            <span className="apps-stall-badge" style={{ background: app.stallColor || app.avatarColor || '#1a5c2a' }}>
               {app.stallLocation || app.stall}
             </span>
           </div>
-          <span className="app-meta">{app.phone}</span>
+          <span className="app-meta">{app.contactNumber || app.phone}</span>
           {app.additionalMessage && (
             <div className="mt-2 text-xs bg-gray-50 border border-gray-100 p-2.5 rounded-lg text-gray-600 font-medium text-left">
               <span className="block text-[9px] text-gray-400 font-bold uppercase tracking-wider mb-0.5">Message</span>
@@ -244,9 +226,9 @@ const normalizedStalls = stallsData.map(req => ({
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: "inline", marginRight: 3 }}>
                 <rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
               </svg>
-              Applied: {app.applied}
+              Applied: {app.date || app.submittedOn || app.applied}
             </span>
-            <span className="app-type" style={{ color: app.typeColor }}>{app.type}</span>
+            <span className="app-type" style={{ color: app.typeColor }}>{app.intendedBusinessUse || app.type}</span>
           </div>
         </div>
         <div className="apps-action-col">
@@ -279,8 +261,8 @@ const normalizedStalls = stallsData.map(req => ({
           ) : (
             <div className="apps-status-row">
               <button className="apps-view-btn" onClick={() => setSelectedApp(app)}>View Details</button>
-              <span className={`apps-status-chip apps-status-${app.status}`}>
-                {app.status === "approved" ? "✓ Approved" : "✗ Rejected"}
+              <span className={`apps-status-chip apps-status-${app.status?.toLowerCase()}`}>
+                {app.status?.toLowerCase() === "approved" ? "✓ Approved" : "✗ Rejected"}
               </span>
             </div>
           )}
@@ -403,39 +385,45 @@ const normalizedStalls = stallsData.map(req => ({
                   </span>
                 </div>
                 <div>
-                  <h2 className="app-detail-name">{selectedApp.name}</h2>
-                  <span className="app-detail-phone">{selectedApp.phone}</span>
+                  <h2 className="app-detail-name">{selectedApp.fullName || selectedApp.name}</h2>
+                  <span className="app-detail-phone">{selectedApp.contactNumber || selectedApp.phone}</span>
                 </div>
               </div>
               <div className="app-detail-grid">
                 <div className="app-detail-item">
                   <span className="app-detail-label">Stall Requested</span>
-                  <span className="app-detail-value" style={{ color: selectedApp.stallColor, fontWeight: 800 }}>
+                  <span className="app-detail-value" style={{ color: '#1a5c2a', fontWeight: 800 }}>
                     {selectedApp.stallLocation || selectedApp.stall}
                   </span>
                 </div>
                 <div className="app-detail-item">
                   <span className="app-detail-label">Application Type</span>
-                  <span className="app-detail-value" style={{ color: selectedApp.typeColor }}>{selectedApp.type}</span>
+                  <span className="app-detail-value" style={{ color: selectedApp.typeColor }}>
+                    {selectedApp.intendedBusinessUse || selectedApp.type}
+                  </span>
                 </div>
                 <div className="app-detail-item">
                   <span className="app-detail-label">Date Applied</span>
-                  <span className="app-detail-value">{selectedApp.applied}</span>
+                  <span className="app-detail-value">
+                    {selectedApp.date || selectedApp.submittedOn || selectedApp.applied}
+                  </span>
                 </div>
                 {selectedApp.additionalMessage && (
                   <div className="app-detail-item" style={{ gridColumn: 'span 2' }}>
                     <span className="app-detail-label">Message</span>
-                    <p className="app-detail-value" style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{selectedApp.additionalMessage}</p>
+                    <p className="app-detail-value" style={{ whiteSpace: 'pre-wrap', margin: 0 }}>
+                      {selectedApp.additionalMessage}
+                    </p>
                   </div>
                 )}
                 <div className="app-detail-item">
                   <span className="app-detail-label">Status</span>
-                  <span className={`apps-status-chip apps-status-${selectedApp.status}`} style={{ alignSelf: "flex-start" }}>
-                    {selectedApp.status.charAt(0).toUpperCase() + selectedApp.status.slice(1)}
+                  <span className={`apps-status-chip apps-status-${selectedApp.status?.toLowerCase()}`} style={{ alignSelf: "flex-start" }}>
+                    {selectedApp.status?.charAt(0).toUpperCase() + selectedApp.status?.slice(1).toLowerCase()}
                   </span>
                 </div>
               </div>
-              {selectedApp.status === "pending" && (
+              {selectedApp.status?.toLowerCase() === "pending" && (
                 <div className="app-detail-actions">
                   <button
                     className="btn-reject"
