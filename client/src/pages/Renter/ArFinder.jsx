@@ -1014,9 +1014,9 @@ export default function ArFinder({ onBack }) {
                 if (filtered.length > 0) setSelectedStallId(filtered[0].id);
               }}>
                 <option value="all">All Sections</option>
-                <option value="meat">🥩 Meat</option>
-                <option value="fish">🐟 Fishes</option>
-                <option value="veggies">🥬 Vegetables</option>
+                <option value="meat"> Meat</option>
+                <option value="fish"> Fishes</option>
+                <option value="veggies"> Vegetables</option>
               </select>
             </div>
             <div className="stall-select">
@@ -1112,9 +1112,9 @@ export default function ArFinder({ onBack }) {
               setStallPickerSearch("");
             }} style={{ maxWidth: 70 }}>
               <option value="all">All</option>
-              <option value="meat">🥩</option>
-              <option value="fish">🐟</option>
-              <option value="veggies">🥬</option>
+              <option value="meat"></option>
+              <option value="fish"></option>
+              <option value="veggies"></option>
             </select>
           </div>
 

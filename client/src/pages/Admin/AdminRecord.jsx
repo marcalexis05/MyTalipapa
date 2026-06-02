@@ -301,7 +301,7 @@ export default function AdminRecord() {
           {archiveRequests.length > 0 && (
             <div className="bg-white rounded-2xl p-5 shadow-sm border border-orange-100 mb-4 mt-4">
               <div className="flex items-center gap-2 mb-3">
-                <span className="text-orange-500 text-lg">🔑</span>
+                <span className="text-orange-500 text-lg"></span>
                 <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">
                   Archive Access Requests
                 </h3>
@@ -344,14 +344,14 @@ export default function AdminRecord() {
             <div className="rec-stat-card rec-stat-green">
               <div className="rec-stat-top">
                 <span className="rec-stat-label">TOTAL RENTERS</span>
-                <span className="rec-stat-icon">👥</span>
+                <span className="rec-stat-icon"></span>
               </div>
               <span className="rec-stat-value">{totalRenters}</span>
             </div>
             <div className="rec-stat-card rec-stat-orange">
               <div className="rec-stat-top">
                 <span className="rec-stat-label">ACTIVE</span>
-                <span className="rec-stat-icon">📈</span>
+                <span className="rec-stat-icon"></span>
               </div>
               <span className="rec-stat-value">{activePct}%</span>
             </div>
@@ -371,7 +371,7 @@ export default function AdminRecord() {
                   : 'bg-white text-gray-700 border-gray-200 hover:border-[#1a5c2a]'
               }`}
             >
-              {isShowingArchives ? '← Show Active' : '📁 Show Archives'}
+              {isShowingArchives ? '← Show Active' : ' Show Archives'}
             </button>
           </div>
 
@@ -420,7 +420,7 @@ export default function AdminRecord() {
           <div className="rec-grid">
             {filtered.length === 0 ? (
               <div className="no-applications" style={{ gridColumn: "1 / -1" }}>
-                <span style={{ fontSize: 32 }}>🔍</span>
+                <span style={{ fontSize: 32 }}></span>
                 <span>No renters found</span>
               </div>
             ) : (

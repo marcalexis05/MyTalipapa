@@ -213,7 +213,7 @@ export default function ContractorLockScreen({ children }) {
 
         {/* Header Branding */}
         <div className="flex items-center justify-center gap-2 mb-6">
-          <span className="text-3xl">🏪</span>
+          <span className="text-3xl"></span>
           <span className="text-xl font-black text-green-800 tracking-tight">MyTalipapa Contractor Portal</span>
         </div>
 

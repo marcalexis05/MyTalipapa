@@ -493,7 +493,7 @@ const handleDeleteAnnouncement = async (id) => {
       <div className="text-center py-4 text-xs text-gray-400">Loading announcements...</div>
     ) : recentAnnouncements.length === 0 ? (
       <div className="text-center py-6 bg-gray-50 border border-dashed border-gray-200 rounded-2xl text-xs text-gray-400">
-        📢 No announcements posted yet.
+         No announcements posted yet.
       </div>
     ) : (
       recentAnnouncements.map(ann => (

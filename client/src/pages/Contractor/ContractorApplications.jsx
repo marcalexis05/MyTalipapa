@@ -172,7 +172,7 @@ export default function ContractorApplication() {
     if (loadingApps) {
       return (
         <div className="no-applications">
-          <span style={{ fontSize: 32 }}>⏳</span>
+          <span style={{ fontSize: 32 }}></span>
           <span>Loading applications…</span>
         </div>
       );
@@ -180,7 +180,7 @@ export default function ContractorApplication() {
     if (error) {
       return (
         <div className="no-applications" style={{ color: '#dc2626' }}>
-          <span style={{ fontSize: 32 }}>⚠️</span>
+          <span style={{ fontSize: 32 }}></span>
           <span>{error}</span>
         </div>
       );
@@ -189,7 +189,7 @@ export default function ContractorApplication() {
       return (
         <div className="no-applications">
           <span style={{ fontSize: 32 }}>
-            {tab === "Pending" ? "📋" : tab === "Approved" ? "✅" : "❌"}
+            {tab === "Pending" ? "" : tab === "Approved" ? "" : ""}
           </span>
           <span>No {tab.toLowerCase()} applications</span>
         </div>

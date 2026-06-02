@@ -539,7 +539,7 @@ export default function ContractorDashboard() {
                   <div className="text-center py-4 text-xs text-gray-400">Loading announcements...</div>
                 ) : announcements.length === 0 ? (
                   <div className="text-center py-6 bg-gray-50 border border-dashed border-gray-200 rounded-2xl text-xs text-gray-400">
-                    📢 No active announcements from management.
+                     No active announcements from management.
                   </div>
                 ) : (
                   // Show the latest 3 announcements on the dashboard

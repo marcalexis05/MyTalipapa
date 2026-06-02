@@ -287,7 +287,7 @@ const rejectedCount = activeApps.filter(a => a.status === "rejected").length;
         return (
           <div className="no-applications">
             <span style={{ fontSize: 32 }}>
-              {tab === "Pending" ? "📋" : tab === "Approved" ? "✅" : "❌"}
+              {tab === "Pending" ? "" : tab === "Approved" ? "" : ""}
             </span>
             <span>No {tab.toLowerCase()} applications</span>
           </div>
@@ -338,7 +338,7 @@ const rejectedCount = activeApps.filter(a => a.status === "rejected").length;
       if (loadingContractorApps) {
         return (
           <div className="no-applications">
-            <span style={{ fontSize: 32 }}>⏳</span>
+            <span style={{ fontSize: 32 }}></span>
             <span>Loading contractor registrations…</span>
           </div>
         );
@@ -347,7 +347,7 @@ const rejectedCount = activeApps.filter(a => a.status === "rejected").length;
         return (
           <div className="no-applications">
             <span style={{ fontSize: 32 }}>
-              {tab === "Pending" ? "📋" : tab === "Approved" ? "✅" : "❌"}
+              {tab === "Pending" ? "" : tab === "Approved" ? "" : ""}
             </span>
             <span>No {tab.toLowerCase()} contractor registrations</span>
           </div>
@@ -554,12 +554,12 @@ const rejectedCount = activeApps.filter(a => a.status === "rejected").length;
           <div className="applications-list apps-list-full">
             {appType === "stalls" ? (
               loadingStalls ? (
-                <div className="no-applications"><span style={{ fontSize: 32 }}>⏳</span><span>Loading stall requests…</span></div>
+                <div className="no-applications"><span style={{ fontSize: 32 }}></span><span>Loading stall requests…</span></div>
               ) : stallError ? (
-                <div className="no-applications" style={{ color: '#dc2626' }}><span style={{ fontSize: 32 }}>⚠️</span><span>{stallError}</span></div>
+                <div className="no-applications" style={{ color: '#dc2626' }}><span style={{ fontSize: 32 }}></span><span>{stallError}</span></div>
               ) : stallRequests.length === 0 ? (
                 <div className="no-applications">
-                  <span style={{ fontSize: 32 }}>📭</span>
+                  <span style={{ fontSize: 32 }}></span>
                   <span>No {tab.toLowerCase()} stall requests</span>
                 </div>
               ) : (

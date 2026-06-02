@@ -388,7 +388,7 @@ export default function Register() {
 
               {success === 'immediate' && (
                 <div className="text-center py-6">
-                  <div className="text-5xl mb-4 success-emoji">🎉</div>
+                  <div className="text-5xl mb-4 success-emoji"></div>
                   <div className="success-text">
                     <h3 className="font-bold text-gray-800 text-lg mb-2">Account created! Please check your email for verification link.</h3>
                     <p className="text-sm text-gray-500 mb-6">Welcome, <strong>{form.full_name}</strong>!</p>
@@ -405,7 +405,7 @@ export default function Register() {
 
               {success === 'contractor_pending' && (
                 <div className="text-center py-6">
-                  <div className="text-5xl mb-4 success-emoji">⏳</div>
+                  <div className="text-5xl mb-4 success-emoji"></div>
                   <div className="success-text">
                     <h3 className="font-bold text-gray-800 text-lg mb-2">Application Submitted!</h3>
                     <p className="text-sm text-gray-500 mb-6 leading-relaxed">

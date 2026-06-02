@@ -44,8 +44,8 @@ const SECTION_META = {
 };
 
 const FLOOR_META = {
-  upper: { label: "Upper Floor", icon: "⬆️" },
-  lower: { label: "Lower Floor", icon: "⬇️" },
+  upper: { label: "Upper Floor", icon: "⬆" },
+  lower: { label: "Lower Floor", icon: "⬇" },
 };
 
 const STATUS_LABEL = { available: "Available", occupied: "Occupied", pending: "Pending" };
@@ -429,7 +429,7 @@ export default function ContractorStalls() {
               </div>
             )}
             {error && (
-              <div className="stalls-error-msg">⚠️ Failed to load stalls: {error}</div>
+              <div className="stalls-error-msg"> Failed to load stalls: {error}</div>
             )}
 
             {/* Add Stall Modal */}
@@ -634,7 +634,7 @@ export default function ContractorStalls() {
                         className={`stalls-floor-tab${activeZone === "all" ? " floor-tab-active" : ""}`}
                         onClick={() => { setActiveZone("all"); setFilterStatus("all"); }}
                       >
-                        <span className="floor-tab-icon">🌐</span>
+                        <span className="floor-tab-icon"></span>
                         All Zones
                         <span className="floor-tab-count">
                           {stalls.filter(s => s.section === activeSection).length}
@@ -650,7 +650,7 @@ export default function ContractorStalls() {
                             className={`stalls-floor-tab${activeZone === zone ? " floor-tab-active" : ""}`}
                             onClick={() => { setActiveZone(zone); setFilterStatus("all"); }}
                           >
-                            <span className="floor-tab-icon">📍</span>
+                            <span className="floor-tab-icon"></span>
                             Zone {zone}
                             <span className="floor-tab-count">{zoneCount}</span>
                           </button>
@@ -789,10 +789,10 @@ export default function ContractorStalls() {
 
               <div className="stall-modal-meta-row">
                 {selectedStall.zone && (
-                  <span className="stall-modal-meta-chip">📍 Zone {selectedStall.zone}</span>
+                  <span className="stall-modal-meta-chip"> Zone {selectedStall.zone}</span>
                 )}
                 {selectedStall.monthlyRate && (
-                  <span className="stall-modal-meta-chip">💰 ₱{selectedStall.monthlyRate.toLocaleString()}/mo</span>
+                  <span className="stall-modal-meta-chip"> ₱{selectedStall.monthlyRate.toLocaleString()}/mo</span>
                 )}
               </div>
 

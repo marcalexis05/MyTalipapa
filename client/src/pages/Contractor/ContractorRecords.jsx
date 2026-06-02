@@ -479,14 +479,14 @@ export default function ContractorRecords() {
               <div className="rec-stat-card rec-stat-green">
                 <div className="rec-stat-top">
                   <span className="rec-stat-label">TOTAL RENTERS</span>
-                  <span className="rec-stat-icon">👥</span>
+                  <span className="rec-stat-icon"></span>
                 </div>
                 <span className="rec-stat-value">{totalRenters}</span>
               </div>
               <div className="rec-stat-card rec-stat-orange">
                 <div className="rec-stat-top">
                   <span className="rec-stat-label">ACTIVE</span>
-                  <span className="rec-stat-icon">📈</span>
+                  <span className="rec-stat-icon"></span>
                 </div>
                 <span className="rec-stat-value">{activePct}%</span>
               </div>
@@ -510,7 +510,7 @@ export default function ContractorRecords() {
                       if (diffMs <= 0) return 'Access expired';
                       const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
                       const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-                      return `🕒 Access expires in: ${diffHours}h ${diffMins}m`;
+                      return ` Access expires in: ${diffHours}h ${diffMins}m`;
                     })()}
                   </span>
                   <button
@@ -521,19 +521,19 @@ export default function ContractorRecords() {
                         : 'bg-white text-gray-700 border-gray-200 hover:border-[#1a5c2a]'
                     }`}
                   >
-                    {isShowingArchives ? '← Show Active' : '📁 Show Archives'}
+                    {isShowingArchives ? '← Show Active' : ' Show Archives'}
                   </button>
                 </div>
               ) : contractorProfile?.archiveAccessStatus === 'pending' ? (
                 <span className="px-3 py-1.5 rounded-xl bg-orange-50 border border-orange-200 text-orange-700 text-xs font-bold">
-                  ⏳ Request Pending Review
+                   Request Pending Review
                 </span>
               ) : (
                 <button
                   onClick={handleRequestArchiveAccess}
                   className="px-4 py-2 bg-[#1a5c2a] hover:bg-[#154d23] text-white text-xs font-bold rounded-xl shadow-sm transition-all"
                 >
-                  🔑 Request Archive Access
+                   Request Archive Access
                 </button>
               )}
             </div>
@@ -546,7 +546,7 @@ export default function ContractorRecords() {
                 <div className="moveout-banner">
                   <div className="moveout-banner-left">
                     <span className="moveout-banner-pulse" />
-                    <span className="text-sm">🔔</span>
+                    <span className="text-sm"></span>
                     <span className="moveout-banner-text">
                       {newMoveOutCount} new move-out request{newMoveOutCount > 1 ? 's' : ''} received
                     </span>
@@ -596,7 +596,7 @@ export default function ContractorRecords() {
                       : 'bg-white text-gray-700 border-gray-200 hover:border-[#1a5c2a]'
                   }`}
                 >
-                  {showMoveOut ? '← Hide' : '🚪 Show Requests'}
+                  {showMoveOut ? '← Hide' : ' Show Requests'}
                 </button>
               </div>
 
@@ -607,7 +607,7 @@ export default function ContractorRecords() {
                     <p className="text-xs text-gray-400 px-1 py-2">Loading move-out requests…</p>
                   ) : moveOutRequests.length === 0 ? (
                     <div className="bg-white rounded-2xl p-6 text-center shadow-sm border border-gray-100">
-                      <span className="text-2xl block mb-1">🏪</span>
+                      <span className="text-2xl block mb-1"></span>
                       <p className="text-xs text-gray-400 font-medium">No move-out requests at this time.</p>
                     </div>
                   ) : (
@@ -620,7 +620,7 @@ export default function ContractorRecords() {
                           className={`moveout-request-card ${isNew ? 'moveout-request-card--new' : ''} cursor-pointer`}
                         >
                           <div className="moveout-request-icon-wrap">
-                            <span className="text-base">🚪</span>
+                            <span className="text-base"></span>
                           </div>
                           <div className="moveout-request-body">
                             <div className="flex items-center gap-2 mb-0.5">
@@ -690,7 +690,7 @@ export default function ContractorRecords() {
             <div className="rec-grid">
               {filtered.length === 0 ? (
                 <div className="no-applications" style={{ gridColumn: "1 / -1" }}>
-                  <span style={{ fontSize: 32 }}>🔍</span>
+                  <span style={{ fontSize: 32 }}></span>
                   <span>No renters found</span>
                 </div>
               ) : (
@@ -755,7 +755,7 @@ export default function ContractorRecords() {
               {/* Header */}
               <div className="moveout-modal-header">
                 <div className="moveout-modal-icon-wrap">
-                  <span className="text-2xl">🚪</span>
+                  <span className="text-2xl"></span>
                 </div>
                 <div>
                   <h2 className="moveout-modal-title">{selectedMoveOut.title || 'Move Out Request'}</h2>
@@ -797,7 +797,7 @@ export default function ContractorRecords() {
                           <span className="moveout-email-loading">Fetching email…</span>
                         ) : renterEmail ? (
                           <a href={`mailto:${renterEmail}`} className="moveout-detail-value moveout-email-value">
-                            ✉️ {renterEmail}
+                             {renterEmail}
                           </a>
                         ) : (
                           <span className="moveout-email-empty">No email on file</span>
@@ -816,7 +816,7 @@ export default function ContractorRecords() {
               {/* Actions */}
               <div className="moveout-modal-actions">
                 <div className="moveout-contact-info-msg">
-                  <span className="moveout-contact-info-icon">ℹ️</span>
+                  <span className="moveout-contact-info-icon">ℹ</span>
                   <span>Contact the renter for more info about the request.</span>
                 </div>
 
@@ -932,10 +932,10 @@ export default function ContractorRecords() {
                           setShowPaymentForm(true);
                         }}
                       >
-                        💵 Record Cash Payment
+                         Record Cash Payment
                       </button>
                       <button type="button" className="moveout-btn" onClick={handleMoveOut}>
-                        🚪 Move Out (Archive Renter)
+                         Move Out (Archive Renter)
                       </button>
                     </div>
                   ) : (
