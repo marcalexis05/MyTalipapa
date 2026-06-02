@@ -205,8 +205,7 @@ exports.updateApplicationStatus = async (req, res) => {
           stall._id,
           {
             $set: {
-              // Mark stall as occupied by renter
-              managedBy: null,
+              // Keep contractor as manager and mark stall as occupied by renter
               status: 'occupied',
               tenant: {
                 name: app.fullName,
