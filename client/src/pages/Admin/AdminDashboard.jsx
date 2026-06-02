@@ -88,7 +88,7 @@ export default function AdminDashboard() {
     setLoadingApps(true);
     return fetch('/api/admin/applications')
       .then(r => r.json())
-      .then(data => { setApplications(data); setLoadingApps(false); })
+      .then(data => { setApplications(Array.isArray(data) ? data : []); setLoadingApps(false); })
       .catch(() => { setLoadingApps(false); });
   };
 

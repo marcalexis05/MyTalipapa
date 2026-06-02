@@ -131,8 +131,11 @@ exports.updateStallStatus = async (req, res) => {
 exports.getApplications = async (req, res) => {
   try {
     const { email } = req.query;
-    if (!email) return res.status(400).json({ error: 'Contractor email required' });
-    const apps = await Application.find({ contractorEmail: email.toLowerCase(), archived: { $ne: true } }).sort({ appliedAt: -1 });
+    let query = { archived: { $ne: true } };
+    if (email) {
+      query.contractorEmail = email.toLowerCase();
+    }
+    const apps = await Application.find(query).sort({ appliedAt: -1 });
     const mapped = apps.map(app => {
       const stallId = app.stallId;
       return {
