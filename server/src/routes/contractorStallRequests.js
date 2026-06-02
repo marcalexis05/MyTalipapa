@@ -90,17 +90,26 @@ router.post('/request', async (req, res) => {
   res.status(anySuccess ? 201 : 400).json(results);
 });
 
-// GET pending stall requests for this contractor
 router.get('/my-requests', async (req, res) => {
-  const contractorEmail = req.contractor.email;
   try {
+    const User = require('../models/User');
+    const user = await User.findById(req.contractor.id).select('email');
+    if (!user) return res.status(404).json({ error: 'Contractor not found' });
+    const contractorEmail = user.email;
+
     const pendingRequests = await StallRequest.find({
       contractorEmail,
       status: { $in: ['pending', 'approved', 'rejected'] },
     })
-      .populate('stallId')
+      .populate('stallId', 'stallNumber location zone section color')
       .sort({ createdAt: -1 });
-    res.json(pendingRequests);
+
+    const mapped = pendingRequests.map(doc => ({
+      ...doc.toObject(),
+      stallLocation: doc.stallId?.location || 'Unknown',
+    }));
+
+    res.json(mapped);
   } catch (err) {
     console.error('Failed to fetch contractor stall requests:', err);
     res.status(500).json({ error: 'Failed to load requests' });
