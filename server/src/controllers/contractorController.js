@@ -128,7 +128,7 @@ exports.updateStallStatus = async (req, res) => {
 };
 
 // ── GET /api/contractor/applications ─────────────────────
-// FIXED VERSION: Properly fetches stall location instead of showing ObjectId
+// CORRECTED VERSION: Use stall.location (not stall.coordinates.location)
 exports.getApplications = async (req, res) => {
   try {
     const { email } = req.query;
@@ -150,8 +150,8 @@ exports.getApplications = async (req, res) => {
         // Use stall.stallNumber instead of ObjectId, fallback to preferredStall
         stall: stall ? `Stall #${stall.stallNumber}` : `Stall #${app.preferredStall}`,
         stallId: stall ? stall._id.toString() : null,
-        // Now properly populated with stall.coordinates.location
-        stallLocation: stall ? (stall.coordinates?.location || stall.section || '') : '',
+        // ✅ CORRECTED: Use stall.location (not stall.coordinates.location)
+        stallLocation: stall ? (stall.location || '') : '',
         stallColor: app.avatarColor || '#f97316',
         applied: app.appliedAt ? new Date(app.appliedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '',
         type: app.intendedBusinessUse,
