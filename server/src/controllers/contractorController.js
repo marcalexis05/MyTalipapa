@@ -66,9 +66,16 @@ exports.getStalls = async (req, res) => {
     }
     const stalls = await Stall.find(query).sort({ section: 1, floorArea: 1, floorCol: 1, floorRow: 1 });
 
-    // Fetch approved applications to infer occupancy if stall status not updated
-    const approvedApps = await Application.find({ status: 'approved', archived: { $ne: true } }, 'stallId');
-    const occupiedStallIds = new Set(approvedApps.map(app => app.stallId?.toString()).filter(Boolean));
+    const User = require('../models/User');
+    const contractors = await User.find({ role: 'contractor' }, 'email full_name contact_number');
+    const contractorMap = {};
+    const contractorContactMap = {};
+    contractors.forEach(c => {
+      if (c.email) {
+        contractorMap[c.email.toLowerCase()] = c.full_name;
+        contractorContactMap[c.email.toLowerCase()] = c.contact_number || 'N/A';
+      }
+    });
 
     const stallsWithContractor = stalls.map(stall => {
       const stallObj = stall.toObject();
@@ -78,10 +85,6 @@ exports.getStalls = async (req, res) => {
       } else {
         stallObj.contractorName = 'None';
         stallObj.contractorContact = 'N/A';
-      }
-      // Override status to 'occupied' if there is an approved application for this stall
-      if (occupiedStallIds.has(stallObj._id.toString())) {
-        stallObj.status = 'occupied';
       }
       return stallObj;
     });
@@ -176,51 +179,49 @@ exports.updateApplicationStatus = async (req, res) => {
     if (!app) return res.status(404).json({ error: 'Application not found' });
 
     const stall = await findStallByAppStallNumber(app.preferredStall, app.intendedBusinessUse);
-    // Ensure application has contractorEmail before proceeding
-    if (!app.contractorEmail && stall && stall.managedBy) {
-      app.contractorEmail = stall.managedBy;
-      await app.save();
+    if (!stall) {
+      console.warn(`[updateApplicationStatus] No stall found for preferredStall="${app.preferredStall}"`);
     }
 
     if (stall) {
-        if (action === 'approve') {
-          // Update stall to occupied and record tenant info
-          await Stall.findByIdAndUpdate(stall._id, {
-            $set: {
-              status: 'occupied',
-              tenant: {
-                name: app.fullName,
-                contact: app.contactNumber,
-                email: app.email,
-                leaseStart: new Date(),
-                leaseEnd: null,
-              },
-              updatedAt: new Date(),
+      if (action === 'approve') {
+        // Update stall to occupied and record tenant info
+        await Stall.findByIdAndUpdate(stall._id, {
+          $set: {
+            status: 'occupied',
+            tenant: {
+              name: app.fullName,
+              contact: app.contactNumber,
+              email: app.email,
+              leaseStart: new Date(),
+              leaseEnd: null,
             },
-          }, { new: true });
-          // Create occupancy record
-          const OccupancyRecord = require('../models/OccupancyRecord');
-          await OccupancyRecord.create({
-            stallId: stall._id,
-            renterId: app._id,
-            contractorEmail: stall.managedBy,
-            startedAt: new Date(),
-          });
-        } else {
-          // Rejection: ensure stall is available and tenant cleared
-          await Stall.findByIdAndUpdate(stall._id, {
-            $set: {
-              status: 'available',
-              tenant: {
-                name: null,
-                contact: null,
-                email: null,
-                leaseStart: null,
-                leaseEnd: null,
-              },
-              updatedAt: new Date(),
-            },
+            updatedAt: new Date(),
           },
+        }, { new: true });
+        // Create occupancy record
+        const OccupancyRecord = require('../models/OccupancyRecord');
+        await OccupancyRecord.create({
+          stallId: stall._id,
+          renterId: app._id,
+          contractorEmail: stall.managedBy,
+          startedAt: new Date(),
+        });
+      } else {
+        // Rejection: ensure stall is available and tenant cleared
+        await Stall.findByIdAndUpdate(stall._id, {
+          $set: {
+            status: 'available',
+            tenant: {
+              name: null,
+              contact: null,
+              email: null,
+              leaseStart: null,
+              leaseEnd: null,
+            },
+            updatedAt: new Date(),
+          },
+        },
           { new: true }
         );
       }
