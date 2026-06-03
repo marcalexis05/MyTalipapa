@@ -63,37 +63,6 @@ router.delete('/announcements/:id', async (req, res) => {
   }
 });
 
-// Admin notifications endpoints
-const Notification = require('../models/Notification');
-
-router.get('/notifications', async (req, res) => {
-  try {
-    const notifications = await Notification.find({ recipient: 'admin' }).sort({ createdAt: -1 });
-    res.json(notifications);
-  } catch (err) {
-    console.error('Error fetching admin notifications:', err);
-    res.status(500).json({ error: 'Failed to fetch admin notifications' });
-  }
-});
-
-router.post('/notifications/read-all', async (req, res) => {
-  try {
-    await Notification.updateMany({ recipient: 'admin', read: false }, { read: true });
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to mark all as read' });
-  }
-});
-
-router.post('/notifications/:id/read', async (req, res) => {
-  try {
-    await Notification.findByIdAndUpdate(req.params.id, { read: true });
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to mark as read' });
-  }
-});
-
 router.get('/applications', contractorController.getApplications);
 router.post('/applications/:id/status', contractorController.updateApplicationStatus);
 router.get('/contractor-applications', contractorController.getContractorApplications);

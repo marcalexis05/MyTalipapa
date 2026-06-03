@@ -9,10 +9,10 @@ const crypto = require('crypto');
 const router = express.Router();
 
 router.get('/verify', async (req, res) => {
-    const rawToken = req.query.token;
-    const token = rawToken ? decodeURIComponent(rawToken).trim() : null;
-    console.log('[/verify] Processed token:', token);
-    if (!token) {
+  const rawToken = req.query.token;
+  const token = rawToken ? decodeURIComponent(rawToken).trim() : null;
+  console.log('[/verify] Processed token:', token);
+  if (!token) {
     return res.status(400).json({ error: 'Verification token is required.' });
   }
   try {
@@ -217,14 +217,6 @@ router.post('/contractor/register-application', async (req, res) => {
       });
     }
 
-    const Notification = require('../models/Notification');
-    await Notification.create({
-      recipient: 'admin',
-      title: 'New Contractor Application',
-      message: `${fullName} (${businessName}) has submitted a contractor application.`,
-      link: '/admin/applications'
-    });
-
     return res.status(201).json({
       message: 'Application submitted successfully',
       application,
@@ -286,30 +278,30 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid email or password.' });
     }
 
-      console.log(`[Login attempt] User role: ${user.role}, User status: ${user.status}`);
-      // Role-based authorization: check role first
-      if (role) {
-        // Renter trying to login as another role
-        if (user.role === 'renter' && role !== 'renter') {
-          return res.status(403).json({ error: 'This is a renter account' });
-        }
-        // Contractor trying to login as another role
-        if (user.role === 'contractor' && role !== 'contractor') {
-          return res.status(403).json({ error: 'This is a contractor account' });
-        }
-        // Admin trying to login as another role
-        if (user.role === 'admin' && role !== 'admin') {
-          return res.status(403).json({ error: 'this is an admin account' });
-        }
-        // If role provided but does not match (should not happen after above), generic fallback
-        if (user.role !== role) {
-          return res.status(403).json({ error: `This account is not registered as a ${role}.` });
-        }
+    console.log(`[Login attempt] User role: ${user.role}, User status: ${user.status}`);
+    // Role-based authorization: check role first
+    if (role) {
+      // Renter trying to login as another role
+      if (user.role === 'renter' && role !== 'renter') {
+        return res.status(403).json({ error: 'This is a renter account' });
       }
-      // After role validation, enforce password change if the role matches the user's role
-      if (role && user.role === role && user.mustChangePassword) {
-        return res.status(403).json({ error: 'Password must be changed before proceeding.', mustChangePassword: true });
+      // Contractor trying to login as another role
+      if (user.role === 'contractor' && role !== 'contractor') {
+        return res.status(403).json({ error: 'This is a contractor account' });
       }
+      // Admin trying to login as another role
+      if (user.role === 'admin' && role !== 'admin') {
+        return res.status(403).json({ error: 'this is an admin account' });
+      }
+      // If role provided but does not match (should not happen after above), generic fallback
+      if (user.role !== role) {
+        return res.status(403).json({ error: `This account is not registered as a ${role}.` });
+      }
+    }
+    // After role validation, enforce password change if the role matches the user's role
+    if (role && user.role === role && user.mustChangePassword) {
+      return res.status(403).json({ error: 'Password must be changed before proceeding.', mustChangePassword: true });
+    }
 
     let isMatch = await bcrypt.compare(password, user.passwordHash);
     console.log(`[Login attempt] Password matches User.passwordHash: ${isMatch}`);
@@ -345,7 +337,7 @@ router.post('/login', async (req, res) => {
     if (user.mustChangePassword) {
       return res.status(403).json({ error: 'Password must be changed before proceeding.', mustChangePassword: true });
     }
-  
+
 
     const token = jwt.sign(
       { id: user._id, role: user.role },
@@ -753,21 +745,21 @@ router.get('/dev/reset-contractor', async (req, res) => {
     const bcrypt = require('bcryptjs');
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash('Password123!', salt);
-    
+
     const email = 'juliales.christiandave.narcilla@gmail.com';
     const user = await User.findOneAndUpdate(
       { email },
       { $set: { passwordHash, status: 'approved' } },
       { new: true }
     );
-    
+
     const ContractorApplication = require('../models/ContractorApplication');
     const app = await ContractorApplication.findOneAndUpdate(
       { email },
       { $set: { passwordHash, status: 'approved' } },
       { new: true }
     );
-    
+
     return res.json({
       message: 'Password reset successfully for ' + email,
       userUpdated: !!user,

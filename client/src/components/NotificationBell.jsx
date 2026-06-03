@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { Bell, X } from 'lucide-react';
-import { getToken, getUser } from '../utils/auth';
+import { getToken } from '../utils/auth';
 
 export default function NotificationBell() {
   const navigate = useNavigate();
@@ -11,14 +11,12 @@ export default function NotificationBell() {
   const [selectedNotif, setSelectedNotif] = useState(null);
   const containerRef = useRef(null);
   const token = getToken();
-  const user = getUser();
-  const role = user?.role || 'renter'; // default to renter if not set
 
   // ✅ Fixed: removed duplicate fetch
   const fetchNotifications = async () => {
     if (!token) return;
     try {
-      const res = await fetch(`/api/${role}/notifications`, {
+      const res = await fetch('/api/contractor/notifications', {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) {
@@ -38,7 +36,7 @@ export default function NotificationBell() {
     fetchNotifications();
     const interval = setInterval(fetchNotifications, 15000);
     return () => clearInterval(interval);
-  }, [token, role]);
+  }, [token]);
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -55,7 +53,7 @@ export default function NotificationBell() {
   const markAllAsRead = async () => {
     if (!token) return;
     try {
-      const res = await fetch(`/api/${role}/notifications/read-all`, {
+      const res = await fetch('/api/contractor/notifications/read-all', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -66,7 +64,7 @@ export default function NotificationBell() {
   const markSingleAsRead = async (id) => {
     if (!token) return;
     try {
-      const res = await fetch(`/api/${role}/notifications/${id}/read`, {
+      const res = await fetch(`/api/contractor/notifications/${id}/read`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` }
       });

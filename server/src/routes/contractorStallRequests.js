@@ -80,14 +80,6 @@ router.post('/request', async (req, res) => {
       await Stall.findByIdAndUpdate(stallId, { status: 'pending' });
 
       const reqDoc = await StallRequest.create({ stallId, contractorEmail: email });
-      
-      const Notification = require('../models/Notification');
-      await Notification.create({
-        recipient: 'admin',
-        title: 'New Stall Request',
-        message: `Contractor ${email} requested a stall.`,
-      });
-
       results.push({ stallId, status: 'success', requestId: reqDoc._id });
     } catch (err) {
       results.push({ stallId, status: 'error', message: err.message });
