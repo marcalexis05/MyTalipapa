@@ -98,10 +98,38 @@ router.get('/admin/requests/pending', verifyAdmin, async (req, res) => {
       .sort({ createdAt: -1 })
       .populate('contractorId', 'businessName email');
 
-    return res.json(pendingRequests);
+    // Fallback: if contractor has no businessName in User document, look up in ContractorApplication
+    const ContractorApplication = require('../models/ContractorApplication');
+    const enrichedRequests = await Promise.all(
+      pendingRequests.map(async (reqDoc) => {
+        const doc = reqDoc.toObject();
+        if (doc.contractorId && !doc.contractorId.businessName) {
+          const app = await ContractorApplication.findOne({ email: doc.contractorId.email.toLowerCase() });
+          if (app) {
+            doc.contractorId.businessName = app.businessName;
+          }
+        }
+        return doc;
+      })
+    );
+
+    return res.json(enrichedRequests);
   } catch (err) {
     console.error('Error fetching pending removal requests:', err);
     return res.status(500).json({ error: 'Failed to fetch pending requests' });
+  }
+});
+
+// GET /api/stall-removal-requests/contractor/my-requests
+router.get('/contractor/my-requests', verifyContractor, async (req, res) => {
+  try {
+    const contractorRequests = await StallRemovalRequest.find({ contractorId: req.contractor.id })
+      .sort({ createdAt: -1 });
+
+    return res.json(contractorRequests);
+  } catch (err) {
+    console.error('Error fetching contractor removal requests:', err);
+    return res.status(500).json({ error: 'Failed to fetch removal requests' });
   }
 });
 

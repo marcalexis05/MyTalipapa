@@ -86,6 +86,7 @@ export default function ContractorStalls() {
   const [removalReason, setRemovalReason] = useState('');
   const [removalStatus, setRemovalStatus] = useState(null);
   const [submittingRemoval, setSubmittingRemoval] = useState(false);
+  const [showRemovalSuccessModal, setShowRemovalSuccessModal] = useState(false);
 
   useEffect(() => {
     if (!selectedStall) {
@@ -366,8 +367,8 @@ export default function ContractorStalls() {
         throw new Error(data.error || 'Failed to submit removal request');
       }
 
-      setToast({ show: true, message: 'Removal request submitted successfully!', type: 'success' });
       setSelectedStall(null); // Close the modal
+      setShowRemovalSuccessModal(true);
     } catch (err) {
       setRemovalStatus(err.message);
     } finally {
@@ -421,6 +422,44 @@ export default function ContractorStalls() {
                 onClick={() => setShowSuccessModal(false)}
                 style={{
                   background: '#16a34a', color: 'white', border: 'none',
+                  borderRadius: 10, padding: '12px 40px', fontWeight: 700,
+                  fontSize: 15, cursor: 'pointer', width: '100%',
+                }}
+              >
+                Got it!
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Removal Success Modal */}
+        {showRemovalSuccessModal && (
+          <div
+            style={{
+              position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999,
+            }}
+            onClick={() => setShowRemovalSuccessModal(false)}
+          >
+            <div
+              style={{
+                background: 'white', borderRadius: 20, padding: '2.5rem 2rem',
+                maxWidth: 380, width: '90%', textAlign: 'center',
+                boxShadow: '0 12px 40px rgba(0,0,0,0.2)',
+              }}
+              onClick={e => e.stopPropagation()}
+            >
+              <div style={{ fontSize: 56, marginBottom: 12 }}>⚠️</div>
+              <h2 style={{ fontSize: 22, fontWeight: 800, color: '#111827', marginBottom: 8 }}>
+                Removal Requested!
+              </h2>
+              <p style={{ color: '#6b7280', fontSize: 14, lineHeight: 1.6, marginBottom: 28 }}>
+                Your request to remove this stall has been submitted. Please wait for the admin to review and approve it.
+              </p>
+              <button
+                onClick={() => setShowRemovalSuccessModal(false)}
+                style={{
+                  background: '#f59e0b', color: 'white', border: 'none',
                   borderRadius: 10, padding: '12px 40px', fontWeight: 700,
                   fontSize: 15, cursor: 'pointer', width: '100%',
                 }}

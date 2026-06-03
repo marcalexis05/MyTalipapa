@@ -21,6 +21,7 @@ import ContractorSecurity from './pages/Contractor/ContractorSecurity'
 import RenterLayout from './pages/Renter/Renterlayout'
 import MarketTour360 from './pages/MarketTour360'
 import AdminStallRemovalRequests from './pages/Admin/AdminStallRemovalRequests'
+import ContractorRequests from './pages/Contractor/ContractorRequests'
 
 export default function App() {
   return (
@@ -37,6 +38,7 @@ export default function App() {
         <Route path="/contractor/records" element={<ContractorRecords />} />
         <Route path="/contractor/applications" element={<ContractorApplications />} />
         <Route path="/contractor/stalls" element={<ContractorStalls />} />
+        <Route path="/contractor/requests" element={<ContractorRequests />} />
         <Route path="/contractor/*" element={<ContractorDashboard />} />
 
         <Route path="/admin/dashboard" element={<AdminDashboard />} />

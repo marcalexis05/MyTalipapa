@@ -137,7 +137,14 @@ export default function AdminStallRemovalRequests() {
         {/* Content Main */}
         <main className="dashboard-main overflow-y-auto p-6">
           <div className="flex flex-col gap-1 mb-6">
-            <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">Stall Removal Requests</h1>
+            <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight flex items-center gap-2">
+              Stall Removal Requests
+              {requests.length > 0 && (
+                <span className="px-2.5 py-0.5 rounded-full bg-[#f59e0b] text-xs font-black text-white leading-none">
+                  {requests.length}
+                </span>
+              )}
+            </h1>
             <p className="text-xs text-gray-400 font-medium">Review and process requests submitted by contractors to remove available stalls.</p>
           </div>
 

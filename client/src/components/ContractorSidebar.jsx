@@ -6,7 +6,8 @@ import {
   FileText,
   History,
   User,
-  LogOut
+  LogOut,
+  ClipboardList
 } from 'lucide-react'
 import { getUser } from '../utils/auth'
 
@@ -14,6 +15,7 @@ const NAV_ITEMS = [
   { id: 'nav-dashboard', label: 'Dashboard', path: '/contractor/dashboard', Icon: LayoutDashboard },
   { id: 'nav-stalls', label: 'Stalls', path: '/contractor/stalls', Icon: Store },
   { id: 'nav-apps', label: 'Applications', path: '/contractor/applications', Icon: FileText },
+  { id: 'nav-requests', label: 'My Requests', path: '/contractor/requests', Icon: ClipboardList },
   { id: 'nav-records', label: 'Records', path: '/contractor/records', Icon: History },
   { id: 'nav-profile', label: 'Profile', path: '/contractor/profile', Icon: User },
 ]
