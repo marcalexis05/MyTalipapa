@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronRight, Store, Trash2, User, Mail, Calendar, Info, FileText } from 'lucide-react';
 import { useCurrentUser, getToken } from '../../utils/auth';
-import AdminSidebar from '../../components/AdminSidebar';
+
 import NotificationBell from '../../components/NotificationBell';
 
 const LogoutIcon = () => (
@@ -217,9 +217,6 @@ export default function AdminRequests() {
           </div>
         </div>
       )}
-
-      {/* Sidebar */}
-      <AdminSidebar active="nav-requests" />
 
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
         {/* Header */}

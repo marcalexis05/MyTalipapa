@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import AdminSidebar from '../../components/AdminSidebar';
+
 import NotificationBell from '../../components/NotificationBell';
 import ChangePasswordForm from '../../components/ChangePasswordForm';
 import { ChevronRight, Store } from 'lucide-react';
@@ -10,8 +10,6 @@ export default function AdminSecurity() {
 
   return (
     <div className="flex h-screen bg-[#f5f5f0] font-sans overflow-hidden w-full">
-      {/* Sidebar */}
-      <AdminSidebar active="nav-profile" />
 
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
         {/* Header */}
