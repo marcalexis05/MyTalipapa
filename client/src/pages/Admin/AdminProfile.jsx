@@ -253,20 +253,7 @@ export default function AdminProfile() {
         </main>
       </div>
 
-      {/* ── Bottom Nav ── */}
-      <nav className="admin-bottom-nav" aria-label="Main Navigation">
-        {NAV_ITEMS.map(item => (
-          <button
-            key={item.id}
-            id={`nav-${item.id}`}
-            className={`admin-nav-item ${activeNav === item.id ? 'active' : ''}`}
-            onClick={() => handleNav(item)}
-          >
-            <span className="admin-nav-icon">{item.icon}</span>
-            <span className="admin-nav-label">{item.label}</span>
-          </button>
-        ))}
-      </nav>
+
 
       {/* ── Edit Profile Modal ── */}
       {showEditModal && (

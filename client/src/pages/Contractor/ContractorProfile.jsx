@@ -273,20 +273,7 @@ export default function ContractorProfile() {
           </main>
         </div>
 
-        {/* ── Bottom Nav ── */}
-        <nav className="contractor-bottom-nav" aria-label="Main Navigation">
-          {NAV_ITEMS.map(item => (
-            <button
-              key={item.id}
-              id={`nav-${item.id}`}
-              className={`ct-nav-item ${activeNav === item.id ? 'active' : ''}`}
-              onClick={() => handleNav(item)}
-            >
-              <span className="ct-nav-icon">{item.icon}</span>
-              <span className="ct-nav-label">{item.label}</span>
-            </button>
-          ))}
-        </nav>
+
 
       </div>
 
