@@ -256,14 +256,11 @@ exports.updateApplicationStatus = async (req, res) => {
       link: '/renter/applications'
     });
 
-    if (action === 'approve') {
-      await Notification.create({
-        recipient: 'admin',
-        title: 'Stall Occupied',
-        message: `${app.fullName} has been approved to rent Stall #${app.preferredStall}.`,
-        link: '/admin/records'
-      });
-    }
+    await Notification.create({
+      recipient: 'admin',
+      title: 'Renter Application Status Changed',
+      message: `The application for stall ${app.preferredStall} by ${app.email} was ${action}d.`,
+    });
 
     res.json({
       application: updatedApp,
@@ -501,6 +498,13 @@ exports.updateContractorApplicationStatus = async (req, res) => {
 
     await app.save();
 
+    const NotificationAdmin = require('../models/Notification');
+    await NotificationAdmin.create({
+      recipient: 'admin',
+      title: 'Contractor Application Status Changed',
+      message: `The contractor application for ${app.email} was ${action}d.`,
+    });
+
     res.json({
       message: `Application successfully ${action}d`,
       application: app,
@@ -542,6 +546,12 @@ exports.recordPayment = async (req, res) => {
       title: 'Payment Recorded',
       message: `Your cash payment of ₱${Number(amount).toLocaleString()} has been recorded.`,
       link: '/renter/dashboard'
+    });
+
+    await Notification.create({
+      recipient: 'admin',
+      title: 'Payment Recorded',
+      message: `A payment of ₱${Number(amount).toLocaleString()} was recorded for renter ${app.email}.`,
     });
 
     res.status(201).json(payment);
@@ -587,9 +597,8 @@ exports.archiveRenter = async (req, res) => {
 
     await Notification.create({
       recipient: 'admin',
-      title: 'Renter Moved Out',
-      message: `Renter ${app.fullName} has moved out of Stall #${stall ? stall.stallNumber : app.preferredStall}.`,
-      link: '/admin/records'
+      title: 'Renter Archived',
+      message: `Renter ${app.email} has been archived.`,
     });
 
     res.json({ message: 'Renter successfully moved out and archived.' });
