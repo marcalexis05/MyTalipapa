@@ -20,7 +20,7 @@ import AdminMessages from './pages/Admin/AdminMessages'
 import ContractorSecurity from './pages/Contractor/ContractorSecurity'
 import RenterLayout from './pages/Renter/Renterlayout'
 import MarketTour360 from './pages/MarketTour360'
-import AdminStallRemovalRequests from './pages/Admin/AdminStallRemovalRequests'
+import AdminRequests from './pages/Admin/AdminRequests'
 import ContractorRequests from './pages/Contractor/ContractorRequests'
 
 export default function App() {
@@ -50,7 +50,7 @@ export default function App() {
         <Route path="/admin/records" element={<AdminRecord />} />
         <Route path="/admin/applications" element={<AdminApplication />} />
         <Route path="/admin/stalls" element={<AdminStalls />} />
-        <Route path="/admin/removal-requests" element={<AdminStallRemovalRequests />} />
+        <Route path="/admin/requests" element={<AdminRequests />} />
         <Route path="/admin/*" element={<AdminDashboard />} />
 
         <Route path="/renter/market-tour" element={<MarketTour360 />} />
