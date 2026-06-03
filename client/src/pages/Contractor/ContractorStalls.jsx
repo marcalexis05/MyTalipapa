@@ -453,7 +453,7 @@ export default function ContractorStalls() {
               }}
               onClick={e => e.stopPropagation()}
             >
-              <div style={{ fontSize: 56, marginBottom: 12 }}>⚠️</div>
+              <div style={{ fontSize: 56, marginBottom: 12 }}></div>
               <h2 style={{ fontSize: 22, fontWeight: 800, color: '#111827', marginBottom: 8 }}>
                 Removal Requested!
               </h2>

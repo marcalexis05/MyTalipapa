@@ -320,12 +320,12 @@ export default function AdminRequests() {
                   </div>
                 ) : additionError ? (
                   <div className="no-applications" style={{ color: '#dc2626' }}>
-                    <span style={{ fontSize: 32 }}>⚠️</span>
+                    <span style={{ fontSize: 32 }}></span>
                     <span>{additionError}</span>
                   </div>
                 ) : additionRequests.length === 0 ? (
                   <div className="no-applications">
-                    <span style={{ fontSize: 32 }}>✨</span>
+                    <span style={{ fontSize: 32 }}></span>
                     <span>No {additionTab.toLowerCase()} stall requests</span>
                   </div>
                 ) : (

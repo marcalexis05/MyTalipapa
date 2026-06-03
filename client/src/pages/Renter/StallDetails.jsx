@@ -229,11 +229,11 @@ const mapAmenity = (amenity) => {
 
 // --- Common Problems (dropdown) ---
 const COMMON_PROBLEMS = [
-  { id: "electric", label: "Electrical Issue",  icon: "⚡" },
-  { id: "pest",     label: "Pest / Rodents",    icon: "🐀" },
-  { id: "drain",    label: "Clogged Drain",     icon: "🚿" },
-  { id: "floor",    label: "Flooring / Tiles",  icon: "🪨" },
-  { id: "waste",    label: "Waste Disposal",    icon: "🗑️" },
+  { id: "electric", label: "Electrical Issue",  icon: "" },
+  { id: "pest",     label: "Pest / Rodents",    icon: "" },
+  { id: "drain",    label: "Clogged Drain",     icon: "" },
+  { id: "floor",    label: "Flooring / Tiles",  icon: "" },
+  { id: "waste",    label: "Waste Disposal",    icon: "" },
 ];
 
 const REPORT_TYPES = [

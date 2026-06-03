@@ -120,7 +120,7 @@ export default function NotificationBell() {
             <div className="max-h-64 overflow-y-auto divide-y divide-gray-50">
               {notifications.length === 0 ? (
                 <div className="px-4 py-8 text-center text-xs text-gray-400">
-                  🔔 No notifications yet
+                  No notifications yet
                 </div>
               ) : (
                 notifications.map(n => (

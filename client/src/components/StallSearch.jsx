@@ -113,9 +113,9 @@ export default function StallSearch({ onStallFound }) {
           <label>Category</label>
           <select value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)}>
             <option value="all">All Categories</option>
-            <option value="meat">🥩 Meat</option>
-            <option value="fish">🐟 Fishes</option>
-            <option value="veggies">🥬 Vegetables</option>
+            <option value="meat">Meat</option>
+            <option value="fish">Fishes</option>
+            <option value="veggies">Vegetables</option>
           </select>
         </div>
 

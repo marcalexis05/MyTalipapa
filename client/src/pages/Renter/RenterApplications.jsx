@@ -354,10 +354,10 @@ function StallPickerModal({ stallsList, value, onChange, onClose }) {
    FilterSheet — bottom-sheet filter for application status
    ════════════════════════════════════════════════════════════════ */
 const FILTER_OPTIONS = [
-  { key: 'All', label: 'All Applications', desc: 'Show everything', icon: '📋', activeClass: 'border-gray-700 bg-gray-50' },
-  { key: 'Approved', label: 'Approved', desc: 'Accepted by management', icon: '✅', activeClass: 'border-[#1a5c2a] bg-[#edf5ed]' },
-  { key: 'Pending', label: 'Pending Review', desc: 'Awaiting a decision', icon: '⏳', activeClass: 'border-[#e8621a] bg-[#fff4ee]' },
-  { key: 'Rejected', label: 'Rejected', desc: 'Not approved this time', icon: '❌', activeClass: 'border-red-400 bg-red-50' },
+  { key: 'All', label: 'All Applications', desc: 'Show everything', icon: <SlidersHorizontal size={18} />, activeClass: 'border-gray-700 bg-gray-50' },
+  { key: 'Approved', label: 'Approved', desc: 'Accepted by management', icon: <CheckCircle size={18} />, activeClass: 'border-[#1a5c2a] bg-[#edf5ed]' },
+  { key: 'Pending', label: 'Pending Review', desc: 'Awaiting a decision', icon: <Clock size={18} />, activeClass: 'border-[#e8621a] bg-[#fff4ee]' },
+  { key: 'Rejected', label: 'Rejected', desc: 'Not approved this time', icon: <XCircle size={18} />, activeClass: 'border-red-400 bg-red-50' },
 ]
 
 function FilterSheet({ activeFilter, counts, onSelect, onClose }) {

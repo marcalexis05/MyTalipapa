@@ -158,7 +158,7 @@ export default function AdminApplication() {
       if (error) {
         return (
           <div className="no-applications" style={{ color: '#dc2626' }}>
-            <span style={{ fontSize: 32 }}>⚠️</span>
+            <span style={{ fontSize: 32 }}></span>
             <span>{error}</span>
           </div>
         );

@@ -434,7 +434,7 @@ export default function RenterDashboard({ onNavigate, onOpenStall }) {
               </>
             ) : (
               <div className="text-center py-6 text-xs text-gray-400 font-semibold" style={{ animation: 'fadeIn 0.4s ease both' }}>
-                🏪 You do not have an active stall lease yet.
+                You do not have an active stall lease yet.
               </div>
             )}
           </div>
@@ -500,7 +500,7 @@ export default function RenterDashboard({ onNavigate, onOpenStall }) {
                   ) : (
                     <tr>
                       <td colSpan="4" className="py-6 text-center text-xs text-gray-400 font-semibold" style={{ animation: 'fadeIn 0.4s ease 0.5s both' }}>
-                        🏪 No applications submitted yet.
+                        No applications submitted yet.
                       </td>
                     </tr>
                   )}

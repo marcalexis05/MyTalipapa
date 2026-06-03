@@ -165,7 +165,7 @@ const SECTIONS = {
   meat: {
     id: 'meat',
     name: 'Meat Section',
-    icon: '🥩',
+    icon: '',
     bgTheme: 'from-red-500/20 to-transparent',
     accentColor: '#ef4444',
     stalls: generateStalls('meat', [
@@ -178,7 +178,7 @@ const SECTIONS = {
   fish: {
     id: 'fish',
     name: 'Fish Section',
-    icon: '🐟',
+    icon: '',
     bgTheme: 'from-blue-500/20 to-transparent',
     accentColor: '#3b82f6',
     stalls: generateStalls('fish', [
@@ -193,7 +193,7 @@ const SECTIONS = {
   veggies: {
     id: 'veggies',
     name: 'Vegetables Section',
-    icon: '🥬',
+    icon: '',
     bgTheme: 'from-green-500/20 to-transparent',
     accentColor: '#10b981',
     stalls: generateStalls('veggies', [
@@ -1263,7 +1263,7 @@ export default function MarketTour360() {
               <X size={16} />
             </button>
             <h3 className="text-lg font-black text-slate-900 mb-1.5 flex items-center gap-2">
-              <span>🧭</span> 360° Virtual Tour Guide
+              <span></span> 360° Virtual Tour Guide
             </h3>
             <p className="text-xs text-slate-600 mb-6 leading-relaxed">
               Explore the public market spaces virtually from your device. Inspect stalls and compare rates instantly.
@@ -1271,21 +1271,21 @@ export default function MarketTour360() {
 
             <div className="space-y-4">
               <div className="flex gap-4 items-start bg-black/5 p-3 rounded-2xl border border-black/5">
-                <span className="text-xl">☝️</span>
+                <span className="text-xl"></span>
                 <div>
                   <h4 className="text-xs font-bold text-slate-800">Look Around</h4>
                   <p className="text-[11px] text-slate-600 mt-0.5">Drag with mouse or swipe with touch in any direction to turn the camera view.</p>
                 </div>
               </div>
               <div className="flex gap-4 items-start bg-black/5 p-3 rounded-2xl border border-black/5">
-                <span className="text-xl">🔍</span>
+                <span className="text-xl"></span>
                 <div>
                   <h4 className="text-xs font-bold text-slate-800">Zoom In / Out</h4>
                   <p className="text-[11px] text-slate-600 mt-0.5">Use scroll wheel or float buttons (+ / -) to change viewing field-of-view.</p>
                 </div>
               </div>
               <div className="flex gap-4 items-start bg-black/5 p-3 rounded-2xl border border-black/5">
-                <span className="text-xl">🟢</span>
+                <span className="text-xl"></span>
                 <div>
                   <h4 className="text-xs font-bold text-slate-800">Dynamic Hotspots</h4>
                   <p className="text-[11px] text-slate-600 mt-0.5">Tap hotspots to walk to adjacent stalls virtually.</p>

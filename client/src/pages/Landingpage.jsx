@@ -323,7 +323,7 @@ export default function Landingpage() {
               style={slideRight(featuresInView, 0.25)}
             >
               <div className="p-6 sm:p-8 h-full flex flex-col justify-center">
-                <div className="text-4xl mb-4" style={{ display: 'inline-block', animation: featuresInView ? 'float 3s ease-in-out infinite' : 'none' }}>📦</div>
+                <div className="text-4xl mb-4" style={{ display: 'inline-block', animation: featuresInView ? 'float 3s ease-in-out infinite' : 'none' }}></div>
                 <h3 className="text-2xl font-bold text-gray-900 mb-3">Easy Rental</h3>
                 <p className="text-gray-700 mb-4">Digital contracts, automated billing, and transparent stall availability at your fingertips.</p>
               </div>
@@ -345,7 +345,7 @@ export default function Landingpage() {
                   </div>
                 </div>
                 <div className="p-6 sm:p-8 flex flex-col justify-center order-1 lg:order-2">
-                  <div className="text-4xl mb-4" style={{ display: 'inline-block', animation: featuresInView ? 'float 4s ease-in-out 0.5s infinite' : 'none' }}>👁️</div>
+                  <div className="text-4xl mb-4" style={{ display: 'inline-block', animation: featuresInView ? 'float 4s ease-in-out 0.5s infinite' : 'none' }}></div>
                   <h3 className="text-2xl font-bold text-gray-900 mb-3">360° Market Tour</h3>
                   <p className="text-gray-700">A virtual window into your market. Showcase stall spaces to potential tenants without a site visit.</p>
                 </div>

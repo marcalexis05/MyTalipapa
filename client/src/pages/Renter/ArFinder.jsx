@@ -143,7 +143,7 @@ const HALLWAY_GROUPS = {
 };
 
 const HALLWAYS = Object.values(HALLWAY_GROUPS).flat();
-const CATEGORY_EMOJI = { meat: "🥩", fish: "🐟", veggies: "🥬", all: "🏪" };
+const CATEGORY_EMOJI = { meat: "", fish: "", veggies: "", all: "" };
 
 export default function ArFinder({ onBack }) {
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -1179,7 +1179,7 @@ export default function ArFinder({ onBack }) {
             {/* Step counter badge — only shown when motion is active */}
             {motionActive && (
               <div className="step-badge">
-                <span>👟</span>
+                <span></span>
                 <span>{stepCount} steps</span>
               </div>
             )}
@@ -1202,7 +1202,7 @@ export default function ArFinder({ onBack }) {
                   <li>Follow the floating orange dots in the camera view.</li>
                   <li>Use the right-side HUD to simulate walking or rotating.</li>
                   <li>Tap anywhere on the floor map to set your position manually.</li>
-                  <li>Tap <strong>STEP</strong> (👟) to enable automatic step detection — walk and the map updates automatically!</li>
+                  <li>Tap <strong>STEP</strong> to enable automatic step detection — walk and the map updates automatically!</li>
                 </ul>
               </div>
             )}
@@ -1266,7 +1266,7 @@ export default function ArFinder({ onBack }) {
               style={{ marginBottom: 4 }}
               title="Toggle Step Detection"
             >
-              <span style={{ fontSize: motionActive ? 13 : 11 }}>👟</span>
+              <span style={{ fontSize: motionActive ? 13 : 11 }}></span>
             </button>
 
             {!hasOrientation && (
@@ -1382,7 +1382,7 @@ export default function ArFinder({ onBack }) {
               </svg>
               <div className="sim-badge">
                 <Compass size={10} className="animate-spin-slow" />
-                <span>{userX}, {userY} | {heading}°{motionActive ? ` | 👟${stepCount}` : ''}</span>
+                <span>{userX}, {userY} | {heading}°{motionActive ? ` | ${stepCount}` : ''}</span>
               </div>
             </div>
           )}
