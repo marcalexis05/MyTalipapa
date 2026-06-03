@@ -82,6 +82,19 @@ export default function ContractorStalls() {
   const [filterOpen, setFilterOpen] = useState(false);
   const [selectedStall, setSelectedStall] = useState(null);
 
+  const [showRemovalForm, setShowRemovalForm] = useState(false);
+  const [removalReason, setRemovalReason] = useState('');
+  const [removalStatus, setRemovalStatus] = useState(null);
+  const [submittingRemoval, setSubmittingRemoval] = useState(false);
+
+  useEffect(() => {
+    if (!selectedStall) {
+      setShowRemovalForm(false);
+      setRemovalReason('');
+      setRemovalStatus(null);
+    }
+  }, [selectedStall]);
+
   const [stalls, setStalls] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -324,6 +337,41 @@ export default function ContractorStalls() {
       }
     } catch (err) {
       setRequestStatus('Error sending request');
+    }
+  };
+  const handleRequestRemoval = async (e) => {
+    e.preventDefault();
+    if (!removalReason.trim()) {
+      setRemovalStatus('Please enter a reason for removal');
+      return;
+    }
+    setSubmittingRemoval(true);
+    setRemovalStatus(null);
+    try {
+      const res = await fetch('/api/stall-removal-requests/request', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${getToken()}`,
+        },
+        body: JSON.stringify({
+          stallId: selectedStall._id,
+          location: selectedStall.location || `Zone ${selectedStall.zone}, Stall #${selectedStall.stallNumber} (${selectedStall.section})`,
+          requestReason: removalReason,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to submit removal request');
+      }
+
+      setToast({ show: true, message: 'Removal request submitted successfully!', type: 'success' });
+      setSelectedStall(null); // Close the modal
+    } catch (err) {
+      setRemovalStatus(err.message);
+    } finally {
+      setSubmittingRemoval(false);
     }
   };
 
@@ -804,30 +852,135 @@ export default function ContractorStalls() {
                 </div>
               )}
 
-              {selectedStall.status === "occupied" && selectedStall.tenant && (
-                <div className="stall-modal-info">
-                  <div className="stall-modal-row"><span>Vendor</span><strong>{selectedStall.tenant.name}</strong></div>
-                  <div className="stall-modal-row"><span>Contact</span><strong>{selectedStall.tenant.contact}</strong></div>
-                  <div className="stall-modal-row"><span>Monthly Rent</span><strong>₱{selectedStall.monthlyRate?.toLocaleString()}</strong></div>
-                  {selectedStall.tenant.leaseStart && (
-                    <div className="stall-modal-row">
-                      <span>Lease Start</span>
-                      <strong>{new Date(selectedStall.tenant.leaseStart).toLocaleDateString('en-PH', { month: 'short', year: 'numeric' })}</strong>
+              {showRemovalForm ? (
+                <form onSubmit={handleRequestRemoval} className="w-full flex flex-col gap-4 mt-2">
+                  <div className="w-full">
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 text-left">
+                      Reason for Removal
+                    </label>
+                    <textarea
+                      placeholder="Please describe why this stall should be removed..."
+                      rows="3"
+                      value={removalReason}
+                      onChange={e => setRemovalReason(e.target.value)}
+                      required
+                      style={{
+                        width: '100%',
+                        backgroundColor: '#f9fafb',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '12px',
+                        padding: '10px 12px',
+                        fontSize: '13px',
+                        resize: 'none',
+                        color: '#1f2937',
+                        fontFamily: "'Inter', sans-serif"
+                      }}
+                      className="focus:outline-none focus:border-[#f59e0b] transition-all"
+                    />
+                  </div>
+
+                  {removalStatus && (
+                    <div style={{
+                      fontSize: '12px',
+                      color: '#b91c1c',
+                      backgroundColor: '#fef2f2',
+                      padding: '10px',
+                      borderRadius: '8px',
+                      textAlign: 'left'
+                    }}>
+                      {removalStatus}
                     </div>
                   )}
-                </div>
-              )}
-              {(selectedStall.status === "available" || (selectedStall.status === "occupied" && !selectedStall.tenant)) && (
-  <p className="stall-modal-avail">This stall is available for rent.</p>
-)}
-              {selectedStall.status === "pending" && (
-                <div className="stall-modal-info">
-                  <div className="stall-modal-row"><span>Status</span><strong>Awaiting Approval</strong></div>
-                </div>
-              )}
-              
 
-              <button className="stall-modal-close" onClick={() => setSelectedStall(null)}>Close</button>
+                  <div className="flex gap-2 w-full mt-1">
+                    <button
+                      type="button"
+                      onClick={() => { setShowRemovalForm(false); setRemovalStatus(null); }}
+                      style={{
+                        flex: 1,
+                        padding: '10px',
+                        borderRadius: '10px',
+                        border: '1px solid #e5e7eb',
+                        color: '#6b7280',
+                        fontSize: '12px',
+                        fontWeight: '700',
+                        backgroundColor: 'white',
+                        cursor: 'pointer',
+                        fontFamily: "'Inter', sans-serif"
+                      }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={submittingRemoval}
+                      style={{
+                        flex: 1,
+                        padding: '10px',
+                        borderRadius: '10px',
+                        border: 'none',
+                        color: 'white',
+                        backgroundColor: '#f59e0b',
+                        fontSize: '12px',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        fontFamily: "'Inter', sans-serif"
+                      }}
+                      className="disabled:opacity-50"
+                    >
+                      {submittingRemoval ? 'Submitting...' : 'Submit Request'}
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <>
+                  {selectedStall.status === "occupied" && selectedStall.tenant && (
+                    <div className="stall-modal-info">
+                      <div className="stall-modal-row"><span>Vendor</span><strong>{selectedStall.tenant.name}</strong></div>
+                      <div className="stall-modal-row"><span>Contact</span><strong>{selectedStall.tenant.contact}</strong></div>
+                      <div className="stall-modal-row"><span>Monthly Rent</span><strong>₱{selectedStall.monthlyRate?.toLocaleString()}</strong></div>
+                      {selectedStall.tenant.leaseStart && (
+                        <div className="stall-modal-row">
+                          <span>Lease Start</span>
+                          <strong>{new Date(selectedStall.tenant.leaseStart).toLocaleDateString('en-PH', { month: 'short', year: 'numeric' })}</strong>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {(selectedStall.status === "available" || (selectedStall.status === "occupied" && !selectedStall.tenant)) && (
+                    <p className="stall-modal-avail">This stall is available for rent.</p>
+                  )}
+                  {selectedStall.status === "available" && (
+                    <button
+                      onClick={() => setShowRemovalForm(true)}
+                      style={{
+                        background: '#f59e0b',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        padding: '10px 16px',
+                        fontWeight: '700',
+                        fontSize: '13px',
+                        cursor: 'pointer',
+                        width: '100%',
+                        marginTop: '8px',
+                        fontFamily: "'Inter', sans-serif",
+                      }}
+                      className="hover:opacity-90 transition-opacity"
+                    >
+                      Request to Remove Stall
+                    </button>
+                  )}
+                  {selectedStall.status === "pending" && (
+                    <div className="stall-modal-info">
+                      <div className="stall-modal-row"><span>Status</span><strong>Awaiting Approval</strong></div>
+                    </div>
+                  )}
+                  
+
+                  <button className="stall-modal-close" onClick={() => setSelectedStall(null)}>Close</button>
+                </>
+              )}
             </div>
           </div>
         )}

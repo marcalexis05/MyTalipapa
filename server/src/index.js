@@ -35,6 +35,7 @@ app.use('/api', authRoutes);
 app.use('/api/admin', adminRoutes);         // ✅ admin routes
 app.use('/api/admin/stall-requests', require('./routes/adminStallRequests'));
 app.use('/api/contractor/stall-requests', require('./routes/contractorStallRequests'));
+app.use('/api/stall-removal-requests', require('./routes/stallRemovalRequests'));
 app.use('/api/contractor', contractorRoutes); // ✅ restored
 app.use('/api/renter', renterRoutes);
 app.use('/api/public', publicRoutes);

@@ -7,13 +7,15 @@ import {
   History,
   User,
   LogOut,
-  MessageSquare
+  MessageSquare,
+  Trash2
 } from 'lucide-react'
 
 const NAV_ITEMS = [
   { id: 'nav-dashboard', label: 'Dashboard', path: '/admin/dashboard', Icon: LayoutDashboard },
   { id: 'nav-stalls', label: 'Stalls', path: '/admin/stalls', Icon: Store },
   { id: 'nav-apps', label: 'Applications', path: '/admin/applications', Icon: FileText },
+  { id: 'nav-removal-requests', label: 'Removal Requests', path: '/admin/removal-requests', Icon: Trash2 },
   { id: 'nav-records', label: 'Records', path: '/admin/records', Icon: History },
   { id: 'nav-messages', label: 'Messages', path: '/admin/messages', Icon: MessageSquare },
   { id: 'nav-profile', label: 'Profile', path: '/admin/profile', Icon: User },
@@ -26,15 +28,19 @@ export default function AdminSidebar({ active }) {
   const [showLogout, setShowLogout] = useState(false)
   const [pendingAppsCount, setPendingAppsCount] = useState(0)
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0)
+  const [pendingRemovalsCount, setPendingRemovalsCount] = useState(0)
 
   // Fetch pending applications count and messages for notification badge
   useEffect(() => {
     const fetchCounts = async () => {
       try {
-        const [renterRes, contractorRes, messagesRes] = await Promise.all([
+        const [renterRes, contractorRes, messagesRes, removalRes] = await Promise.all([
           fetch('/api/admin/applications'),
           fetch('/api/admin/contractor-applications'),
-          fetch('/api/admin/contact-messages')
+          fetch('/api/admin/contact-messages'),
+          fetch('/api/stall-removal-requests/admin/requests/pending', {
+            headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` }
+          })
         ])
         
         let count = 0
@@ -52,6 +58,11 @@ export default function AdminSidebar({ active }) {
           const messages = await messagesRes.json()
           const unread = messages.filter(m => m.status === 'unread').length
           setUnreadMessagesCount(unread)
+        }
+
+        if (removalRes.ok) {
+          const removals = await removalRes.json()
+          setPendingRemovalsCount(removals.length)
         }
       } catch (err) {
         console.error('Error fetching counts for sidebar:', err)
@@ -126,7 +137,17 @@ export default function AdminSidebar({ active }) {
                   )
                 )}
 
-                {!collapsed && isActive && id !== 'nav-apps' && id !== 'nav-messages' && (
+                {id === 'nav-removal-requests' && pendingRemovalsCount > 0 && (
+                  collapsed ? (
+                    <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#f59e0b]" />
+                  ) : (
+                    <span className="ml-auto px-1.5 py-0.5 rounded-full bg-[#f59e0b] text-[9px] font-black text-white leading-none">
+                      {pendingRemovalsCount}
+                    </span>
+                  )
+                )}
+
+                {!collapsed && isActive && id !== 'nav-apps' && id !== 'nav-messages' && id !== 'nav-removal-requests' && (
                   <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[#1a5c2a]" />
                 )}
               </button>
