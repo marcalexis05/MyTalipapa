@@ -2,11 +2,71 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronRight, Store } from "lucide-react";
 import { useCurrentUser, getUser, getToken } from '../../utils/auth';
-
+import ContractorSidebar from '../../components/ContractorSidebar';
 import ContractorLockScreen from './ContractorLockScreen';
 import NotificationBell from '../../components/NotificationBell';
 
-
+const NAV_ITEMS = [
+  {
+    id: 'nav-dashboard',
+    label: 'Dashboard',
+    path: '/contractor/dashboard',
+    icon: (
+      <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+        <rect x="3" y="3" width="7" height="7" rx="1" />
+        <rect x="14" y="3" width="7" height="7" rx="1" />
+        <rect x="3" y="14" width="7" height="7" rx="1" />
+        <rect x="14" y="14" width="7" height="7" rx="1" />
+      </svg>
+    ),
+  },
+  {
+    id: 'nav-stalls',
+    label: 'Stalls',
+    path: '/contractor/stalls',
+    icon: (
+      <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+        <polyline points="9,22 9,12 15,12 15,22" />
+      </svg>
+    ),
+  },
+  {
+    id: 'nav-apps',
+    label: 'Apps',
+    path: '/contractor/applications',
+    icon: (
+      <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+        <polyline points="14,2 14,8 20,8" />
+        <line x1="16" y1="13" x2="8" y2="13" />
+        <line x1="16" y1="17" x2="8" y2="17" />
+      </svg>
+    ),
+  },
+  {
+    id: 'nav-records',
+    label: 'Records',
+    path: '/contractor/records',
+    icon: (
+      <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+        <circle cx="12" cy="12" r="10" />
+        <polyline points="12,6 12,12 16,14" />
+      </svg>
+    ),
+  },
+  {
+    id: 'nav-profile',
+    label: 'Profile',
+    path: '/contractor/profile',
+    icon: (
+      <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+        <circle cx="12" cy="7" r="4" />
+      </svg>
+    ),
+  },
+];
 
 const LogoutIcon = () => (
   <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
@@ -24,6 +84,7 @@ export default function ContractorApplication() {
   const [loadingApps, setLoadingApps] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
+  const [activeNav, setActiveNav] = useState('nav-apps');
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const { userName, loading: authLoading } = useCurrentUser();
   const [processingId, setProcessingId] = useState(null);
@@ -56,6 +117,11 @@ export default function ContractorApplication() {
       })
       .finally(() => setLoadingApps(false));
   }, [userEmail]);
+
+  const handleNav = (item) => {
+    setActiveNav(item.id);
+    navigate(item.path);
+  };
 
   const handleLogout = () => {
     navigate('/login');
@@ -223,6 +289,9 @@ export default function ContractorApplication() {
           </div>
         )}
 
+        {/* Sidebar */}
+        <ContractorSidebar active="nav-apps" />
+
         <div className="flex-1 flex flex-col overflow-hidden min-w-0">
           {/* Header */}
           <header className="bg-white border-b border-gray-100 px-4 md:px-6 py-3.5 flex items-center justify-between sticky top-0 z-30 shrink-0">
@@ -289,6 +358,21 @@ export default function ContractorApplication() {
             </div>
           </main>
         </div>
+
+        {/* Bottom Navigation */}
+        <nav className="bottom-nav" aria-label="Main Navigation">
+          {NAV_ITEMS.map(item => (
+            <button
+              key={item.id}
+              id={item.id}
+              className={`nav-item ${activeNav === item.id ? 'nav-active' : ''}`}
+              onClick={() => handleNav(item)}
+            >
+              <span className="nav-icon">{item.icon}</span>
+              <span className="nav-label">{item.label}</span>
+            </button>
+          ))}
+        </nav>
 
         {/* Detail Modal */}
         {selectedApp && (

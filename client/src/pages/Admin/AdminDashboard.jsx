@@ -4,7 +4,79 @@ import { ChevronRight, Store } from 'lucide-react'
 import { useCurrentUser } from '../../utils/auth'
 import marketImage from '../../images/market_live_view.png'
 import tour360Preview from '../../images/tour360_preview.png'
+import AdminSidebar from '../../components/AdminSidebar'
+import NotificationBell from '../../components/NotificationBell'
 
+const NAV_ITEMS = [
+  {
+    id: 'nav-dashboard', label: 'Dashboard', path: '/admin/dashboard',
+    icon: (<svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></svg>),
+  },
+  {
+    id: 'nav-stalls', label: 'Stalls', path: '/admin/stalls',
+    icon: (<svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9,22 9,12 15,12 15,22" /></svg>),
+  },
+  {
+    id: 'nav-apps', label: 'Apps', path: '/admin/applications',
+    icon: (<svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14,2 14,8 20,8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>),
+  },
+  {
+    id: 'nav-records', label: 'Records', path: '/admin/records',
+    icon: (<svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><circle cx="12" cy="12" r="10" /><polyline points="12,6 12,12 16,14" /></svg>),
+  },
+  {
+    id: 'nav-profile', label: 'Profile', path: '/admin/profile',
+    icon: (<svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>),
+  },
+]
+
+const LogoutIcon = () => (
+  <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+    <polyline points="16,17 21,12 16,7" />
+    <line x1="21" y1="12" x2="9" y2="12" />
+  </svg>
+)
+
+function OccupancyRing({ percent }) {
+  const r = 70
+  const circumference = 2 * Math.PI * r
+  const offset = circumference - (percent / 100) * circumference
+  return (
+    <svg width="180" height="180" viewBox="0 0 180 180" className="occupancy-ring">
+      <circle cx="90" cy="90" r={r} fill="none" stroke="#e5e7eb" strokeWidth="12" />
+      <circle
+        cx="90" cy="90" r={r} fill="none"
+        stroke="var(--color-brand-green)" strokeWidth="12"
+        strokeLinecap="round"
+        strokeDasharray={circumference}
+        strokeDashoffset={offset}
+        transform="rotate(-90 90 90)"
+        className="occupancy-progress"
+      />
+      <text x="90" y="85" textAnchor="middle" className="ring-percent">{percent}%</text>
+      <text x="90" y="103" textAnchor="middle" className="ring-label">Capacity</text>
+    </svg>
+  )
+}
+
+export default function AdminDashboard() {
+  const navigate = useNavigate()
+  const [activeNav, setActiveNav] = useState('nav-dashboard')
+  const [showLogoutModal, setShowLogoutModal] = useState(false)
+  const { userName, loading: authLoading } = useCurrentUser()
+  const [processingId, setProcessingId] = useState(null)
+  const liveViewMountRef = useRef(null)
+
+  // ── Live data from DB ──────────────────────────────────
+  const [stalls, setStalls] = useState([])
+  const [applications, setApplications] = useState([])
+  const [loadingStalls, setLoadingStalls] = useState(false)
+  const [loadingApps, setLoadingApps] = useState(false)
+
+  // Fetch stalls
+  const fetchStalls = () => {
+    setLoadingStalls(true);
     return fetch('/api/admin/stalls')
       .then(r => r.json())
       .then(data => { setStalls(data); setLoadingStalls(false); })
@@ -181,6 +253,8 @@ const handleDeleteAnnouncement = async (id) => {
       setProcessingId(null)
     }
   }
+
+  const handleNav = (item) => { setActiveNav(item.id); navigate(item.path) }
   const handleLogout = () => navigate('/login')
 
   return (
@@ -199,6 +273,9 @@ const handleDeleteAnnouncement = async (id) => {
           </div>
         </div>
       )}
+
+      {/* Sidebar */}
+      <AdminSidebar active="nav-dashboard" />
 
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
         {/* Header */}
@@ -561,6 +638,20 @@ const handleDeleteAnnouncement = async (id) => {
 </section>
         </main>
       </div>
+
+      {/* Bottom Navigation */}
+      <nav className="bottom-nav" aria-label="Main Navigation">
+        {NAV_ITEMS.map(item => (
+          <button
+            key={item.id}
+            className={`nav-item ${activeNav === item.id ? 'nav-active' : ''}`}
+            onClick={() => handleNav(item)}
+          >
+            <span className="nav-icon">{item.icon}</span>
+            <span className="nav-label">{item.label}</span>
+          </button>
+        ))}
+      </nav>
 
       <style>{`
         .stalls-spinner { border: 2px solid #e5e7eb; border-top-color: var(--color-brand-green); border-radius: 50%; animation: spin 0.7s linear infinite; }
