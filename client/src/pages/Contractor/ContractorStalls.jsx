@@ -82,6 +82,9 @@ export default function ContractorStalls() {
   const [filterOpen, setFilterOpen] = useState(false);
   const [selectedStall, setSelectedStall] = useState(null);
 
+  const user = getUser();
+  const userEmail = user?.email || '';
+
   const [showRemovalForm, setShowRemovalForm] = useState(false);
   const [removalReason, setRemovalReason] = useState('');
   const [removalStatus, setRemovalStatus] = useState(null);
@@ -141,9 +144,6 @@ export default function ContractorStalls() {
   const [activeSection, setActiveSection] = useState(null);
   // Active zone tab (A-H or 'all')
   const [activeZone, setActiveZone] = useState('all');
-
-  const user = getUser();
-  const userEmail = user?.email || '';
 
   useEffect(() => {
     if (!userEmail) return;
