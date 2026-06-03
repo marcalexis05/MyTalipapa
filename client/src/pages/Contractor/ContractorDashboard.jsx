@@ -5,245 +5,7 @@ import { useCurrentUser, getUser } from '../../utils/auth'
 import marketImage from '../../images/market_live_view.png'
 import tour360Preview from '../../images/tour360_preview.png'
 import ContractorLockScreen from './ContractorLockScreen'
-import ContractorSidebar from '../../components/ContractorSidebar'
-import NotificationBell from '../../components/NotificationBell'
-
-const NAV_ITEMS = [
-  {
-    id: 'nav-dashboard', label: 'Dashboard', path: '/contractor/dashboard',
-    icon: (<svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></svg>),
-  },
-  {
-    id: 'nav-stalls', label: 'Stalls', path: '/contractor/stalls',
-    icon: (<svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9,22 9,12 15,12 15,22" /></svg>),
-  },
-  {
-    id: 'nav-apps', label: 'Apps', path: '/contractor/applications',
-    icon: (<svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14,2 14,8 20,8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>),
-  },
-  {
-    id: 'nav-records', label: 'Records', path: '/contractor/records',
-    icon: (<svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><circle cx="12" cy="12" r="10" /><polyline points="12,6 12,12 16,14" /></svg>),
-  },
-  {
-    id: 'nav-profile', label: 'Profile', path: '/contractor/profile',
-    icon: (<svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>),
-  },
-]
-
-const LogoutIcon = () => (
-  <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-    <polyline points="16,17 21,12 16,7" />
-    <line x1="21" y1="12" x2="9" y2="12" />
-  </svg>
-)
-
-function OccupancyRing({ percent }) {
-  const r = 70
-  const circumference = 2 * Math.PI * r
-  const offset = circumference - (percent / 100) * circumference
-  return (
-    <svg width="180" height="180" viewBox="0 0 180 180" className="occupancy-ring">
-      <circle cx="90" cy="90" r={r} fill="none" stroke="#e5e7eb" strokeWidth="12" />
-      <circle
-        cx="90" cy="90" r={r} fill="none"
-        stroke="var(--color-brand-green)" strokeWidth="12"
-        strokeLinecap="round"
-        strokeDasharray={circumference}
-        strokeDashoffset={offset}
-        transform="rotate(-90 90 90)"
-        className="occupancy-progress"
-      />
-      <text x="90" y="85" textAnchor="middle" className="ring-percent">{percent}%</text>
-      <text x="90" y="103" textAnchor="middle" className="ring-label">Capacity</text>
-    </svg>
-  )
-}
-
-export default function ContractorDashboard() {
-  const navigate = useNavigate()
-  const [activeNav, setActiveNav] = useState('nav-dashboard')
-  const [showLogoutModal, setShowLogoutModal] = useState(false)
-  const { userName, loading: authLoading } = useCurrentUser()
-  const [processingId, setProcessingId] = useState(null)
-  const liveViewMountRef = useRef(null)
-
-  useEffect(() => {
-    let THREE
-    let renderer, scene, camera, material, animationFrameId
-    let isDragging = false
-    let previousMousePosition = { x: 0, y: 0 }
-    let spherical = { phi: Math.PI / 2, theta: 0 }
-
-    const mount = liveViewMountRef.current
-    if (!mount) return
-
-    let isCleanedUp = false
-
-    async function initThree() {
-      // Wait for layout to settle (150ms)
-      await new Promise(resolve => setTimeout(resolve, 150))
-      if (isCleanedUp) return
-
-      if (!window.THREE) {
-        await new Promise((resolve, reject) => {
-          const s = document.createElement('script')
-          s.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js'
-          s.onload = resolve
-          s.onerror = reject
-          document.head.appendChild(s)
-        })
-      }
-      if (isCleanedUp) return
-      THREE = window.THREE
-
-      const rect = mount.getBoundingClientRect()
-      const width = rect.width || mount.clientWidth || mount.parentElement?.clientWidth || 350
-      const height = rect.height || mount.clientHeight || 160
-
-      scene = new THREE.Scene()
-      camera = new THREE.PerspectiveCamera(70, width / height, 0.1, 1000)
-      camera.position.set(0, 0, 0.001)
-
-      renderer = new THREE.WebGLRenderer({ antialias: true })
-      renderer.setSize(width, height)
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-      mount.appendChild(renderer.domElement)
-
-      const geometry = new THREE.SphereGeometry(500, 64, 40)
-      geometry.scale(-1, 1, 1)
-
-      const texture = new THREE.TextureLoader().load(marketImage)
-      material = new THREE.MeshBasicMaterial({ map: texture })
-      const sphere = new THREE.Mesh(geometry, material)
-      scene.add(sphere)
-
-      const updateCamera = () => {
-        const { phi, theta } = spherical
-        const x = Math.sin(phi) * Math.cos(theta)
-        const y = Math.cos(phi)
-        const z = Math.sin(phi) * Math.sin(theta)
-        camera.lookAt(x, y, z)
-      }
-      updateCamera()
-
-      const onMouseDown = (e) => {
-        isDragging = true
-        previousMousePosition = { x: e.clientX, y: e.clientY }
-      }
-
-      const onMouseMove = (e) => {
-        if (!isDragging) return
-        const deltaX = e.clientX - previousMousePosition.x
-        const deltaY = e.clientY - previousMousePosition.y
-        previousMousePosition = { x: e.clientX, y: e.clientY }
-
-        spherical.theta -= deltaX * 0.003
-        spherical.phi = Math.max(0.1, Math.min(Math.PI - 0.1, spherical.phi - deltaY * 0.003))
-        updateCamera()
-      }
-
-      const onMouseUp = () => {
-        isDragging = false
-      }
-
-      const onTouchStart = (e) => {
-        if (e.touches.length === 1) {
-          isDragging = true
-          previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY }
-        }
-      }
-
-      const onTouchMove = (e) => {
-        if (!isDragging || e.touches.length !== 1) return
-        const deltaX = e.touches[0].clientX - previousMousePosition.x
-        const deltaY = e.touches[0].clientY - previousMousePosition.y
-        previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY }
-
-        spherical.theta -= deltaX * 0.003
-        spherical.phi = Math.max(0.1, Math.min(Math.PI - 0.1, spherical.phi - deltaY * 0.003))
-        updateCamera()
-      }
-
-      const onTouchEnd = () => {
-        isDragging = false
-      }
-
-      mount.addEventListener('mousedown', onMouseDown)
-      window.addEventListener('mousemove', onMouseMove)
-      window.addEventListener('mouseup', onMouseUp)
-
-      mount.addEventListener('touchstart', onTouchStart, { passive: true })
-      mount.addEventListener('touchmove', onTouchMove, { passive: true })
-      mount.addEventListener('touchend', onTouchEnd)
-
-      const handleResize = () => {
-        if (!mount || !renderer || !camera) return
-        const w = mount.clientWidth
-        const h = mount.clientHeight
-        camera.aspect = w / h
-        camera.updateProjectionMatrix()
-        renderer.setSize(w, h)
-      }
-      window.addEventListener('resize', handleResize)
-
-      const animate = () => {
-        animationFrameId = requestAnimationFrame(animate)
-        if (!isDragging) {
-          spherical.theta += 0.001
-          updateCamera()
-        }
-        renderer.render(scene, camera)
-      }
-      animate()
-
-      // Cleanup function
-      return () => {
-        cancelAnimationFrame(animationFrameId)
-        mount.removeEventListener('mousedown', onMouseDown)
-        window.removeEventListener('mousemove', onMouseMove)
-        window.removeEventListener('mouseup', onMouseUp)
-        mount.removeEventListener('touchstart', onTouchStart)
-        mount.removeEventListener('touchmove', onTouchMove)
-        mount.removeEventListener('touchend', onTouchEnd)
-        window.removeEventListener('resize', handleResize)
-        if (renderer && renderer.domElement) {
-          mount.removeChild(renderer.domElement)
-          renderer.dispose()
-        }
-        if (geometry) geometry.dispose()
-        if (material) material.dispose()
-        if (texture) texture.dispose()
-      }
-    }
-
-    let cleanupFn
-    initThree().then(cleanup => {
-      cleanupFn = cleanup
-    })
-
-    return () => {
-      isCleanedUp = true
-      if (cleanupFn) cleanupFn()
-    }
-  }, [])
-
-  // ── Live data from DB ──────────────────────────────────
-  const [stalls, setStalls] = useState([])
-  const [applications, setApplications] = useState([])
-  const [loadingStalls, setLoadingStalls] = useState(true)
-  const [loadingApps, setLoadingApps] = useState(true)
-
-  const user = getUser()
-  const userEmail = user?.email || ''
-
-  // Fetch stalls
-  const fetchStalls = () => {
-    setLoadingStalls(true)
-    fetch(`/api/contractor/stalls?email=${userEmail}`)
-      .then(r => r.json())
-      .then(data => { setStalls(data); setLoadingStalls(false) })
+ setLoadingStalls(false) })
       .catch(() => setLoadingStalls(false))
   }
 
@@ -330,8 +92,6 @@ export default function ContractorDashboard() {
       setProcessingId(null)
     }
   }
-
-  const handleNav = (item) => { setActiveNav(item.id); navigate(item.path) }
   const handleLogout = () => navigate('/login')
 
   return (
@@ -351,9 +111,6 @@ export default function ContractorDashboard() {
             </div>
           </div>
         )}
-
-        {/* Sidebar */}
-        <ContractorSidebar active="nav-dashboard" />
 
         <div className="flex-1 flex flex-col overflow-hidden min-w-0">
           {/* Header */}
@@ -564,20 +321,6 @@ export default function ContractorDashboard() {
             </section>
           </main>
         </div>
-
-        {/* Bottom Navigation */}
-        <nav className="bottom-nav" aria-label="Main Navigation">
-          {NAV_ITEMS.map(item => (
-            <button
-              key={item.id}
-              className={`nav-item ${activeNav === item.id ? 'nav-active' : ''}`}
-              onClick={() => handleNav(item)}
-            >
-              <span className="nav-icon">{item.icon}</span>
-              <span className="nav-label">{item.label}</span>
-            </button>
-          ))}
-        </nav>
 
         {/* ── Announcements Modal ── */}
         {showAllAnnouncements && (
