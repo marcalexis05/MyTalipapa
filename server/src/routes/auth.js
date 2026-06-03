@@ -217,6 +217,14 @@ router.post('/contractor/register-application', async (req, res) => {
       });
     }
 
+    const Notification = require('../models/Notification');
+    await Notification.create({
+      recipient: 'admin',
+      title: 'New Contractor Application',
+      message: `${fullName} (${businessName}) has submitted a contractor application.`,
+      link: '/admin/applications'
+    });
+
     return res.status(201).json({
       message: 'Application submitted successfully',
       application,

@@ -293,6 +293,12 @@
           message: `${fullName} has applied for Stall #${stall.stallNumber} in the ${stall.section} section.`,
           link: '/contractor/applications'
         });
+        await Notification.create({
+          recipient: 'admin',
+          title: 'New Stall Application',
+          message: `${fullName} has applied for Stall #${stall.stallNumber} in the ${stall.section} section.`,
+          link: '/admin/applications'
+        });
       } else {
         await Notification.create({
           recipient: 'admin',
@@ -335,6 +341,12 @@
           title: 'Stall Move Out Request',
           message: `Tenant at Stall #${stall.stallNumber} (${stall.section}) has requested to move out. Renter Contact: ${contactNumber}. Reason: ${reason || 'Not specified'}`,
           link: '/contractor/stalls'
+        });
+        await Notification.create({
+          recipient: 'admin',
+          title: 'Stall Move Out Request',
+          message: `Tenant at Stall #${stall.stallNumber} (${stall.section}) has requested to move out. Renter Contact: ${contactNumber}. Reason: ${reason || 'Not specified'}`,
+          link: '/admin/stalls'
         });
       } else {
         await Notification.create({

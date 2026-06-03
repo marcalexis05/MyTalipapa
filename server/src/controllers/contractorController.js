@@ -256,6 +256,15 @@ exports.updateApplicationStatus = async (req, res) => {
       link: '/renter/applications'
     });
 
+    if (action === 'approve') {
+      await Notification.create({
+        recipient: 'admin',
+        title: 'Stall Occupied',
+        message: `${app.fullName} has been approved to rent Stall #${app.preferredStall}.`,
+        link: '/admin/records'
+      });
+    }
+
     res.json({
       application: updatedApp,
       stallUpdated: !!stall,
