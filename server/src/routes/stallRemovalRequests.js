@@ -120,6 +120,62 @@ router.get('/admin/requests/pending', verifyAdmin, async (req, res) => {
   }
 });
 
+// GET /api/stall-removal-requests/admin/requests/approved
+router.get('/admin/requests/approved', verifyAdmin, async (req, res) => {
+  try {
+    const approvedRequests = await StallRemovalRequest.find({ status: 'approved' })
+      .sort({ updatedAt: -1 })
+      .populate('contractorId', 'businessName email');
+
+    const ContractorApplication = require('../models/ContractorApplication');
+    const enrichedRequests = await Promise.all(
+      approvedRequests.map(async (reqDoc) => {
+        const doc = reqDoc.toObject();
+        if (doc.contractorId && !doc.contractorId.businessName) {
+          const app = await ContractorApplication.findOne({ email: doc.contractorId.email.toLowerCase() });
+          if (app) {
+            doc.contractorId.businessName = app.businessName;
+          }
+        }
+        return doc;
+      })
+    );
+
+    return res.json(enrichedRequests);
+  } catch (err) {
+    console.error('Error fetching approved removal requests:', err);
+    return res.status(500).json({ error: 'Failed to fetch approved requests' });
+  }
+});
+
+// GET /api/stall-removal-requests/admin/requests/rejected
+router.get('/admin/requests/rejected', verifyAdmin, async (req, res) => {
+  try {
+    const rejectedRequests = await StallRemovalRequest.find({ status: 'rejected' })
+      .sort({ updatedAt: -1 })
+      .populate('contractorId', 'businessName email');
+
+    const ContractorApplication = require('../models/ContractorApplication');
+    const enrichedRequests = await Promise.all(
+      rejectedRequests.map(async (reqDoc) => {
+        const doc = reqDoc.toObject();
+        if (doc.contractorId && !doc.contractorId.businessName) {
+          const app = await ContractorApplication.findOne({ email: doc.contractorId.email.toLowerCase() });
+          if (app) {
+            doc.contractorId.businessName = app.businessName;
+          }
+        }
+        return doc;
+      })
+    );
+
+    return res.json(enrichedRequests);
+  } catch (err) {
+    console.error('Error fetching rejected removal requests:', err);
+    return res.status(500).json({ error: 'Failed to fetch rejected requests' });
+  }
+});
+
 // GET /api/stall-removal-requests/contractor/my-requests
 router.get('/contractor/my-requests', verifyContractor, async (req, res) => {
   try {

@@ -13,11 +13,12 @@ const LogoutIcon = () => (
   </svg>
 );
 
-const ADDITION_TABS = ["Pending", "Approved", "Rejected"];
+const TABS = ["Pending", "Approved", "Rejected"];
 
 export default function AdminRequests() {
   const [requestType, setRequestType] = useState('additions'); // 'additions' or 'removals'
   const [additionTab, setAdditionTab] = useState('Pending'); // 'Pending', 'Approved', 'Rejected'
+  const [removalTab, setRemovalTab] = useState('Pending'); // 'Pending', 'Approved', 'Rejected'
   
   // Stall Additions state
   const [additionRequests, setAdditionRequests] = useState([]);
@@ -99,8 +100,15 @@ export default function AdminRequests() {
   // Fetch removals list
   const fetchRemovalRequests = async () => {
     setLoadingRemovals(true);
+    const endpoint =
+      removalTab === 'Approved'
+        ? '/api/stall-removal-requests/admin/requests/approved'
+        : removalTab === 'Rejected'
+        ? '/api/stall-removal-requests/admin/requests/rejected'
+        : '/api/stall-removal-requests/admin/requests/pending';
+
     try {
-      const res = await fetch('/api/stall-removal-requests/admin/requests/pending', {
+      const res = await fetch(endpoint, {
         headers: {
           Authorization: `Bearer ${getToken()}`,
         },
@@ -111,7 +119,7 @@ export default function AdminRequests() {
       setRemovalError(null);
     } catch (err) {
       console.error('Failed to fetch removal requests:', err);
-      setRemovalError('Failed to load pending removal requests.');
+      setRemovalError('Failed to load stall removal requests.');
     } finally {
       setLoadingRemovals(false);
     }
@@ -125,7 +133,7 @@ export default function AdminRequests() {
     } else {
       fetchRemovalRequests();
     }
-  }, [requestType, additionTab]);
+  }, [requestType, additionTab, removalTab]);
 
   // Stall Addition actions
   const handleStallAction = async (id, action) => {
@@ -290,7 +298,7 @@ export default function AdminRequests() {
             <>
               {/* Stall Additions Sub-Tabs */}
               <div className="apps-tab-bar mb-4">
-                {ADDITION_TABS.map(t => (
+                {TABS.map(t => (
                   <button
                     key={t}
                     className={`apps-tab${additionTab === t ? " apps-tab-active" : ""}`}
@@ -369,88 +377,120 @@ export default function AdminRequests() {
             </>
           ) : (
             // Stall Removals View
-            <div className="applications-list">
-              {loadingRemovals ? (
-                <div className="flex flex-col items-center justify-center py-20 text-gray-500 gap-3">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#1a5c2a]"></div>
-                  <span className="text-sm font-semibold">Loading pending requests...</span>
-                </div>
-              ) : removalError ? (
-                <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-2xl text-center text-sm font-semibold max-w-lg mx-auto mt-10">
-                  {removalError}
-                </div>
-              ) : removalRequests.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-24 bg-white border border-gray-100 rounded-3xl p-8 max-w-lg mx-auto shadow-sm">
-                  <div className="w-16 h-16 rounded-full bg-green-50 flex items-center justify-center text-[#1a5c2a] mb-4">
-                    <Store size={28} />
+            <>
+              {/* Stall Removals Sub-Tabs */}
+              <div className="apps-tab-bar mb-4">
+                {TABS.map(t => (
+                  <button
+                    key={t}
+                    className={`apps-tab${removalTab === t ? " apps-tab-active" : ""}`}
+                    onClick={() => setRemovalTab(t)}
+                  >
+                    {t}
+                    {t === "Pending" && pendingRemovalsCount > 0 && (
+                      <span className={`apps-tab-badge${removalTab === t ? " apps-tab-badge-active" : ""}`}>
+                        {pendingRemovalsCount}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+
+              <div className="applications-list">
+                {loadingRemovals ? (
+                  <div className="flex flex-col items-center justify-center py-20 text-gray-500 gap-3">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#1a5c2a]"></div>
+                    <span className="text-sm font-semibold">Loading removal requests...</span>
                   </div>
-                  <h3 className="text-base font-extrabold text-gray-800 mb-1">All Caught Up!</h3>
-                  <p className="text-xs text-gray-400 text-center">There are no pending stall removal requests to review.</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {removalRequests.map(req => {
-                    const dateString = new Date(req.createdAt).toLocaleDateString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    });
-                    return (
-                      <div
-                        key={req._id}
-                        onClick={() => {
-                          setSelectedRemovalRequest(req);
-                          setAdminNotes(req.adminNotes || '');
-                          setActionStatus(null);
-                        }}
-                        className="bg-white border border-gray-100 rounded-3xl p-5 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between relative group animate-in fade-in slide-in-from-bottom-4 duration-200"
-                        style={{ borderLeft: '4px solid #f59e0b' }}
-                      >
-                        <div>
-                          {/* Top Row */}
-                          <div className="flex justify-between items-start mb-3">
-                            <span className="text-[10px] font-extrabold text-[#d97706] bg-amber-50 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                              Pending Removal
-                            </span>
-                            <span className="text-[10px] text-gray-400 font-semibold">{dateString}</span>
+                ) : removalError ? (
+                  <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-2xl text-center text-sm font-semibold max-w-lg mx-auto mt-10">
+                    {removalError}
+                  </div>
+                ) : removalRequests.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-24 bg-white border border-gray-100 rounded-3xl p-8 max-w-lg mx-auto shadow-sm">
+                    <div className="w-16 h-16 rounded-full bg-green-50 flex items-center justify-center text-[#1a5c2a] mb-4">
+                      <Store size={28} />
+                    </div>
+                    <h3 className="text-base font-extrabold text-gray-800 mb-1">All Caught Up!</h3>
+                    <p className="text-xs text-gray-400 text-center">There are no {removalTab.toLowerCase()} removal requests to review.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {removalRequests.map(req => {
+                      const dateString = new Date(req.createdAt).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      });
+                      return (
+                        <div
+                          key={req._id}
+                          onClick={() => {
+                            setSelectedRemovalRequest(req);
+                            setAdminNotes(req.adminNotes || '');
+                            setActionStatus(null);
+                          }}
+                          className="bg-white border border-gray-100 rounded-3xl p-5 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between relative group animate-in fade-in slide-in-from-bottom-4 duration-200"
+                          style={{ 
+                            borderLeft: req.status === 'approved' 
+                              ? '4px solid #1a5c2a' 
+                              : req.status === 'rejected' 
+                              ? '4px solid #dc2626' 
+                              : '4px solid #f59e0b' 
+                          }}
+                        >
+                          <div>
+                            {/* Top Row */}
+                            <div className="flex justify-between items-start mb-3">
+                              <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
+                                req.status === 'approved' 
+                                  ? 'text-green-700 bg-green-50' 
+                                  : req.status === 'rejected' 
+                                  ? 'text-red-750 bg-red-50' 
+                                  : 'text-[#d97706] bg-amber-50'
+                              }`}>
+                                {req.status}
+                              </span>
+                              <span className="text-[10px] text-gray-400 font-semibold">{dateString}</span>
+                            </div>
+
+                            {/* Location & Stall */}
+                            <h3 className="text-base font-bold text-gray-900 mb-1 group-hover:text-[#1a5c2a] transition-colors">
+                              {req.location}
+                            </h3>
+
+                            {/* Contractor Info */}
+                            <div className="flex flex-col gap-1 text-xs text-gray-500 mb-4 font-medium">
+                              <div className="flex items-center gap-1.5">
+                                <User size={12} className="text-gray-400" />
+                                <span>{req.contractorId?.businessName || 'Contractor'}</span>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <Mail size={12} className="text-gray-400" />
+                                <span>{req.contractorId?.email || 'N/A'}</span>
+                              </div>
+                            </div>
+
+                            {/* Reason Message Preview */}
+                            <div className="bg-amber-50/40 border border-amber-100/50 p-3 rounded-2xl text-xs text-gray-700 font-medium">
+                              <span className="block text-[9px] text-[#d97706] font-extrabold uppercase tracking-wider mb-1">Reason for Removal</span>
+                              <p className="line-clamp-3 leading-relaxed m-0 italic">"{req.requestReason}"</p>
+                            </div>
                           </div>
 
-                          {/* Location & Stall */}
-                          <h3 className="text-base font-bold text-gray-900 mb-1 group-hover:text-[#1a5c2a] transition-colors">
-                            {req.location}
-                          </h3>
-
-                          {/* Contractor Info */}
-                          <div className="flex flex-col gap-1 text-xs text-gray-500 mb-4 font-medium">
-                            <div className="flex items-center gap-1.5">
-                              <User size={12} className="text-gray-400" />
-                              <span>{req.contractorId?.businessName || 'Contractor'}</span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              <Mail size={12} className="text-gray-400" />
-                              <span>{req.contractorId?.email || 'N/A'}</span>
-                            </div>
-                          </div>
-
-                          {/* Reason Message Preview */}
-                          <div className="bg-amber-50/40 border border-amber-100/50 p-3 rounded-2xl text-xs text-gray-700 font-medium">
-                            <span className="block text-[9px] text-[#d97706] font-extrabold uppercase tracking-wider mb-1">Reason for Removal</span>
-                            <p className="line-clamp-3 leading-relaxed m-0 italic">"{req.requestReason}"</p>
+                          <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-xs text-gray-400 font-semibold">
+                            <span>{req.status === 'pending' ? 'Click to process' : 'Click to view'}</span>
+                            <ChevronRight size={14} className="text-gray-400 group-hover:translate-x-1 transition-transform" />
                           </div>
                         </div>
-
-                        <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-xs text-gray-400 font-semibold">
-                          <span>Click to process</span>
-                          <ChevronRight size={14} className="text-gray-400 group-hover:translate-x-1 transition-transform" />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </>
           )}
         </main>
       </div>
@@ -575,8 +615,14 @@ export default function AdminRequests() {
                 <h3 className="text-lg font-bold text-gray-900">{selectedRemovalRequest.location}</h3>
                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Removal Request Details</span>
               </div>
-              <span className="text-[10px] font-extrabold text-[#d97706] bg-amber-50 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                Pending
+              <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
+                selectedRemovalRequest.status === 'approved' 
+                  ? 'text-green-700 bg-green-50' 
+                  : selectedRemovalRequest.status === 'rejected' 
+                  ? 'text-red-750 bg-red-50' 
+                  : 'text-[#d97706] bg-amber-50'
+              }`}>
+                {selectedRemovalRequest.status}
               </span>
             </div>
 
@@ -608,13 +654,19 @@ export default function AdminRequests() {
                 <label className="block text-[10px] text-gray-400 font-bold uppercase tracking-wider">
                   Admin Notes / Remarks
                 </label>
-                <textarea
-                  placeholder="Enter comments or reason for decision..."
-                  rows="3"
-                  value={adminNotes}
-                  onChange={e => setAdminNotes(e.target.value)}
-                  className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#1a5c2a] transition-all resize-none text-gray-800"
-                />
+                {selectedRemovalRequest.status === 'pending' ? (
+                  <textarea
+                    placeholder="Enter comments or reason for decision..."
+                    rows="3"
+                    value={adminNotes}
+                    onChange={e => setAdminNotes(e.target.value)}
+                    className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#1a5c2a] transition-all resize-none text-gray-800"
+                  />
+                ) : (
+                  <p className="text-xs bg-gray-50 border border-gray-150 p-3 rounded-xl font-medium text-gray-700">
+                    {selectedRemovalRequest.adminNotes || "No remarks left by administrator."}
+                  </p>
+                )}
               </div>
 
               {actionStatus && (
@@ -632,20 +684,24 @@ export default function AdminRequests() {
               >
                 Close
               </button>
-              <button 
-                className="flex-1 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold transition-all disabled:opacity-50"
-                disabled={submittingAction}
-                onClick={() => handleRemovalAction(selectedRemovalRequest._id, 'reject')}
-              >
-                Reject Request
-              </button>
-              <button 
-                className="flex-1 py-3 rounded-xl bg-[#1a5c2a] hover:bg-[#154d23] text-white text-xs font-bold transition-all disabled:opacity-50"
-                disabled={submittingAction}
-                onClick={() => handleRemovalAction(selectedRemovalRequest._id, 'approve')}
-              >
-                Approve Request
-              </button>
+              {selectedRemovalRequest.status === 'pending' && (
+                <>
+                  <button 
+                    className="flex-1 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold transition-all disabled:opacity-50"
+                    disabled={submittingAction}
+                    onClick={() => handleRemovalAction(selectedRemovalRequest._id, 'reject')}
+                  >
+                    Reject Request
+                  </button>
+                  <button 
+                    className="flex-1 py-3 rounded-xl bg-[#1a5c2a] hover:bg-[#154d23] text-white text-xs font-bold transition-all disabled:opacity-50"
+                    disabled={submittingAction}
+                    onClick={() => handleRemovalAction(selectedRemovalRequest._id, 'approve')}
+                  >
+                    Approve Request
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
