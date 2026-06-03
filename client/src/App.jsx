@@ -22,6 +22,8 @@ import RenterLayout from './pages/Renter/Renterlayout'
 import MarketTour360 from './pages/MarketTour360'
 import AdminRequests from './pages/Admin/AdminRequests'
 import ContractorRequests from './pages/Contractor/ContractorRequests'
+import AdminLayout from './components/AdminLayout'
+import ContractorLayout from './components/ContractorLayout'
 
 export default function App() {
   return (
@@ -33,25 +35,31 @@ export default function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/set-new-password" element={<SetNewPassword />} />
-        <Route path="/contractor/dashboard" element={<ContractorDashboard />} />
-        <Route path="/contractor/profile" element={<ContractorProfile />} />
-        <Route path="/contractor/records" element={<ContractorRecords />} />
-        <Route path="/contractor/applications" element={<ContractorApplications />} />
-        <Route path="/contractor/stalls" element={<ContractorStalls />} />
-        <Route path="/contractor/requests" element={<ContractorRequests />} />
-        <Route path="/contractor/*" element={<ContractorDashboard />} />
 
-        <Route path="/admin/dashboard" element={<AdminDashboard />} />
-        <Route path="/admin/profile" element={<AdminProfile />} />
-        <Route path="/admin/profile/security" element={<AdminSecurity />} />
-        <Route path="/admin/messages" element={<AdminMessages />} />
-        <Route path="/contractor/profile/security" element={<ContractorSecurity />} />
-        <Route path="/contractor/profile/security" element={<ContractorSecurity />} />
-        <Route path="/admin/records" element={<AdminRecord />} />
-        <Route path="/admin/applications" element={<AdminApplication />} />
-        <Route path="/admin/stalls" element={<AdminStalls />} />
-        <Route path="/admin/requests" element={<AdminRequests />} />
-        <Route path="/admin/*" element={<AdminDashboard />} />
+        {/* Contractor Routes */}
+        <Route element={<ContractorLayout />}>
+          <Route path="/contractor/dashboard" element={<ContractorDashboard />} />
+          <Route path="/contractor/profile" element={<ContractorProfile />} />
+          <Route path="/contractor/profile/security" element={<ContractorSecurity />} />
+          <Route path="/contractor/records" element={<ContractorRecords />} />
+          <Route path="/contractor/applications" element={<ContractorApplications />} />
+          <Route path="/contractor/stalls" element={<ContractorStalls />} />
+          <Route path="/contractor/requests" element={<ContractorRequests />} />
+          <Route path="/contractor/*" element={<ContractorDashboard />} />
+        </Route>
+
+        {/* Admin Routes */}
+        <Route element={<AdminLayout />}>
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/profile" element={<AdminProfile />} />
+          <Route path="/admin/profile/security" element={<AdminSecurity />} />
+          <Route path="/admin/messages" element={<AdminMessages />} />
+          <Route path="/admin/records" element={<AdminRecord />} />
+          <Route path="/admin/applications" element={<AdminApplication />} />
+          <Route path="/admin/stalls" element={<AdminStalls />} />
+          <Route path="/admin/requests" element={<AdminRequests />} />
+          <Route path="/admin/*" element={<AdminDashboard />} />
+        </Route>
 
         <Route path="/renter/market-tour" element={<MarketTour360 />} />
         <Route path="/renter/*" element={<RenterLayout />} />
