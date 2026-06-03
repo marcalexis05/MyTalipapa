@@ -87,6 +87,33 @@ export default function ContractorStalls() {
   const [removalStatus, setRemovalStatus] = useState(null);
   const [submittingRemoval, setSubmittingRemoval] = useState(false);
   const [showRemovalSuccessModal, setShowRemovalSuccessModal] = useState(false);
+  const [myRemovalRequests, setMyRemovalRequests] = useState([]);
+
+  const hasPendingRemoval = selectedStall && myRemovalRequests.some(
+    req => String(req.stallId) === String(selectedStall._id) && req.status === 'pending'
+  );
+
+  const fetchMyRemovalRequests = () => {
+    fetch('/api/stall-removal-requests/contractor/my-requests', {
+      headers: { Authorization: `Bearer ${getToken()}` },
+    })
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then(data => {
+        setMyRemovalRequests(Array.isArray(data) ? data : []);
+      })
+      .catch(err => {
+        console.error('Failed to fetch my removal requests:', err);
+      });
+  };
+
+  useEffect(() => {
+    if (userEmail) {
+      fetchMyRemovalRequests();
+    }
+  }, [userEmail]);
 
   useEffect(() => {
     if (!selectedStall) {
@@ -367,6 +394,7 @@ export default function ContractorStalls() {
         throw new Error(data.error || 'Failed to submit removal request');
       }
 
+      fetchMyRemovalRequests();
       setSelectedStall(null); // Close the modal
       setShowRemovalSuccessModal(true);
     } catch (err) {
@@ -991,23 +1019,27 @@ export default function ContractorStalls() {
                   )}
                   {selectedStall.status === "available" && (
                     <button
+                      disabled={hasPendingRemoval}
                       onClick={() => setShowRemovalForm(true)}
                       style={{
-                        background: '#f59e0b',
+                        background: '#dc2626',
                         color: 'white',
                         border: 'none',
                         borderRadius: '8px',
                         padding: '10px 16px',
                         fontWeight: '700',
                         fontSize: '13px',
-                        cursor: 'pointer',
+                        cursor: hasPendingRemoval ? 'not-allowed' : 'pointer',
                         width: '100%',
                         marginTop: '8px',
                         fontFamily: "'Inter', sans-serif",
+                        opacity: hasPendingRemoval ? 0.65 : 1,
                       }}
-                      className="hover:opacity-90 transition-opacity"
+                      className={hasPendingRemoval ? "" : "hover:opacity-90 transition-opacity"}
                     >
-                      Request to Remove Stall
+                      {hasPendingRemoval 
+                        ? 'The request for removal of this stall is being reviewed by the admin' 
+                        : 'Request to Remove Stall'}
                     </button>
                   )}
                   {selectedStall.status === "pending" && (
