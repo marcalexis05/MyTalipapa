@@ -397,41 +397,46 @@ export default function RenterDashboard({ onNavigate, onOpenStall }) {
                   <p className="text-[10px] text-gray-400">Current tenancy information</p>
                 </div>
               </div>
-              {activeStall && (
-                <span className="dash-status-badge px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-800 uppercase tracking-wide">
-                  {activeStall.status}
-                </span>
-              )}
             </div>
-            {activeStall ? (
-              <>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  {[
-                    { label: 'Stall No.', value: activeStall.stallNumber, cls: 'text-base font-extrabold text-gray-800', delay: '0.38s' },
-                    { label: 'Section', value: activeStall.section, cls: 'text-xs font-extrabold text-gray-800 truncate', delay: '0.43s' },
-                    { label: 'Monthly Rent', value: activeStall.monthlyRate, cls: 'text-base font-extrabold text-green-800', delay: '0.48s' },
-                    { label: 'Expiry', value: activeStall.leaseEnd, cls: 'text-xs font-extrabold text-red-500', delay: '0.53s' },
-                  ].map(cell => (
-                    <div
-                      key={cell.label}
-                      className="bg-gray-50 rounded-xl p-3 transition-all hover:bg-gray-100"
-                      style={{ animation: `fadeSlideUp 0.4s ease ${cell.delay} both` }}
-                    >
-                      <p className="text-[9px] text-gray-400 font-semibold uppercase tracking-wider mb-1">{cell.label}</p>
-                      <p className={cell.cls}>{cell.value}</p>
+            {activeStall && Array.isArray(activeStall) && activeStall.length > 0 ? (
+              <div className="space-y-6">
+                {activeStall.map((lease, idx) => (
+                  <div key={lease.id} className={idx > 0 ? "pt-6 border-t border-gray-100" : ""}>
+                    <div className="flex justify-between items-center mb-4">
+                      <h4 className="text-xs font-bold text-gray-800">Stall {lease.stallNumber}</h4>
+                      <span className="dash-status-badge px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-800 uppercase tracking-wide">
+                        {lease.status}
+                      </span>
                     </div>
-                  ))}
-                </div>
-                <div className="mt-4 pt-4 border-t border-gray-50">
-                  <div className="flex justify-between text-xs text-gray-400 mb-1.5">
-                    <span className="font-semibold">Lease Progress</span>
-                    <span>Started {activeStall.leaseStart}</span>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      {[
+                        { label: 'Stall No.', value: lease.stallNumber, cls: 'text-base font-extrabold text-gray-800', delay: '0.38s' },
+                        { label: 'Section', value: lease.section, cls: 'text-xs font-extrabold text-gray-800 truncate', delay: '0.43s' },
+                        { label: 'Monthly Rent', value: lease.monthlyRate, cls: 'text-base font-extrabold text-green-800', delay: '0.48s' },
+                        { label: 'Expiry', value: lease.leaseEnd, cls: 'text-xs font-extrabold text-red-500', delay: '0.53s' },
+                      ].map(cell => (
+                        <div
+                          key={cell.label}
+                          className="bg-gray-50 rounded-xl p-3 transition-all hover:bg-gray-100"
+                          style={{ animation: `fadeSlideUp 0.4s ease ${cell.delay} both` }}
+                        >
+                          <p className="text-[9px] text-gray-400 font-semibold uppercase tracking-wider mb-1">{cell.label}</p>
+                          <p className={cell.cls}>{cell.value}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-4 pt-4 border-t border-gray-50">
+                      <div className="flex justify-between text-xs text-gray-400 mb-1.5">
+                        <span className="font-semibold">Lease Progress</span>
+                        <span>Started {lease.leaseStart}</span>
+                      </div>
+                      <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
+                        <div className="dash-progress-bar h-full rounded-full bg-[#1a5c2a]" style={{ width: '100%' }} />
+                      </div>
+                    </div>
                   </div>
-                  <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
-                    <div className="dash-progress-bar h-full rounded-full bg-[#1a5c2a]" style={{ width: '100%' }} />
-                  </div>
-                </div>
-              </>
+                ))}
+              </div>
             ) : (
               <div className="text-center py-6 text-xs text-gray-400 font-semibold" style={{ animation: 'fadeIn 0.4s ease both' }}>
                 You do not have an active stall lease yet.

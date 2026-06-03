@@ -145,73 +145,84 @@ router.get('/active-lease', async (req, res) => {
       return res.status(400).json({ error: 'Email parameter is required.' });
     }
 
-    // Find a stall occupied by the tenant with this email
-    const stall = await Stall.findOne({
+    // Find all stalls occupied by the tenant with this email
+    const stalls = await Stall.find({
       status: 'occupied',
       'tenant.email': email.toLowerCase()
     });
 
-    if (!stall) {
-      return res.json(null);
+    if (!stalls || stalls.length === 0) {
+      return res.json([]);
     }
 
-    // Find renter's approved application to get payment history
-    const app = await Application.findOne({
+    // Find renter's approved applications to get payment history
+    const apps = await Application.find({
       email: email.toLowerCase(),
       status: 'approved'
     });
 
-    let lastPaidDate = null;
-    if (app) {
-      const payments = await Payment.find({ renter: app._id }).sort({ date: -1 });
-      const lastPaid = payments.find(p => p.status === 'paid');
-      if (lastPaid) {
-        lastPaidDate = lastPaid.date;
+    const leases = await Promise.all(stalls.map(async (stall) => {
+      let lastPaidDate = null;
+      // Find the app for this stall
+      const app = apps.find(a => 
+        (a.stallId && a.stallId.toString() === stall._id.toString()) || 
+        a.preferredStall === stall.stallNumber || 
+        `#${a.preferredStall}` === stall.stallNumber
+      );
+
+      if (app) {
+        const payments = await Payment.find({ renter: app._id }).sort({ date: -1 });
+        const lastPaid = payments.find(p => p.status === 'paid');
+        if (lastPaid) {
+          lastPaidDate = lastPaid.date;
+        }
       }
-    }
 
-    // Base date for next payment due calculation: last paid date or leaseStart date
-    const baseDate = lastPaidDate || stall.tenant.leaseStart || stall.createdAt || new Date();
-    const nextDueDate = new Date(baseDate);
-    nextDueDate.setMonth(nextDueDate.getMonth() + 1); // validity is exactly 1 month from previous payment
+      // Base date for next payment due calculation: last paid date or leaseStart date
+      const baseDate = lastPaidDate || stall.tenant.leaseStart || stall.createdAt || new Date();
+      const nextDueDate = new Date(baseDate);
+      nextDueDate.setMonth(nextDueDate.getMonth() + 1); // validity is exactly 1 month from previous payment
 
-    const formattedNextDue = nextDueDate.toLocaleDateString('en-US', {
-      month: 'short', day: 'numeric', year: 'numeric',
-    });
+      const formattedNextDue = nextDueDate.toLocaleDateString('en-US', {
+        month: 'short', day: 'numeric', year: 'numeric',
+      });
 
-    const now = new Date();
-    let status = 'Active';
+      const now = new Date();
+      let status = 'Active';
 
-    // Calculate dynamic status based on payment validity window
-    const diffMs = now - nextDueDate;
-    const diffDays = diffMs / (1000 * 60 * 60 * 24);
+      // Calculate dynamic status based on payment validity window
+      const diffMs = now - nextDueDate;
+      const diffDays = diffMs / (1000 * 60 * 60 * 24);
 
-    if (diffDays > 30) {
-      status = 'long_overdue';
-    } else if (diffDays > 0) {
-      status = 'late_payment';
-    } else {
-      status = 'active';
-    }
+      if (diffDays > 30) {
+        status = 'long_overdue';
+      } else if (diffDays > 0) {
+        status = 'late_payment';
+      } else {
+        status = 'active';
+      }
 
-    res.json({
-      id: stall._id.toString(),
-      stallNumber: stall.stallNumber.startsWith('#') ? stall.stallNumber : `#${stall.stallNumber}`,
-      section: stall.section,
-      monthlyRate: stall.monthlyRate ? `₱${stall.monthlyRate.toLocaleString()}` : '—',
-      status: status,
-      nextDue: formattedNextDue,
-      leaseStart: stall.tenant.leaseStart
-        ? new Date(stall.tenant.leaseStart).toLocaleDateString('en-US', {
-          month: 'short', day: 'numeric', year: 'numeric',
-        })
-        : '—',
-      leaseEnd: stall.tenant.leaseEnd
-        ? new Date(stall.tenant.leaseEnd).toLocaleDateString('en-US', {
-          month: 'short', day: 'numeric', year: 'numeric',
-        })
-        : 'No Expiry',
-    });
+      return {
+        id: stall._id.toString(),
+        stallNumber: stall.stallNumber.startsWith('#') ? stall.stallNumber : `#${stall.stallNumber}`,
+        section: stall.section,
+        monthlyRate: stall.monthlyRate ? `₱${stall.monthlyRate.toLocaleString()}` : '—',
+        status: status,
+        nextDue: formattedNextDue,
+        leaseStart: stall.tenant.leaseStart
+          ? new Date(stall.tenant.leaseStart).toLocaleDateString('en-US', {
+            month: 'short', day: 'numeric', year: 'numeric',
+          })
+          : '—',
+        leaseEnd: stall.tenant.leaseEnd
+          ? new Date(stall.tenant.leaseEnd).toLocaleDateString('en-US', {
+            month: 'short', day: 'numeric', year: 'numeric',
+          })
+          : 'No Expiry',
+      };
+    }));
+
+    res.json(leases);
   } catch (err) {
     console.error('Renter getActiveLease error:', err);
     res.status(500).json({ error: 'Failed to fetch active lease' });
