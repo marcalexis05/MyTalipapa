@@ -63,7 +63,7 @@ export default function StallSearch({ onStallFound }) {
       const zoneLetter = String(stall.zone || '').replace('Zone ', '').toUpperCase();
       const response = await fetch(`/api/stalls/search?zone=${zoneLetter}&stallNumber=${num}`);
       const data = await response.json();
-      
+
       if (data.success && data.stall) {
         onStallFound(data.stall);
       }
@@ -137,8 +137,8 @@ export default function StallSearch({ onStallFound }) {
         {filteredStalls.length > 0 ? (
           <div className="scrollable-results">
             {filteredStalls.map(s => (
-              <div 
-                key={s.id || s._id} 
+              <div
+                key={s.id || s._id}
                 onClick={() => handleSelectStall(s)}
                 className={`stall-result-item ${s.status === 'occupied' ? 'occupied' : 'available'}`}
               >

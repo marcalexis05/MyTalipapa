@@ -35,7 +35,7 @@ async function sendEmailOtp(email, otp, type = 'verify') {
     });
 
     const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
-    
+
     let subject = '';
     let emailHtml = '';
 
