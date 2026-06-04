@@ -292,6 +292,16 @@ export default function ArFinder({ onBack }) {
   // Keep headingRef in sync so devicemotion can read latest heading
   useEffect(() => { headingRef.current = heading; }, [heading]);
 
+  // NEW: Keep userYRef in sync for zone-aware step size calculations
+  const userYRef = useRef(1720);
+  useEffect(() => { userYRef.current = userY; }, [userY]);
+
+  // NEW: Step size adjusts based on vertical zones
+  const getStepSize = (currentY) => {
+    if (currentY < 910) return Math.round(0.75 / (16.01 / 810)); // 38px
+    return Math.round(0.75 / (11.25 / 810));                      // 54px
+  };
+
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth <= 640);
     check();
@@ -315,7 +325,7 @@ export default function ArFinder({ onBack }) {
     let lastStepTime = 0;
     const STEP_THRESHOLD = 2.5;  // tune up if too sensitive, down if missing steps
     const STEP_COOLDOWN = 350;   // ms — prevents double-counting one footfall
-    const STEP_SIZE = 45;        // map units per step
+    const STEP_SIZE = getStepSize(userYRef.current); // Use zone-aware step size
 
     const handleMotion = (e) => {
       // Prefer gravity-free acceleration; fall back to raw if unavailable
@@ -519,11 +529,19 @@ export default function ArFinder({ onBack }) {
 
   const pathPoints = getPathPoints();
 
+  // Zone-aware distance calculation mapping physical measurements
   const getPathDist = (pts) => {
-    let d = 0;
-    for (let i = 0; i < pts.length - 1; i++)
-      d += Math.sqrt((pts[i + 1].x - pts[i].x) ** 2 + (pts[i + 1].y - pts[i].y) ** 2);
-    return Math.round(d * 0.02);
+    let totalMeters = 0;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const dx = pts[i + 1].x - pts[i].x;
+      const dy = pts[i + 1].y - pts[i].y;
+      const midY = (pts[i].y + pts[i + 1].y) / 2;
+      const scaleV = midY < 910 ? 16.01 / 810 : 11.25 / 810;
+      const realDx = Math.abs(dx) * (16.57 / 2090);
+      const realDy = Math.abs(dy) * scaleV;
+      totalMeters += Math.sqrt(realDx ** 2 + realDy ** 2);
+    }
+    return Math.round(totalMeters * 10) / 10;
   };
   const totalDistance = getPathDist(pathPoints);
 
@@ -542,8 +560,20 @@ export default function ArFinder({ onBack }) {
     return Math.round((a + 360) % 360);
   };
 
+  // Fix 1: Determine if user has arrived at destination
+  const ARRIVED_THRESHOLD = 60;
+  const isArrived = Math.sqrt((userX - currentStall.x) ** 2 + (userY - currentStall.y) ** 2) < ARRIVED_THRESHOLD;
+
   const targetBearing = getBearing(userX, userY, currentStall.x, currentStall.y);
-  const nextWP = pathPoints[1] || currentStall;
+  
+  // Fix 3: Point towards next waypoint, advancing if within threshold
+  let nextTargetIndex = 1;
+  while (nextTargetIndex < pathPoints.length && Math.sqrt((userX - pathPoints[nextTargetIndex].x) ** 2 + (userY - pathPoints[nextTargetIndex].y) ** 2) < ARRIVED_THRESHOLD) {
+    nextTargetIndex++;
+  }
+  const nextWP = pathPoints[nextTargetIndex] || currentStall;
+  
+  // Fix 2: Derive bearings directly from current state
   const nextBearing = getBearing(userX, userY, nextWP.x, nextWP.y);
   let relNextAngle = nextBearing - heading;
   if (relNextAngle > 180) relNextAngle -= 360;
@@ -578,8 +608,9 @@ export default function ArFinder({ onBack }) {
 
   const handleStepForward = () => {
     const rad = (heading * Math.PI) / 180;
-    setUserX(x => Math.max(30, Math.min(2270, x + Math.round(Math.sin(rad) * 45))));
-    setUserY(y => Math.max(30, Math.min(1790, y - Math.round(Math.cos(rad) * 45))));
+    const step = getStepSize(userYRef.current); // Apply zone-aware step size
+    setUserX(x => Math.max(30, Math.min(2270, x + Math.round(Math.sin(rad) * step))));
+    setUserY(y => Math.max(30, Math.min(1790, y - Math.round(Math.cos(rad) * step))));
   };
   const handleRotateLeft = () => setHeading(h => (h - 15 + 360) % 360);
   const handleRotateRight = () => setHeading(h => (h + 15) % 360);
@@ -1207,41 +1238,55 @@ export default function ArFinder({ onBack }) {
               </div>
             )}
 
-            {arPathDots.map((dot, i) => (
-              <div key={i} style={{
-                position: "absolute",
-                left: `${dot.proj.xPct}%`, top: `${dot.proj.yPct}%`,
-                transform: `translate(-50%,-50%) scale(${dot.proj.scale})`,
-                width: 11, height: 11, borderRadius: "50%",
-                background: "rgba(232,98,26,0.88)",
-                border: "1.5px solid rgba(255,255,255,0.5)",
-                boxShadow: "0 0 6px rgba(232,98,26,0.5)",
-              }} />
-            ))}
-
-            {targetProj.isVisible ? (
-              <div style={{
-                position: "absolute",
-                left: `${targetProj.xPct}%`, top: `${targetProj.yPct}%`,
-                transform: `translate(-50%,-50%) scale(${targetProj.scale})`,
-                display: "flex", flexDirection: "column", alignItems: "center",
-                animation: "pulse 1.5s ease-in-out infinite",
-              }}>
-                <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(232,98,26,0.95)", border: "2.5px solid #fff", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 16px rgba(232,98,26,0.5)" }}>
-                  <Navigation size={20} color="#fff" style={{ transform: `rotate(${nextBearing - heading}deg)`, transition: 'transform 0.2s ease-out' }} />
-                </div>
-                <div style={{ marginTop: 6, background: "rgba(255,255,255,0.97)", border: "1px solid #e2e8f0", borderRadius: 10, padding: "4px 10px", textAlign: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.1)", maxWidth: 160 }}>
-                  <div style={{ fontSize: 11, fontWeight: 800, color: "#1e293b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{currentStall.label}</div>
-                  <div style={{ fontSize: 9, color: "#e8621a", fontWeight: 700 }}>{totalDistance}m away · {getETA(totalDistance)}</div>
+            {/* Fix 1: Render arrived state plain text, hide everything else */}
+            {isArrived ? (
+              <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
+                <div style={{ background: "rgba(255,255,255,0.95)", border: "1px solid #e2e8f0", borderRadius: 12, padding: "12px 24px", fontSize: 16, fontWeight: 800, color: "#1e293b", boxShadow: "0 4px 20px rgba(0,0,0,0.15)" }}>
+                  You have arrived.
                 </div>
               </div>
             ) : (
-              <div style={{ position: "absolute", inset: "0 52px", top: "38%", display: "flex", alignItems: "flex-start", justifyContent: relNextAngle < 0 ? "flex-start" : "flex-end" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.97)", border: "1px solid #e2e8f0", borderRadius: 999, padding: "6px 12px", boxShadow: "0 2px 10px rgba(0,0,0,0.1)", animation: "pulse 1s ease-in-out infinite" }}>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: "#1e293b" }}>{relNextAngle < 0 ? "◀ Turn Left" : "Turn Right ▶"}</span>
-                  <span style={{ fontSize: 9, color: "#e8621a", fontWeight: 700 }}>{Math.round(Math.abs(relNextAngle))}°</span>
-                </div>
-              </div>
+              <>
+                {arPathDots.map((dot, i) => (
+                  <div key={i} style={{
+                    position: "absolute",
+                    left: `${dot.proj.xPct}%`, top: `${dot.proj.yPct}%`,
+                    transform: `translate(-50%,-50%) scale(${dot.proj.scale})`,
+                    width: 11, height: 11, borderRadius: "50%",
+                    background: "rgba(232,98,26,0.88)",
+                    border: "1.5px solid rgba(255,255,255,0.5)",
+                    boxShadow: "0 0 6px rgba(232,98,26,0.5)",
+                  }} />
+                ))}
+
+                {targetProj.isVisible ? (
+                  <div style={{
+                    position: "absolute",
+                    left: `${targetProj.xPct}%`, top: `${targetProj.yPct}%`,
+                    transform: `translate(-50%,-50%) scale(${targetProj.scale})`,
+                    display: "flex", flexDirection: "column", alignItems: "center",
+                    animation: "pulse 1.5s ease-in-out infinite",
+                  }}>
+                    <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(232,98,26,0.95)", border: "2.5px solid #fff", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 16px rgba(232,98,26,0.5)" }}>
+                      <Navigation size={20} color="#fff" style={{ transform: `rotate(${nextBearing - heading}deg)`, transition: 'transform 0.2s ease-out' }} />
+                    </div>
+                    <div style={{ marginTop: 6, background: "rgba(255,255,255,0.97)", border: "1px solid #e2e8f0", borderRadius: 10, padding: "4px 10px", textAlign: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.1)", maxWidth: 160 }}>
+                      <div style={{ fontSize: 11, fontWeight: 800, color: "#1e293b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{currentStall.label}</div>
+                      <div style={{ fontSize: 9, color: "#e8621a", fontWeight: 700 }}>{totalDistance}m away · {getETA(totalDistance)}</div>
+                    </div>
+                  </div>
+                ) : null}
+
+                {/* Fix 4: Show turn indicator only if not arrived and next waypoint is outside 50 deg FOV */}
+                {Math.abs(relNextAngle) > 50 && (
+                  <div style={{ position: "absolute", inset: "0 52px", top: "38%", display: "flex", alignItems: "flex-start", justifyContent: relNextAngle < 0 ? "flex-start" : "flex-end" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.97)", border: "1px solid #e2e8f0", borderRadius: 999, padding: "6px 12px", boxShadow: "0 2px 10px rgba(0,0,0,0.1)", animation: "pulse 1s ease-in-out infinite" }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: "#1e293b" }}>{relNextAngle < 0 ? "◀ Turn Left" : "Turn Right ▶"}</span>
+                      <span style={{ fontSize: 9, color: "#e8621a", fontWeight: 700 }}>{Math.round(Math.abs(relNextAngle))}°</span>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
 
