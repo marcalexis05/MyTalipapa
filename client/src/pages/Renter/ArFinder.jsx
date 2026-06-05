@@ -105,40 +105,11 @@ const buildAllStalls = () => {
 const STALLS_AR = buildAllStalls();
 
 const HALLWAY_GROUPS = {
-  "Main Entrance": [
-    { id: "entrance", label: "Main Entrance", x: 1050, y: 1720 }
-  ],
-  "Top Pathways": [
-    { id: "hallway1", label: "Hallway 1 (Top Left)", x: 30, y: 100 },
-    { id: "hallway2", label: "Hallway 2 (Top, A-B)", x: 530, y: 100 },
-    { id: "hallway3_4", label: "Hallway 3 & 4 (Top, Zone B)", x: 790, y: 100 },
-    { id: "hallway5", label: "Hallway 5 (Top, B-C)", x: 1050, y: 100 },
-    { id: "hallway6", label: "Hallway 6 (Top, Zone C)", x: 1300, y: 100 },
-    { id: "hallway7", label: "Hallway 7 (Top, C-D)", x: 1570, y: 100 },
-    { id: "hallway8_9", label: "Hallway 8 & 9 (Top, Zone D)", x: 1845, y: 100 },
-    { id: "hallway10", label: "Hallway 10 (Top Right)", x: 2120, y: 100 }
-  ],
-  "Middle Pathways": [
-    { id: "hallway31H", label: "Hallway 31H (Middle Left)", x: 30, y: 910 },
-    { id: "hallway31", label: "Hallway 31 (Middle, E-A)", x: 265, y: 910 },
-    { id: "hallway28", label: "Hallway 28 (Middle, E-F)", x: 530, y: 910 },
-    { id: "hallway32", label: "Hallway 32 (Middle, B-F)", x: 790, y: 910 },
-    { id: "hallway30", label: "Hallway 30 (Middle, C-G)", x: 1050, y: 910 },
-    { id: "hallway33", label: "Hallway 33 (Middle, C-G)", x: 1300, y: 910 },
-    { id: "hallway29", label: "Hallway 29 (Middle, G-H)", x: 1570, y: 910 },
-    { id: "hallway34", label: "Hallway 34 (Middle, D-H)", x: 1845, y: 910 },
-    { id: "hallway11", label: "Hallway 11 (Right Mid)", x: 2120, y: 910 }
-  ],
-  "Bottom Pathways": [
-    { id: "hallway27", label: "Hallway 27 (Bottom Left)", x: 30, y: 1720 },
-    { id: "hallway25_26", label: "Hallway 25 & 26 (Bottom, Zone E)", x: 265, y: 1720 },
-    { id: "hallway24", label: "Hallway 24 (Bottom, E-F)", x: 530, y: 1720 },
-    { id: "hallway21_22_23", label: "Hallway 21, 22, 23 (Bottom, Zone F)", x: 790, y: 1720 },
-    { id: "hallway20", label: "Hallway 20 (Bottom, F-G)", x: 1050, y: 1720 },
-    { id: "hallway17_18_19", label: "Hallway 17, 18, 19 (Bottom, Zone G)", x: 1300, y: 1720 },
-    { id: "hallway16", label: "Hallway 16 (Bottom, G-H)", x: 1570, y: 1720 },
-    { id: "hallway13_14_15", label: "Hallway 13, 14, 15 (Bottom Right)", x: 1845, y: 1720 },
-    { id: "hallway12", label: "Hallway 12 (Bottom Right)", x: 2120, y: 1720 }
+  "Entrances": [
+    { id: "entrance", label: "Main Entrance (Bottom Center)", x: 1050, y: 1720 },
+    { id: "shortcut_top", label: "Top Shortcut Entrance", x: 1050, y: 100 },
+    { id: "shortcut_right", label: "Right Side Shortcut", x: 2120, y: 910 },
+    { id: "guardhouse", label: "Guard House Side (Top Left)", x: 30, y: 100 }
   ]
 };
 
@@ -496,7 +467,7 @@ export default function ArFinder({ onBack }) {
   };
 
   const X_CORRIDORS = [30, 265, 530, 790, 1050, 1300, 1570, 1845, 2120];
-  const Y_PATHWAYS = [100, 910, 1720];
+  const Y_PATHWAYS = [100, 300, 500, 700, 910, 1100, 1300, 1500, 1720];
 
   const getPathPoints = () => {
     const pts = [{ x: userX, y: userY }];
@@ -1240,9 +1211,10 @@ export default function ArFinder({ onBack }) {
 
             {/* Fix 1: Render arrived state plain text, hide everything else */}
             {isArrived ? (
-              <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
-                <div style={{ background: "rgba(255,255,255,0.95)", border: "1px solid #e2e8f0", borderRadius: 12, padding: "12px 24px", fontSize: 16, fontWeight: 800, color: "#1e293b", boxShadow: "0 4px 20px rgba(0,0,0,0.15)" }}>
-                  You have arrived.
+              <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none", zIndex: 30 }}>
+                <div style={{ background: "rgba(255,255,255,0.95)", border: "1px solid #e2e8f0", borderRadius: 12, padding: "16px 24px", textAlign: "center", boxShadow: "0 4px 20px rgba(0,0,0,0.15)", maxWidth: "80%" }}>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: "#1a5c2a", marginBottom: 6 }}>You have arrived at {currentStall.label}!</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "#64748b" }}>Look around you — the stall should be nearby.</div>
                 </div>
               </div>
             ) : (
@@ -1394,6 +1366,9 @@ export default function ArFinder({ onBack }) {
 
           {!mapCollapsed && (
             <div className="ar-map-body">
+              <div style={{ position: "absolute", top: 10, left: "50%", transform: "translateX(-50%)", background: "rgba(255,255,255,0.9)", padding: "6px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700, color: "#1e293b", boxShadow: "0 2px 8px rgba(0,0,0,0.15)", pointerEvents: "none", zIndex: 10, border: "1px solid #e2e8f0", whiteSpace: "nowrap" }}>
+                Tap the map to set your position
+              </div>
               <svg viewBox="0 0 2305 1824" preserveAspectRatio="xMidYMid meet"
                 onClick={handleMapClick} style={{ width: "100%", height: "100%", cursor: "crosshair", userSelect: "none" }}>
                 <image xlinkHref={mapImage} href={mapImage} x="-20" y="-15" width="2305" height="1824" preserveAspectRatio="none" />
