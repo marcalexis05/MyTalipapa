@@ -106,10 +106,36 @@ const STALLS_AR = buildAllStalls();
 
 const HALLWAY_GROUPS = {
   "Entrances": [
-    { id: "entrance", label: "Main Entrance (Bottom Center)", x: 1050, y: 1720 },
-    { id: "shortcut_top", label: "Top Shortcut Entrance", x: 1050, y: 100 },
-    { id: "shortcut_right", label: "Right Side Shortcut", x: 2120, y: 910 },
-    { id: "guardhouse", label: "Guard House Side (Top Left)", x: 30, y: 100 }
+    { 
+      id: "entrance", 
+      label: "Main Entrance & Exit (Bottom Center)", 
+      x: 1050, y: 1720 
+    },
+    { 
+      id: "shortcut_top", 
+      label: "Top Shortcut (Top Center)", 
+      x: 1050, y: 100 
+    },
+    { 
+      id: "shortcut_right", 
+      label: "Right Shortcut (Right Side)", 
+      x: 2120, y: 910 
+    },
+    { 
+      id: "shortcut_bottom_right", 
+      label: "Bottom Right Exit (Hallway 12)", 
+      x: 2120, y: 1720 
+    },
+    { 
+      id: "shortcut_bottom_left", 
+      label: "Bottom Left Exit (Hallway 27)", 
+      x: 30, y: 1720 
+    },
+    { 
+      id: "guardhouse", 
+      label: "Guard House Side (Top Left)", 
+      x: 30, y: 100 
+    }
   ]
 };
 
@@ -436,7 +462,7 @@ export default function ArFinder({ onBack }) {
       if (h !== undefined) {
         // Rolling average over last 6 readings to smooth compass jitter
         headingBufferRef.current.push(h);
-        if (headingBufferRef.current.length > 6) headingBufferRef.current.shift();
+        if (headingBufferRef.current.length > 15) headingBufferRef.current.shift();
         const avg = headingBufferRef.current.reduce((a, b) => a + b, 0) / headingBufferRef.current.length;
         setHeading(Math.round(avg));
         setHasOrientation(true);
@@ -556,7 +582,7 @@ export default function ArFinder({ onBack }) {
     let rel = bearing - heading;
     if (rel > 180) rel -= 360;
     if (rel < -180) rel += 360;
-    const fov = 50;
+    const fov = 65;
     return { isVisible: Math.abs(rel) <= fov, xPct: 50 + (rel / fov) * 50, yPct: 65 - (dist / 40) * 30, scale: Math.max(0.4, 1 - dist / 50), dist, relAngle: rel };
   };
 
@@ -1350,9 +1376,12 @@ export default function ArFinder({ onBack }) {
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <Map size={13} color="#e8621a" style={{ flexShrink: 0 }} />
               {(!isMobile ? !mapCollapsed : true) && (
-                <span className="ar-map-header-label">
-                  {isMobile ? (mapCollapsed ? "Show Floor Map" : "Hide Floor Map") : "Floor Map"}
-                </span>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span className="ar-map-header-label">
+                    {isMobile ? (mapCollapsed ? "Show Floor Map" : "Hide Floor Map") : "Floor Map"}
+                  </span>
+                  <span style={{ fontSize: "9px", color: "#94a3b8", fontWeight: 600 }}>Use map to navigate · AR confirms direction</span>
+                </div>
               )}
             </div>
             {(!isMobile ? !mapCollapsed : true) && (
