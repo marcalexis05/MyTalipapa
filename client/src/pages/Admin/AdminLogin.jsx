@@ -148,7 +148,7 @@ export default function AdminLogin() {
           ← Back
         </button>
 
-        <div className="w-full max-w-sm relative z-10">
+        <div className="w-full sm:max-w-[450px] relative z-10 px-2 sm:px-0">
 
           <div className="login-logo flex flex-col items-center mb-8">
             <div className="login-logo-icon w-20 h-20 rounded-2xl flex items-center justify-center mb-4" style={{ backgroundColor: '#1a5c2a' }}>
@@ -177,7 +177,7 @@ export default function AdminLogin() {
                     onChange={e => setEmail(e.target.value)}
                     placeholder="admin@mytalipapa.com"
                     required
-                    className="flex-1 bg-transparent text-sm focus:outline-none"
+                    className="flex-1 bg-transparent text-base sm:text-sm focus:outline-none w-full"
                   />
                 </div>
               </div>
@@ -192,7 +192,7 @@ export default function AdminLogin() {
                     onChange={e => setPassword(e.target.value)}
                     placeholder="••••••••"
                     required
-                    className="flex-1 bg-transparent text-sm focus:outline-none"
+                    className="flex-1 bg-transparent text-base sm:text-sm focus:outline-none w-full"
                   />
                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="clear-btn text-gray-400">
                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -203,7 +203,7 @@ export default function AdminLogin() {
               <button
                 type="submit"
                 disabled={loading}
-                className="submit-btn w-full py-3.5 mt-2 rounded-xl text-white font-bold text-sm disabled:opacity-60 flex items-center justify-center gap-2"
+                className="submit-btn w-full py-3.5 mt-4 rounded-xl text-white font-bold text-base sm:text-sm disabled:opacity-60 flex items-center justify-center gap-2"
                 style={{ backgroundColor: '#1a5c2a' }}
               >
                 {loading ? (
