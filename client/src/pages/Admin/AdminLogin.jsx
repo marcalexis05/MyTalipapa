@@ -40,12 +40,6 @@ const loginStyles = `
   .login-error {
     animation: slideInDown 0.3s ease both;
   }
-  .role-btn {
-    transition: background-color 0.2s ease, color 0.2s ease, transform 0.15s ease, box-shadow 0.15s ease;
-  }
-  .role-btn:active {
-    transform: scale(0.96);
-  }
   .input-field {
     transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
   }
@@ -86,42 +80,16 @@ const loginStyles = `
   .back-btn:hover {
     transform: translateX(-2px);
   }
-  .footer-link {
-    transition: opacity 0.2s ease;
-  }
-  .footer-link:hover {
-    opacity: 0.75;
-  }
 `
 
-export default function Login() {
+export default function AdminLogin() {
   const navigate = useNavigate();
-  const [role, setRole] = useState('renter');
-  const [clickCount, setClickCount] = useState(0);
-  const [lastClickTime, setLastClickTime] = useState(0);
+  const role = 'admin';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [showModal, setShowModal] = useState(false);
-  const [modalEmail, setModalEmail] = useState('');
-  const [modalPassword, setModalPassword] = useState('');
-  
-
-  const handleLogoClick = () => {
-    const now = Date.now();
-    if (now - lastClickTime < 500) {
-      const newCount = clickCount + 1;
-      setClickCount(newCount);
-      if (newCount === 4) {
-        navigate('/admin-login');
-      }
-    } else {
-      setClickCount(0);
-    }
-    setLastClickTime(now);
-  };
 
   async function handleLogin(e) {
     e.preventDefault()
@@ -138,18 +106,6 @@ export default function Login() {
       const result = await response.json()
 
       if (!response.ok) {
-        // Backend may return 403 for two reasons:
-        // 1) mustChangePassword flag (contractor login with password change required)
-        // 2) role‑mismatch errors (e.g., "This is a renter account")
-        if (result.mustChangePassword) {
-          // Show password‑change modal
-          setShowModal(true);
-          setModalEmail(email);
-          setModalPassword(password);
-          setLoading(false);
-          return;
-        }
-        // Otherwise treat as a normal error
         setError(result.error || 'Login failed');
         setLoading(false);
         return;
@@ -159,20 +115,9 @@ export default function Login() {
       localStorage.setItem('authToken', result.token);
       localStorage.setItem('user', JSON.stringify(result.user));
 
-      // If renter, ensure email is verified
-      if (result.user && result.user.role === 'renter' && !result.user.isVerified) {
-        setError('Please verify your email before logging in.');
-        setLoading(false);
-        return;
-      }
-
-      // Redirect based on role
-      if (result.user && result.user.role === 'renter') {
-        window.location.href = '/renter/dashboard';
-      } else if (result.user && result.user.role === 'admin') {
+      // Redirect to admin dashboard
+      if (result.user && result.user.role === 'admin') {
         window.location.href = '/admin/dashboard';
-      } else {
-        window.location.href = '/contractor/dashboard';
       }
 
     } catch (err) {
@@ -197,7 +142,7 @@ export default function Login() {
         <div className="absolute inset-0" style={{ backgroundColor: 'rgba(0,0,0,0.55)' }} />
 
         <button
-          onClick={() => navigate('/')}
+          onClick={() => navigate('/login')}
           className="back-btn absolute top-4 left-4 z-10 flex items-center gap-1 text-sm font-semibold bg-[#1a5c2a] rounded-md shadow p-2 text-white hover:bg-[#163721] transition-colors"
         >
           ← Back
@@ -206,36 +151,16 @@ export default function Login() {
         <div className="w-full max-w-sm relative z-10">
 
           <div className="login-logo flex flex-col items-center mb-8">
-            <div 
-              className="login-logo-icon w-20 h-20 rounded-2xl flex items-center justify-center mb-4 cursor-pointer" 
-              style={{ backgroundColor: '#1a5c2a' }}
-              onClick={handleLogoClick}
-            >
+            <div className="login-logo-icon w-20 h-20 rounded-2xl flex items-center justify-center mb-4" style={{ backgroundColor: '#1a5c2a' }}>
               <img src="/logo.png" alt="MyTalipapa Logo" className="h-12 w-auto object-contain" />
             </div>
             <h1 className="text-3xl font-bold text-white drop-shadow">MyTalipapa</h1>
             <p className="text-xs tracking-widest text-gray-300 mt-1 uppercase">
-              {role === 'renter' ? 'Vendor Portal' : role === 'admin' ? 'Admin Portal' : 'Contractor Portal'}
+              Admin Login
             </p>
           </div>
 
           <div className="login-card bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl p-6">
-
-            <div className="flex rounded-xl overflow-hidden border border-gray-200 mb-6">
-              {['renter', 'contractor'].map((r) => (
-                <button
-                  key={r}
-                  onClick={() => setRole(r)}
-                  className="role-btn flex-1 py-2.5 text-sm font-semibold disabled:opacity-50"
-                  style={{
-                    backgroundColor: role === r ? '#1a5c2a' : 'white',
-                    color: role === r ? 'white' : '#6b7280'
-                  }}
-                >
-                  {r.charAt(0).toUpperCase() + r.slice(1)}
-                </button>
-              ))}
-            </div>
 
             {error && (
               <div className="login-error mb-4 p-3 rounded-xl bg-red-50 text-red-600 text-sm">{error}</div>
@@ -250,7 +175,7 @@ export default function Login() {
                     type="email"
                     value={email}
                     onChange={e => setEmail(e.target.value)}
-                    placeholder="name@example.com"
+                    placeholder="admin@mytalipapa.com"
                     required
                     className="flex-1 bg-transparent text-sm focus:outline-none"
                   />
@@ -273,15 +198,12 @@ export default function Login() {
                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
-                <div className="text-right mt-1.5">
-                  <Link to="/forgot-password" className="text-xs font-medium" style={{ color: '#f97316' }}>Forgot Password?</Link>
-                </div>
               </div>
 
               <button
                 type="submit"
                 disabled={loading}
-                className="submit-btn w-full py-3.5 rounded-xl text-white font-bold text-sm disabled:opacity-60 flex items-center justify-center gap-2"
+                className="submit-btn w-full py-3.5 mt-2 rounded-xl text-white font-bold text-sm disabled:opacity-60 flex items-center justify-center gap-2"
                 style={{ backgroundColor: '#1a5c2a' }}
               >
                 {loading ? (
@@ -294,44 +216,13 @@ export default function Login() {
                   </>
                 ) : (
                   <>
-                    {role === 'renter' ? 'Login' : 'Login to Dashboard'}
+                    Secure Login
                     <span>→</span>
                   </>
                 )}
               </button>
             </form>
 
-            <div className="flex items-center gap-3 my-5">
-              <div className="flex-1 h-px bg-gray-200" />
-              <div className="flex-1 h-px bg-gray-200" />
-            </div>
-
-            <p className="text-center text-sm text-gray-500 mt-5">
-              Don't have an account?{' '}
-              <a href="/register" style={{ color: '#1a5c2a' }} className="font-semibold">Register</a>
-            </p>
-          </div>
-
-          <div className="flex justify-center gap-6 mt-6">
-            <a href="#" className="footer-link text-xs text-gray-300 hover:text-white transition">Help Center</a>
-            <a href="#" className="footer-link text-xs text-gray-300 hover:text-white transition">Privacy Policy</a>
-            {showModal && (
-              <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-                <div className="bg-white rounded-xl p-6 shadow-xl max-w-sm w-full animate-fadeSlideUp" style={{ animation: 'fadeSlideUp 0.45s cubic-bezier(0.22,1,0.36,1) both' }}>
-                  <h2 className="text-lg font-semibold mb-4 text-center" style={{ color: '#1a5c2a' }}>You need to set a new password</h2>
-                  <p className="mb-4 text-center text-gray-600">For security reasons, please set a new password before continuing.</p>
-                  <button type="button"
-                    onClick={() => {
-                      navigate('/set-new-password', { state: { email: modalEmail, password: modalPassword } });
-                      setShowModal(false);
-                    }}
-                    className="w-full py-2 rounded bg-[#1a5c2a] text-white hover:bg-[#163721] transition"
-                  >
-                    Set New Password
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>
