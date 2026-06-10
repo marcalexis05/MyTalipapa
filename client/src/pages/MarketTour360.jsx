@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 
-
-
 import { useNavigate, useLocation } from 'react-router-dom'
+import mapImage from '../images/map.png'
+import { SVG_STALL_COORDS } from '../utils/coords_dict'
 import {
   ArrowLeft,
   X,
@@ -645,27 +645,38 @@ export default function MarketTour360() {
     return new THREE.CanvasTexture(canvas)
   }
 
+  const getCleanDbStallNumber = (rawId) => {
+    return String(rawId)
+      .replace(/\(u\d*\)/gi, '')
+      .replace(/Stall\s*#/gi, '')
+      .replace('#', '')
+      .trim()
+      .toLowerCase()
+      .replace(/^0+(?=\d)/, '');
+  };
+
   // Node Graph to map stalls/hallways to Map X,Y coordinates
-  const getNodeCoordinates = (stall) => {
-    // A simulated node graph for the floor plan connecting the 360 images
-    const num = parseInt(String(stall.id).replace(/[^0-9]/g, '')) || 1;
-    let x = 50;
-    let y = 50;
+  const getRawCoordinates = (stall) => {
+    const cleanNum = getCleanDbStallNumber(stall.id);
+    const category = activeSectionKey;
+    const zoneLetter = String(stall.zone || '').replace('Zone ', '').toUpperCase();
+    const isBottomZone = ['E', 'F', 'G', 'H'].includes(zoneLetter);
+    const yOffset = isBottomZone ? 250 : 0;
     
-    if (stall.zone === 'Zone A') { x = 20 + (num % 5) * 5; y = 20 + (num % 4) * 5; }
-    else if (stall.zone === 'Zone B') { x = 40 + (num % 5) * 5; y = 20 + (num % 4) * 5; }
-    else if (stall.zone === 'Zone C') { x = 60 + (num % 5) * 5; y = 20 + (num % 4) * 5; }
-    else if (stall.zone === 'Zone D') { x = 80 + (num % 5) * 5; y = 20 + (num % 4) * 5; }
-    else if (stall.zone === 'Zone E') { x = 20 + (num % 5) * 5; y = 60 + (num % 4) * 5; }
-    else if (stall.zone === 'Zone F') { x = 40 + (num % 5) * 5; y = 60 + (num % 4) * 5; }
-    else if (stall.zone === 'Zone G') { x = 60 + (num % 5) * 5; y = 60 + (num % 4) * 5; }
-    else if (stall.zone === 'Zone H') { x = 80 + (num % 5) * 5; y = 60 + (num % 4) * 5; }
-    else { x = 50 + (num % 10) * 2; y = 50 + (num % 10) * 2; }
-    
-    // ensure within map bounds
-    x = Math.max(10, Math.min(90, x));
-    y = Math.max(10, Math.min(90, y));
-    
+    let x = 1020;
+    let y = 635 + yOffset;
+
+    const rawKey = `${category}-${stall.id}`;
+    const cleanKey = `${category}-${cleanNum}`;
+
+    if (SVG_STALL_COORDS[rawKey]) {
+      x = SVG_STALL_COORDS[rawKey].x;
+      y = SVG_STALL_COORDS[rawKey].y + yOffset;
+    } else if (SVG_STALL_COORDS[cleanKey]) {
+      x = SVG_STALL_COORDS[cleanKey].x;
+      y = SVG_STALL_COORDS[cleanKey].y + yOffset;
+    }
+
     return { x, y };
   };
 
@@ -675,22 +686,24 @@ export default function MarketTour360() {
     hotspotMeshes.current.forEach((mesh) => scene.remove(mesh))
     hotspotMeshes.current = []
 
-    // Next Arrow Hotspot (Forward-Right on the floor)
+    // Next Arrow Hotspot (Forward on the floor)
     const nextTex = createHotspotTexture(THREE, 'nav', 'next')
     const nextMat = new THREE.MeshBasicMaterial({ map: nextTex, transparent: true, depthTest: false })
     const nextMesh = new THREE.Mesh(new THREE.PlaneGeometry(80, 80), nextMat)
-    nextMesh.rotation.x = -Math.PI / 2 // Lie flat on the floor
-    nextMesh.position.set(120, -250, -200) // Lowered to the floor level
+    // Rotate to lie flat on the floor AND point forward (+X)
+    nextMesh.rotation.set(-Math.PI / 2, 0, -Math.PI / 2)
+    nextMesh.position.set(250, -350, 0) // Forward and deep on floor
     nextMesh.userData = { type: 'next', label: 'Next' }
     scene.add(nextMesh)
     hotspotMeshes.current.push(nextMesh)
 
-    // Previous Arrow Hotspot (Forward-Left on the floor)
+    // Previous Arrow Hotspot (Backward on the floor)
     const prevTex = createHotspotTexture(THREE, 'nav', 'prev')
     const prevMat = new THREE.MeshBasicMaterial({ map: prevTex, transparent: true, depthTest: false })
     const prevMesh = new THREE.Mesh(new THREE.PlaneGeometry(80, 80), prevMat)
-    prevMesh.rotation.x = -Math.PI / 2 // Lie flat on the floor
-    prevMesh.position.set(-120, -250, -200) // Lowered to the floor level
+    // Rotate to lie flat on the floor AND point backward (-X)
+    prevMesh.rotation.set(-Math.PI / 2, 0, Math.PI / 2)
+    prevMesh.position.set(-250, -350, 0) // Backward and deep on floor
     prevMesh.userData = { type: 'prev', label: 'Previous' }
     scene.add(prevMesh)
     hotspotMeshes.current.push(prevMesh)
@@ -1119,34 +1132,19 @@ export default function MarketTour360() {
       {/* MINI MAP OVERLAY */}
       {uiVisible && (
         <div className="absolute bottom-36 left-4 md:bottom-6 md:left-6 w-32 h-32 md:w-48 md:h-48 bg-white/90 backdrop-blur-md border border-black/20 shadow-2xl rounded-2xl overflow-hidden z-30 transition-all duration-300">
-          <div className="relative w-full h-full bg-slate-200">
-            <img src="/export360/map.png" alt="Floor Plan" className="w-full h-full object-contain" />
-            
-            {/* Red Dot indicating user position */}
-            <div 
-              className="absolute w-3 h-3 bg-red-600 rounded-full shadow-[0_0_8px_rgba(220,38,38,0.8)] -translate-x-1/2 -translate-y-1/2 transition-all duration-700 ease-in-out z-10"
-              style={{ 
-                left: `${getNodeCoordinates(currentStall).x}%`, 
-                top: `${getNodeCoordinates(currentStall).y}%` 
-              }}
-            >
-              {/* View Cone */}
-              <div 
-                className="absolute pointer-events-none"
-                style={{ 
-                  bottom: '50%',
-                  left: '50%',
-                  marginLeft: '-25px',
-                  width: '0', 
-                  height: '0', 
-                  borderLeft: '25px solid transparent',
-                  borderRight: '25px solid transparent',
-                  borderTop: '50px solid rgba(239, 68, 68, 0.4)',
-                  transform: `rotate(${compassAngle}deg)`,
-                  transformOrigin: '50% 100%'
-                }}
-              />
-            </div>
+          <div className="relative w-full h-full bg-slate-200 flex items-center justify-center overflow-hidden">
+            <svg viewBox="0 0 2305 1824" preserveAspectRatio="xMidYMid meet" className="w-full h-full drop-shadow-xl pointer-events-none">
+              <image href={mapImage} x="-20" y="-15" width="2305" height="1824" preserveAspectRatio="none" />
+              
+              {/* View Cone and Dot positioned dynamically */}
+              <g transform={`translate(${getRawCoordinates(currentStall).x}, ${getRawCoordinates(currentStall).y})`}>
+                <path d="M0 0 L-100 -200 A200 200 0 0 1 100 -200 Z" fill="rgba(239, 68, 68, 0.4)" transform={`rotate(${compassAngle})`} />
+                <circle r="30" fill="#ef4444" stroke="#ffffff" strokeWidth="8" />
+                <g transform={`rotate(${compassAngle})`}>
+                   <path d="M0 -20 L15 15 L0 5 L-15 15 Z" fill="#ffffff" />
+                </g>
+              </g>
+            </svg>
           </div>
         </div>
       )}
