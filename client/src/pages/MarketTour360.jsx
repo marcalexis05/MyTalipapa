@@ -638,7 +638,8 @@ export default function MarketTour360() {
       ctx.fillText('i', 64, 61)
     } else {
       ctx.font = 'bold 36px sans-serif'
-      ctx.fillText(label === 'next' ? '➔' : '◀', 64, 62)
+      // Use an UP arrow so when laid flat on the floor, it points forward
+      ctx.fillText('↑', 64, 62)
     }
 
     return new THREE.CanvasTexture(canvas)
@@ -674,25 +675,25 @@ export default function MarketTour360() {
     hotspotMeshes.current.forEach((mesh) => scene.remove(mesh))
     hotspotMeshes.current = []
 
-    // Next Arrow Hotspot (Forward-Right)
+    // Next Arrow Hotspot (Forward-Right on the floor)
     const nextTex = createHotspotTexture(THREE, 'nav', 'next')
-    const nextMat = new THREE.SpriteMaterial({ map: nextTex, transparent: true, depthTest: false })
-    const nextSprite = new THREE.Sprite(nextMat)
-    nextSprite.position.set(150, -40, -150)
-    nextSprite.scale.set(30, 30, 1)
-    nextSprite.userData = { type: 'next', label: 'Next' }
-    scene.add(nextSprite)
-    hotspotMeshes.current.push(nextSprite)
+    const nextMat = new THREE.MeshBasicMaterial({ map: nextTex, transparent: true, depthTest: false })
+    const nextMesh = new THREE.Mesh(new THREE.PlaneGeometry(80, 80), nextMat)
+    nextMesh.rotation.x = -Math.PI / 2 // Lie flat on the floor
+    nextMesh.position.set(120, -250, -200) // Lowered to the floor level
+    nextMesh.userData = { type: 'next', label: 'Next' }
+    scene.add(nextMesh)
+    hotspotMeshes.current.push(nextMesh)
 
-    // Previous Arrow Hotspot (Forward-Left)
+    // Previous Arrow Hotspot (Forward-Left on the floor)
     const prevTex = createHotspotTexture(THREE, 'nav', 'prev')
-    const prevMat = new THREE.SpriteMaterial({ map: prevTex, transparent: true, depthTest: false })
-    const prevSprite = new THREE.Sprite(prevMat)
-    prevSprite.position.set(-150, -40, -150)
-    prevSprite.scale.set(30, 30, 1)
-    prevSprite.userData = { type: 'prev', label: 'Previous' }
-    scene.add(prevSprite)
-    hotspotMeshes.current.push(prevSprite)
+    const prevMat = new THREE.MeshBasicMaterial({ map: prevTex, transparent: true, depthTest: false })
+    const prevMesh = new THREE.Mesh(new THREE.PlaneGeometry(80, 80), prevMat)
+    prevMesh.rotation.x = -Math.PI / 2 // Lie flat on the floor
+    prevMesh.position.set(-120, -250, -200) // Lowered to the floor level
+    prevMesh.userData = { type: 'prev', label: 'Previous' }
+    scene.add(prevMesh)
+    hotspotMeshes.current.push(prevMesh)
   }
 
   // Main Three.js Init
@@ -1117,7 +1118,7 @@ export default function MarketTour360() {
 
       {/* MINI MAP OVERLAY */}
       {uiVisible && (
-        <div className="absolute bottom-36 right-4 md:bottom-32 md:right-6 w-32 h-32 md:w-48 md:h-48 bg-white/90 backdrop-blur-md border border-black/20 shadow-2xl rounded-2xl overflow-hidden z-30 transition-all duration-300">
+        <div className="absolute bottom-36 left-4 md:bottom-6 md:left-6 w-32 h-32 md:w-48 md:h-48 bg-white/90 backdrop-blur-md border border-black/20 shadow-2xl rounded-2xl overflow-hidden z-30 transition-all duration-300">
           <div className="relative w-full h-full bg-slate-200">
             <img src="/export360/map.png" alt="Floor Plan" className="w-full h-full object-contain" />
             
