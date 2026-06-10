@@ -9,21 +9,24 @@ import mapImage from '../images/map.png'
 const generateHallwayNodes = () => {
   const nodes = []
   const total = 34
-  // We distribute them roughly around a path for the MVP
-  // Using some coords from ArFinder
+  const X_CORRIDORS = [30, 265, 530, 790, 1050, 1300, 1570, 1845, 2120]
+  const Y_PATHWAYS = [100, 300, 500, 700, 910, 1100, 1300, 1500, 1720]
+  
+  // Create a structured path covering main aisles
   const pathCoords = [
-    {x: 1050, y: 1720}, {x: 1050, y: 1500}, {x: 1050, y: 1300}, {x: 1050, y: 1100}, {x: 1050, y: 910},
-    {x: 790, y: 910}, {x: 530, y: 910}, {x: 265, y: 910}, {x: 30, y: 910},
-    {x: 30, y: 700}, {x: 30, y: 500}, {x: 30, y: 300}, {x: 30, y: 100},
-    {x: 265, y: 100}, {x: 530, y: 100}, {x: 790, y: 100}, {x: 1050, y: 100},
-    {x: 1300, y: 100}, {x: 1570, y: 100}, {x: 1845, y: 100}, {x: 2120, y: 100},
-    {x: 2120, y: 300}, {x: 2120, y: 500}, {x: 2120, y: 700}, {x: 2120, y: 910},
-    {x: 1845, y: 910}, {x: 1570, y: 910}, {x: 1300, y: 910},
-    {x: 1300, y: 1100}, {x: 1300, y: 1300}, {x: 1300, y: 1500}, {x: 1300, y: 1720},
-    {x: 1570, y: 1720}, {x: 1845, y: 1720}
+    {x: 1050, y: 1720}, {x: 1050, y: 1500}, {x: 1050, y: 1300}, {x: 1050, y: 1100}, {x: 1050, y: 910}, // Up center
+    {x: 1300, y: 910}, {x: 1570, y: 910}, {x: 1845, y: 910}, {x: 2120, y: 910}, // Right across middle
+    {x: 2120, y: 1100}, {x: 2120, y: 1300}, {x: 2120, y: 1500}, {x: 2120, y: 1720}, // Down right edge
+    {x: 1845, y: 1720}, {x: 1570, y: 1720}, {x: 1300, y: 1720}, // Left along bottom right
+    {x: 1300, y: 1500}, {x: 1300, y: 1300}, {x: 1300, y: 1100}, {x: 1570, y: 1100}, // Snake around
+    {x: 1570, y: 1300}, {x: 1570, y: 1500}, {x: 1845, y: 1500}, {x: 1845, y: 1300},
+    {x: 1845, y: 1100}, {x: 2120, y: 700}, {x: 2120, y: 500}, {x: 2120, y: 300}, {x: 2120, y: 100}, // Top right
+    {x: 1845, y: 100}, {x: 1570, y: 100}, {x: 1300, y: 100}, {x: 1050, y: 100}, // Top middle
+    {x: 1050, y: 300}, {x: 1050, y: 500}, {x: 1050, y: 700} // Down center
   ]
 
   for (let i = 1; i <= total; i++) {
+    // If we have more images than coordinates, we loop the coordinates safely
     const coord = pathCoords[(i - 1) % pathCoords.length]
     nodes.push({
       id: `hallway${i}`,
@@ -70,15 +73,19 @@ export default function StreetViewTour() {
 
   // Navigation Logic
   const handleNextNode = () => {
-    const nextIdx = (currentNodeIndex + 1) % HALLWAY_NODES.length
-    setCurrentNodeIndex(nextIdx)
-    triggerSceneTransition(HALLWAY_NODES[nextIdx].imagePath, nextIdx)
+    setCurrentNodeIndex(prev => {
+      const nextIdx = (prev + 1) % HALLWAY_NODES.length
+      triggerSceneTransition(HALLWAY_NODES[nextIdx].imagePath, nextIdx)
+      return nextIdx
+    })
   }
 
   const handlePrevNode = () => {
-    const prevIdx = (currentNodeIndex - 1 + HALLWAY_NODES.length) % HALLWAY_NODES.length
-    setCurrentNodeIndex(prevIdx)
-    triggerSceneTransition(HALLWAY_NODES[prevIdx].imagePath, prevIdx)
+    setCurrentNodeIndex(prev => {
+      const prevIdx = (prev - 1 + HALLWAY_NODES.length) % HALLWAY_NODES.length
+      triggerSceneTransition(HALLWAY_NODES[prevIdx].imagePath, prevIdx)
+      return prevIdx
+    })
   }
 
   // Pre-load texture helper
