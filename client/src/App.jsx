@@ -20,7 +20,7 @@ import AdminSecurity from './pages/Admin/AdminSecurity'
 import AdminMessages from './pages/Admin/AdminMessages'
 import ContractorSecurity from './pages/Contractor/ContractorSecurity'
 import RenterLayout from './pages/Renter/Renterlayout'
-import MarketTour360 from './pages/MarketTour360'
+import StreetViewTour from './pages/StreetViewTour'
 import AdminRequests from './pages/Admin/AdminRequests'
 import ContractorRequests from './pages/Contractor/ContractorRequests'
 import AdminLayout from './components/AdminLayout'
@@ -63,9 +63,9 @@ export default function App() {
           <Route path="/admin/*" element={<AdminDashboard />} />
         </Route>
 
-        <Route path="/renter/market-tour" element={<MarketTour360 />} />
+        <Route path="/renter/market-tour" element={<StreetViewTour />} />
         <Route path="/renter/*" element={<RenterLayout />} />
-        <Route path="/tour" element={<MarketTour360 />} />
+        <Route path="/tour" element={<StreetViewTour />} />
       </Routes>
     </BrowserRouter>
   )
