@@ -206,9 +206,11 @@ export default function StreetViewTour() {
 
       const onPointerDownClick = (e) => {
         const rect = renderer.domElement.getBoundingClientRect()
-        const touch = (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0])
+        const touch = e.changedTouches ? e.changedTouches[0] : (e.touches ? e.touches[0] : null)
         const clientX = touch ? touch.clientX : e.clientX
         const clientY = touch ? touch.clientY : e.clientY
+
+        if (clientX === undefined || clientY === undefined) return
 
         mouse.x = ((clientX - rect.left) / rect.width) * 2 - 1
         mouse.y = -((clientY - rect.top) / rect.height) * 2 + 1
@@ -227,18 +229,23 @@ export default function StreetViewTour() {
       renderer.domElement.addEventListener('touchend', onPointerDownClick)
 
       // Drag to pan
-      let startX, startY, startTheta, startPhi
+      let startX = 0, startY = 0, startTheta = 0, startPhi = 0
       const onPointerDownPan = (e) => {
         isDragging.current = true
-        startX = e.clientX || e.touches[0].clientX
-        startY = e.clientY || e.touches[0].clientY
+        const touch = e.touches ? e.touches[0] : null
+        startX = touch ? touch.clientX : e.clientX
+        startY = touch ? touch.clientY : e.clientY
         startTheta = spherical.current.theta
         startPhi = spherical.current.phi
       }
       const onPointerMovePan = (e) => {
         if (!isDragging.current) return
-        const x = e.clientX || e.touches[0].clientX
-        const y = e.clientY || e.touches[0].clientY
+        const touch = e.touches ? e.touches[0] : null
+        const x = touch ? touch.clientX : e.clientX
+        const y = touch ? touch.clientY : e.clientY
+        
+        if (x === undefined || y === undefined) return
+
         const dx = x - startX
         const dy = y - startY
         spherical.current.theta = startTheta - dx * 0.005
