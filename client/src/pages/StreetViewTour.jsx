@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, X, Maximize2, RotateCcw, ZoomIn, ZoomOut, Compass, Map as MapIcon, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Navigation
 } from 'lucide-react'
-import mapImage from '../../images/map.png'
+import mapImage from '../images/map.png'
 
 // Generate a sequence of hallway nodes mapping to images
 const generateHallwayNodes = () => {
