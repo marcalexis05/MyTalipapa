@@ -358,6 +358,7 @@ export default function MarketTour360() {
   const [sectionDropdownOpen, setSectionDropdownOpen] = useState(false)
   const [privacyMode, setPrivacyMode] = useState(true)
   const [stallDropdownOpen, setStallDropdownOpen] = useState(false)
+  const [isMapExpanded, setIsMapExpanded] = useState(false) // NEW State for split-screen map
 
   // Floating Tooltip State
   const [hoveredHotspot, setHoveredHotspot] = useState(null)
@@ -630,16 +631,49 @@ export default function MarketTour360() {
     ctx.stroke()
 
     // Center icon/symbol
-    ctx.fillStyle = '#ffffff'
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
     if (type === 'info') {
+      ctx.fillStyle = '#ffffff'
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
       ctx.font = 'bold italic 36px Georgia, serif'
       ctx.fillText('i', 64, 61)
-    } else {
-      ctx.font = 'bold 36px sans-serif'
-      // Use an UP arrow so when laid flat on the floor, it points forward
-      ctx.fillText('↑', 64, 62)
+    } else if (type === 'nav') {
+      // Google Street View style painted floor chevron
+      ctx.clearRect(0, 0, 128, 128)
+      
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.85)'
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.5)'
+      ctx.shadowBlur = 8
+      ctx.shadowOffsetY = 3
+
+      ctx.beginPath()
+      if (label === 'next') {
+        // Thick wide chevron pointing UP
+        ctx.moveTo(64, 20)
+        ctx.lineTo(110, 60)
+        ctx.lineTo(90, 75)
+        ctx.lineTo(64, 50)
+        ctx.lineTo(38, 75)
+        ctx.lineTo(18, 60)
+      } else {
+        // Thick wide chevron pointing DOWN
+        ctx.moveTo(64, 108)
+        ctx.lineTo(110, 68)
+        ctx.lineTo(90, 53)
+        ctx.lineTo(64, 78)
+        ctx.lineTo(38, 53)
+        ctx.lineTo(18, 68)
+      }
+      ctx.closePath()
+      ctx.fill()
+      
+      // Faint ellipse ring around it
+      ctx.shadowColor = 'transparent'
+      ctx.beginPath()
+      ctx.ellipse(64, 64, 55, 55, 0, 0, 2 * Math.PI)
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)'
+      ctx.lineWidth = 4
+      ctx.stroke()
     }
 
     return new THREE.CanvasTexture(canvas)
@@ -689,7 +723,7 @@ export default function MarketTour360() {
     // Next Arrow Hotspot (Forward on the floor)
     const nextTex = createHotspotTexture(THREE, 'nav', 'next')
     const nextMat = new THREE.MeshBasicMaterial({ map: nextTex, transparent: true, depthTest: false })
-    const nextMesh = new THREE.Mesh(new THREE.PlaneGeometry(80, 80), nextMat)
+    const nextMesh = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), nextMat)
     // Rotate to lie flat on the floor AND point forward (+X)
     nextMesh.rotation.set(-Math.PI / 2, 0, -Math.PI / 2)
     nextMesh.position.set(250, -350, 0) // Forward and deep on floor
@@ -700,7 +734,7 @@ export default function MarketTour360() {
     // Previous Arrow Hotspot (Backward on the floor)
     const prevTex = createHotspotTexture(THREE, 'nav', 'prev')
     const prevMat = new THREE.MeshBasicMaterial({ map: prevTex, transparent: true, depthTest: false })
-    const prevMesh = new THREE.Mesh(new THREE.PlaneGeometry(80, 80), prevMat)
+    const prevMesh = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), prevMat)
     // Rotate to lie flat on the floor AND point backward (-X)
     prevMesh.rotation.set(-Math.PI / 2, 0, Math.PI / 2)
     prevMesh.position.set(-250, -350, 0) // Backward and deep on floor
@@ -979,7 +1013,7 @@ export default function MarketTour360() {
       {/* 360 ThreeJS Viewer Mount */}
       <div
         ref={mountRef}
-        className="absolute inset-0 w-full h-full transition-all duration-300"
+        className={`absolute top-0 left-0 w-full transition-all duration-500 ease-in-out ${isMapExpanded ? 'h-1/2' : 'h-full'}`}
         style={{ cursor, filter: privacyMode ? 'blur(6px) contrast(1.05)' : 'none' }}
       />
 
@@ -1012,7 +1046,7 @@ export default function MarketTour360() {
           className="absolute z-40 bg-white/95 text-slate-800 text-xs font-bold px-3 py-1.5 rounded-xl pointer-events-none shadow-xl border border-black/10 -translate-x-1/2 -translate-y-12 backdrop-blur-sm transition-all"
           style={{ left: mousePos.x, top: mousePos.y }}
         >
-          ➔ {hoveredHotspot.label}
+          {hoveredHotspot.label === 'Next' ? '↑' : hoveredHotspot.label === 'Previous' ? '↓' : 'i'} {hoveredHotspot.label}
         </div>
       )}
 
@@ -1129,22 +1163,55 @@ export default function MarketTour360() {
         </div>
       </div>
 
-      {/* MINI MAP OVERLAY */}
+      {/* MAP OVERLAY (Mini or Expanded) */}
       {uiVisible && (
-        <div className="absolute bottom-36 left-4 md:bottom-6 md:left-6 w-32 h-32 md:w-48 md:h-48 bg-white/90 backdrop-blur-md border border-black/20 shadow-2xl rounded-2xl overflow-hidden z-30 transition-all duration-300">
-          <div className="relative w-full h-full bg-slate-200 flex items-center justify-center overflow-hidden">
-            <svg viewBox="0 0 2305 1824" preserveAspectRatio="xMidYMid meet" className="w-full h-full drop-shadow-xl pointer-events-none">
-              <image href={mapImage} x="-20" y="-15" width="2305" height="1824" preserveAspectRatio="none" />
-              
-              {/* View Cone and Dot positioned dynamically */}
-              <g transform={`translate(${getRawCoordinates(currentStall).x}, ${getRawCoordinates(currentStall).y})`}>
-                <path d="M0 0 L-100 -200 A200 200 0 0 1 100 -200 Z" fill="rgba(239, 68, 68, 0.4)" transform={`rotate(${compassAngle})`} />
-                <circle r="30" fill="#ef4444" stroke="#ffffff" strokeWidth="8" />
-                <g transform={`rotate(${compassAngle})`}>
-                   <path d="M0 -20 L15 15 L0 5 L-15 15 Z" fill="#ffffff" />
-                </g>
-              </g>
-            </svg>
+        <div 
+          className={`absolute transition-all duration-500 ease-in-out z-30 overflow-hidden bg-slate-200 shadow-2xl 
+          ${isMapExpanded 
+            ? 'bottom-0 left-0 w-full h-1/2 rounded-t-3xl border-t-4 border-black/20' 
+            : 'bottom-36 left-4 md:bottom-6 md:left-6 w-32 h-32 md:w-48 md:h-48 rounded-2xl border border-black/20'
+          }`}
+        >
+          {/* Expand/Collapse Toggle Button */}
+          <button 
+            onClick={() => {
+              setIsMapExpanded(!isMapExpanded);
+              // Trigger resize events during CSS transition to smooth out 360 canvas
+              let count = 0;
+              const interval = setInterval(() => {
+                window.dispatchEvent(new Event('resize'));
+                if (count++ > 30) clearInterval(interval);
+              }, 16);
+            }}
+            className="absolute top-3 right-3 z-40 bg-white/90 backdrop-blur-md p-2 rounded-full shadow-lg border border-black/10 hover:bg-white text-slate-800 transition-all cursor-pointer active:scale-95"
+            title={isMapExpanded ? "Collapse Map" : "Expand Map"}
+          >
+            {isMapExpanded ? <ChevronDown size={18} /> : <Maximize2 size={16} />}
+          </button>
+
+          <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
+            {(() => {
+              const mapCoords = getRawCoordinates(currentStall);
+              // When expanded, show the full map (2305x1824). When collapsed, zoom in (600x600).
+              const zoomWidth = isMapExpanded ? 2305 : 600;
+              const zoomHeight = isMapExpanded ? 1824 : 600;
+              const vbX = isMapExpanded ? 0 : Math.max(0, Math.min(2305 - zoomWidth, mapCoords.x - zoomWidth / 2));
+              const vbY = isMapExpanded ? 0 : Math.max(0, Math.min(1824 - zoomHeight, mapCoords.y - zoomHeight / 2));
+              return (
+                <svg viewBox={`${vbX} ${vbY} ${zoomWidth} ${zoomHeight}`} preserveAspectRatio="xMidYMid meet" className="w-full h-full drop-shadow-xl pointer-events-none transition-all duration-700 ease-in-out">
+                  <image href={mapImage} x="-20" y="-15" width="2305" height="1824" preserveAspectRatio="none" />
+                  
+                  {/* View Cone and Dot positioned dynamically */}
+                  <g transform={`translate(${mapCoords.x}, ${mapCoords.y})`}>
+                    <path d="M0 0 L-100 -200 A200 200 0 0 1 100 -200 Z" fill="rgba(239, 68, 68, 0.4)" transform={`rotate(${compassAngle})`} />
+                    <circle r="30" fill="#ef4444" stroke="#ffffff" strokeWidth="8" />
+                    <g transform={`rotate(${compassAngle})`}>
+                       <path d="M0 -20 L15 15 L0 5 L-15 15 Z" fill="#ffffff" />
+                    </g>
+                  </g>
+                </svg>
+              );
+            })()}
           </div>
         </div>
       )}
