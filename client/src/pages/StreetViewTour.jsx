@@ -229,14 +229,12 @@ export default function StreetViewTour() {
       renderer.domElement.addEventListener('touchend', onPointerDownClick)
 
       // Drag to pan
-      let startX = 0, startY = 0, startTheta = 0, startPhi = 0
+      let lastX = 0, lastY = 0
       const onPointerDownPan = (e) => {
         isDragging.current = true
         const touch = e.touches ? e.touches[0] : null
-        startX = touch ? touch.clientX : e.clientX
-        startY = touch ? touch.clientY : e.clientY
-        startTheta = spherical.current.theta
-        startPhi = spherical.current.phi
+        lastX = touch ? touch.clientX : e.clientX
+        lastY = touch ? touch.clientY : e.clientY
       }
       const onPointerMovePan = (e) => {
         if (!isDragging.current) return
@@ -246,10 +244,13 @@ export default function StreetViewTour() {
         
         if (x === undefined || y === undefined) return
 
-        const dx = x - startX
-        const dy = y - startY
-        spherical.current.theta = startTheta - dx * 0.005
-        spherical.current.phi = Math.max(0.1, Math.min(Math.PI - 0.1, startPhi - dy * 0.005))
+        const dx = x - lastX
+        const dy = y - lastY
+        lastX = x
+        lastY = y
+
+        spherical.current.theta -= dx * 0.004
+        spherical.current.phi = Math.max(0.4, Math.min(Math.PI - 0.4, spherical.current.phi + dy * 0.004))
       }
       const onPointerUpPan = () => { isDragging.current = false }
 
