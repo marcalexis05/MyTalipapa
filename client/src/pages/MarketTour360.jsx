@@ -647,23 +647,13 @@ export default function MarketTour360() {
       ctx.shadowOffsetY = 3
 
       ctx.beginPath()
-      if (label === 'next') {
-        // Thick wide chevron pointing UP
-        ctx.moveTo(64, 20)
-        ctx.lineTo(110, 60)
-        ctx.lineTo(90, 75)
-        ctx.lineTo(64, 50)
-        ctx.lineTo(38, 75)
-        ctx.lineTo(18, 60)
-      } else {
-        // Thick wide chevron pointing DOWN
-        ctx.moveTo(64, 108)
-        ctx.lineTo(110, 68)
-        ctx.lineTo(90, 53)
-        ctx.lineTo(64, 78)
-        ctx.lineTo(38, 53)
-        ctx.lineTo(18, 68)
-      }
+      // Always draw UP chevron so it points away from origin when rotated flat
+      ctx.moveTo(64, 20)
+      ctx.lineTo(110, 60)
+      ctx.lineTo(90, 75)
+      ctx.lineTo(64, 50)
+      ctx.lineTo(38, 75)
+      ctx.lineTo(18, 60)
       ctx.closePath()
       ctx.fill()
       
@@ -850,13 +840,29 @@ export default function MarketTour360() {
         const hits = raycaster.intersectObjects(hotspotMeshes.current)
 
         if (hits.length > 0) {
-          const hovered = hits[0].object.userData
-          setHoveredHotspot(hovered)
-          if (!isDragging.current) setCursor('pointer')
-        } else {
-          setHoveredHotspot(null)
-          if (!isDragging.current) setCursor('grab')
+        const hit = hits[0]
+        
+        let dynamicLabel = hit.object.userData.label;
+        if (hit.object.userData.type === 'next' || hit.object.userData.type === 'prev') {
+          // Calculate if the arrow is generally in front of the user's view
+          const cameraDirection = new THREE.Vector3()
+          cameraRef.current.getWorldDirection(cameraDirection)
+          
+          const arrowDirection = new THREE.Vector3().copy(hit.object.position).normalize()
+          const dot = cameraDirection.dot(arrowDirection)
+          
+          dynamicLabel = dot > 0 ? 'Forward' : 'Backward'
         }
+
+        setHoveredHotspot({ 
+          ...hit.object.userData, 
+          dynamicLabel 
+        })
+        setCursor('pointer')
+      } else {
+        setHoveredHotspot(null)
+        setCursor('grab')
+      }
       }
 
       window.addEventListener('mousemove', onPointerMove)
@@ -869,9 +875,9 @@ export default function MarketTour360() {
         const z = Math.sin(phi) * Math.sin(theta)
         camera.lookAt(x, y, z)
 
-        // Sync compass rotation
+        // Sync compass rotation (adding 180 degree offset to align with map correctly)
         const deg = Math.round((theta * 180) / Math.PI) % 360
-        setCompassAngle(-deg)
+        setCompassAngle((-deg + 180) % 360)
       }
       updateCamera()
 
@@ -1046,7 +1052,7 @@ export default function MarketTour360() {
           className="absolute z-40 bg-white/95 text-slate-800 text-xs font-bold px-3 py-1.5 rounded-xl pointer-events-none shadow-xl border border-black/10 -translate-x-1/2 -translate-y-12 backdrop-blur-sm transition-all"
           style={{ left: mousePos.x, top: mousePos.y }}
         >
-          {hoveredHotspot.label === 'Next' ? '↑' : hoveredHotspot.label === 'Previous' ? '↓' : 'i'} {hoveredHotspot.label}
+          {hoveredHotspot.dynamicLabel === 'Forward' ? '↑' : hoveredHotspot.dynamicLabel === 'Backward' ? '↓' : 'i'} {hoveredHotspot.dynamicLabel || hoveredHotspot.label}
         </div>
       )}
 
