@@ -644,11 +644,55 @@ export default function MarketTour360() {
     return new THREE.CanvasTexture(canvas)
   }
 
+  // Node Graph to map stalls/hallways to Map X,Y coordinates
+  const getNodeCoordinates = (stall) => {
+    // A simulated node graph for the floor plan connecting the 360 images
+    const num = parseInt(String(stall.id).replace(/[^0-9]/g, '')) || 1;
+    let x = 50;
+    let y = 50;
+    
+    if (stall.zone === 'Zone A') { x = 20 + (num % 5) * 5; y = 20 + (num % 4) * 5; }
+    else if (stall.zone === 'Zone B') { x = 40 + (num % 5) * 5; y = 20 + (num % 4) * 5; }
+    else if (stall.zone === 'Zone C') { x = 60 + (num % 5) * 5; y = 20 + (num % 4) * 5; }
+    else if (stall.zone === 'Zone D') { x = 80 + (num % 5) * 5; y = 20 + (num % 4) * 5; }
+    else if (stall.zone === 'Zone E') { x = 20 + (num % 5) * 5; y = 60 + (num % 4) * 5; }
+    else if (stall.zone === 'Zone F') { x = 40 + (num % 5) * 5; y = 60 + (num % 4) * 5; }
+    else if (stall.zone === 'Zone G') { x = 60 + (num % 5) * 5; y = 60 + (num % 4) * 5; }
+    else if (stall.zone === 'Zone H') { x = 80 + (num % 5) * 5; y = 60 + (num % 4) * 5; }
+    else { x = 50 + (num % 10) * 2; y = 50 + (num % 10) * 2; }
+    
+    // ensure within map bounds
+    x = Math.max(10, Math.min(90, x));
+    y = Math.max(10, Math.min(90, y));
+    
+    return { x, y };
+  };
+
   // Re-populate the 3D scene with relevant Hotspots
   const recreateHotspots = (scene, stall, THREE) => {
     // Clear old sprites
     hotspotMeshes.current.forEach((mesh) => scene.remove(mesh))
     hotspotMeshes.current = []
+
+    // Next Arrow Hotspot (Forward-Right)
+    const nextTex = createHotspotTexture(THREE, 'nav', 'next')
+    const nextMat = new THREE.SpriteMaterial({ map: nextTex, transparent: true, depthTest: false })
+    const nextSprite = new THREE.Sprite(nextMat)
+    nextSprite.position.set(150, -40, -150)
+    nextSprite.scale.set(30, 30, 1)
+    nextSprite.userData = { type: 'next', label: 'Next' }
+    scene.add(nextSprite)
+    hotspotMeshes.current.push(nextSprite)
+
+    // Previous Arrow Hotspot (Forward-Left)
+    const prevTex = createHotspotTexture(THREE, 'nav', 'prev')
+    const prevMat = new THREE.SpriteMaterial({ map: prevTex, transparent: true, depthTest: false })
+    const prevSprite = new THREE.Sprite(prevMat)
+    prevSprite.position.set(-150, -40, -150)
+    prevSprite.scale.set(30, 30, 1)
+    prevSprite.userData = { type: 'prev', label: 'Previous' }
+    scene.add(prevSprite)
+    hotspotMeshes.current.push(prevSprite)
   }
 
   // Main Three.js Init
@@ -1070,6 +1114,41 @@ export default function MarketTour360() {
           </button>
         </div>
       </div>
+
+      {/* MINI MAP OVERLAY */}
+      {uiVisible && (
+        <div className="absolute bottom-36 right-4 md:bottom-32 md:right-6 w-32 h-32 md:w-48 md:h-48 bg-white/90 backdrop-blur-md border border-black/20 shadow-2xl rounded-2xl overflow-hidden z-30 transition-all duration-300">
+          <div className="relative w-full h-full bg-slate-200">
+            <img src="/export360/map.png" alt="Floor Plan" className="w-full h-full object-contain" />
+            
+            {/* Red Dot indicating user position */}
+            <div 
+              className="absolute w-3 h-3 bg-red-600 rounded-full shadow-[0_0_8px_rgba(220,38,38,0.8)] -translate-x-1/2 -translate-y-1/2 transition-all duration-700 ease-in-out z-10"
+              style={{ 
+                left: `${getNodeCoordinates(currentStall).x}%`, 
+                top: `${getNodeCoordinates(currentStall).y}%` 
+              }}
+            >
+              {/* View Cone */}
+              <div 
+                className="absolute pointer-events-none"
+                style={{ 
+                  bottom: '50%',
+                  left: '50%',
+                  marginLeft: '-25px',
+                  width: '0', 
+                  height: '0', 
+                  borderLeft: '25px solid transparent',
+                  borderRight: '25px solid transparent',
+                  borderTop: '50px solid rgba(239, 68, 68, 0.4)',
+                  transform: `rotate(${compassAngle}deg)`,
+                  transformOrigin: '50% 100%'
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* BOTTOM CENTER STALL QUICK SWITCHER CONTROLS */}
       <div className={`absolute left-1/2 -translate-x-1/2 z-20 transition-all duration-300 ${uiVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12 pointer-events-none'} ${detailsCollapsed ? 'bottom-20' : 'bottom-[330px] md:bottom-[240px]'} flex flex-col items-center gap-2.5`}>
