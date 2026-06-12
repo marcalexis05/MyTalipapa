@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 
 import { useNavigate, useLocation } from 'react-router-dom'
 import mapImage from '../images/map.png'
-import { SVG_STALL_COORDS, NORTH_OFFSETS } from '../utils/coords_dict'
+import { SVG_STALL_COORDS } from '../utils/coords_dict'
 import {
   ArrowLeft,
   X,
@@ -345,8 +345,7 @@ export default function MarketTour360() {
       console.log('[MarketTour360] findIndex result for targetStallNum:', targetStallNum, 'is index:', idx);
       if (idx !== -1) return idx;
     }
-    const emptyIdx = SECTIONS['meat'].stalls.findIndex(s => s.id === 'empty3');
-    return emptyIdx !== -1 ? emptyIdx : 0;
+    return 0;
   })
   const currentStall = activeSection.stalls[stallIndex] || activeSection.stalls[0]
 
@@ -380,7 +379,6 @@ export default function MarketTour360() {
   const lastPos = useRef({ x: 0, y: 0 })
   const spherical = useRef({ phi: Math.PI / 2, theta: 0 })
   const hotspotMeshes = useRef([])
-  const textureCache = useRef({})
   const [compassAngle, setCompassAngle] = useState(0)
 
   // Sync details sheet when stall changes
@@ -402,7 +400,7 @@ export default function MarketTour360() {
 
     const nextIdx = (stallIndex + 1) % stalls.length;
     const prevIdx = (stallIndex - 1 + stalls.length) % stalls.length;
-    
+
     const preloads = [
       getStallImagePath(stalls[nextIdx].id, activeSectionKey),
       getStallImagePath(stalls[prevIdx].id, activeSectionKey)
@@ -562,45 +560,9 @@ export default function MarketTour360() {
 
   // Pre-load texture helper with percentage progress simulation
   const triggerSceneTransition = (texturePath, preserveTheta = false) => {
-    console.log("[DEBUG] triggerSceneTransition path:", texturePath);
-    const THREE = window.THREE
-
-    if (textureCache.current[texturePath] && textureCache.current[texturePath] !== 'loading') {
-      console.log("[DEBUG] Texture hit in cache:", texturePath);
-      // Texture is fully cached, do an instant transition without spinner
-      const tex = textureCache.current[texturePath]
-      materialRef.current.map = tex
-      materialRef.current.needsUpdate = true
-
-      // Recreate Hotspots in 3D Space
-      recreateHotspots(sceneRef.current, stateRef.current.currentStall, THREE)
-
-      // Reset camera viewing angle slightly to default
-      spherical.current.phi = Math.PI / 2
-      if (!preserveTheta) {
-        spherical.current.theta = 0
-      }
-      if (cameraRef.current) {
-        cameraRef.current.fov = 70;
-        cameraRef.current.position.set(0, 0, 0.001);
-        cameraRef.current.updateProjectionMatrix();
-      }
-      
-      setLoaded(true);
-      setTransitioning(false); // FIX: Ensure we clear transitioning state!
-      return
-    }
-
     setTransitioning(true)
     setLoaded(false)
     setLoadingProgress(10)
-
-    // Safety timeout to prevent permanent stuck state
-    const safetyTimeout = setTimeout(() => {
-      console.warn("[DEBUG] TextureLoader Safety Timeout! Forcing transition complete.");
-      setLoaded(true);
-      setTransitioning(false);
-    }, 5000);
 
     // Simulate progress while loading
     const interval = setInterval(() => {
@@ -615,21 +577,18 @@ export default function MarketTour360() {
 
     if (!window.THREE || !materialRef.current || !sceneRef.current) {
       clearInterval(interval)
-      clearTimeout(safetyTimeout)
       setLoaded(true)
       setTransitioning(false)
       return
     }
 
+    const THREE = window.THREE
     new THREE.TextureLoader().load(
       texturePath,
       (tex) => {
-        console.log("[DEBUG] TextureLoader onLoad success:", texturePath);
-        clearTimeout(safetyTimeout)
-        textureCache.current[texturePath] = tex;
         clearInterval(interval)
         setLoadingProgress(100)
-        
+
         materialRef.current.map = tex
         materialRef.current.needsUpdate = true
 
@@ -652,8 +611,7 @@ export default function MarketTour360() {
       },
       null,
       (err) => {
-        console.error('[DEBUG] Failed to load panorama (onError):', err)
-        clearTimeout(safetyTimeout)
+        console.error('Failed to load panorama', err)
         clearInterval(interval)
         setLoaded(true)
         setTransitioning(false)
@@ -779,9 +737,6 @@ export default function MarketTour360() {
     let minDistance = Infinity;
 
     const sectionKeys = ['meat', 'fish', 'veggies'];
-    
-    console.log(`[DEBUG] findNearestStallInDirection from: ${currentStall.id} (${activeSectionKey})`);
-    console.log(`[DEBUG] currentCoords: x=${currentCoords.x}, y=${currentCoords.y}, compassAngle=${currentCompassAngle}`);
 
     sectionKeys.forEach((secKey) => {
       const stalls = sectionsData[secKey].stalls;
@@ -789,7 +744,7 @@ export default function MarketTour360() {
         if (secKey === activeSectionKey && stall.id === currentStall.id) return;
 
         const targetCoords = getRawCoordinates(stall, secKey);
-        
+
         const dx = targetCoords.x - currentCoords.x;
         const dy = targetCoords.y - currentCoords.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
@@ -808,7 +763,6 @@ export default function MarketTour360() {
 
         // Valid if within 45 degrees field of view
         if (angleDiff <= 45) {
-          console.log(`[DEBUG] Candidate: ${stall.id} (${secKey}) | distance=${distance.toFixed(1)}px | targetCompass=${targetCompassAngle.toFixed(1)}° | angleDiff=${angleDiff.toFixed(1)}°`);
           if (distance < minDistance) {
             minDistance = distance;
             bestMatch = { sectionKey: secKey, index: idx, stall, distance };
@@ -816,12 +770,6 @@ export default function MarketTour360() {
         }
       });
     });
-
-    if (bestMatch) {
-      console.log(`[DEBUG] Selected Best Match: ${bestMatch.stall.id} (${bestMatch.sectionKey}) at distance ${bestMatch.distance.toFixed(1)}`);
-    } else {
-      console.log(`[DEBUG] No match found.`);
-    }
 
     return bestMatch;
   };
@@ -928,24 +876,23 @@ export default function MarketTour360() {
           } else if (uData.type === 'go_forward') {
             if (uData.targetStallInfo) {
               const { sectionKey, index } = uData.targetStallInfo;
-              console.log("[DEBUG] go_forward click handler started. target:", uData.targetStallInfo);
               if (transitioning) return;
-              
+
               setTransitioning(true);
               const startFov = camera.fov;
               const targetFov = Math.max(30, startFov - 25);
               const duration = 400; // 400ms zoom animation
               const startTime = performance.now();
-              
+
               const animateForward = (time) => {
                 const elapsed = time - startTime;
                 const progress = Math.min(elapsed / duration, 1);
                 // Ease in out
                 const ease = progress < 0.5 ? 2 * progress * progress : -1 + (4 - 2 * progress) * progress;
-                
+
                 camera.fov = startFov - ((startFov - targetFov) * ease);
                 camera.updateProjectionMatrix();
-                
+
                 if (progress < 1) {
                   requestAnimationFrame(animateForward);
                 } else {
@@ -993,7 +940,7 @@ export default function MarketTour360() {
           } else if (hit.object.userData.type === 'go_forward') {
             const target = hit.object.userData.targetStallInfo;
             if (target) {
-               dynamicLabel = `Forward to ${target.stall.name || 'Stall ' + target.stall.id}`;
+              dynamicLabel = `Forward to ${target.stall.name || 'Stall ' + target.stall.id}`;
             }
           }
 
@@ -1020,19 +967,8 @@ export default function MarketTour360() {
 
         // Sync compass rotation (0 deg = North)
         const deg = Math.round((theta * 180) / Math.PI) % 360
-        
-        // Apply custom per-stall offset if defined, otherwise default to global +90 (so theta=0 (+X) aligns with map East)
-        const currentStallInfo = stateRef.current.currentStall;
-        const rawKey = `${stateRef.current.activeSectionKey}-${currentStallInfo.id}`;
-        const cleanStallId = getCleanDbStallNumber(currentStallInfo.id);
-        const cleanKey = `${stateRef.current.activeSectionKey}-${cleanStallId}`;
-        
-        let offset = 90; // Default global offset
-        if (NORTH_OFFSETS[rawKey] !== undefined) offset = NORTH_OFFSETS[rawKey];
-        else if (NORTH_OFFSETS[cleanKey] !== undefined) offset = NORTH_OFFSETS[cleanKey];
+        const compassDeg = (deg + 360) % 360; // ensure positive
 
-        const compassDeg = (deg + offset + 360) % 360;
-        
         // Optimize: Only recalculate heavy math and React state if the degree actually changed
         if (stateRef.current.lastCompassDeg !== compassDeg) {
           stateRef.current.lastCompassDeg = compassDeg;
@@ -1052,19 +988,18 @@ export default function MarketTour360() {
               const arrowX = Math.cos(theta) * 250;
               const arrowZ = Math.sin(theta) * 250;
               forwardMesh.position.set(arrowX, -350, arrowZ);
-              
+
               // Rotate the arrow to point in the direction of the camera
               forwardMesh.rotation.set(-Math.PI / 2, 0, -theta - Math.PI / 2);
               forwardMesh.userData.targetStallInfo = nearestStallInfo;
 
               // Preload target stall's image
               const targetImagePath = getStallImagePath(nearestStallInfo.stall.id, nearestStallInfo.sectionKey);
-              const THREE = window.THREE;
-              if (THREE && !textureCache.current[targetImagePath]) {
-                textureCache.current[targetImagePath] = 'loading';
-                new THREE.TextureLoader().load(targetImagePath, (tex) => {
-                  textureCache.current[targetImagePath] = tex;
-                });
+              if (!window.__preloadedPaths) window.__preloadedPaths = new Set();
+              if (!window.__preloadedPaths.has(targetImagePath)) {
+                window.__preloadedPaths.add(targetImagePath);
+                const img = new Image();
+                img.src = targetImagePath;
               }
             } else {
               forwardMesh.visible = false;

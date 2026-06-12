@@ -186,10 +186,5 @@ export const SVG_STALL_COORDS = {
   "veggies-63": { "x": 2000, "y": 1240 },
   "veggies-62": { "x": 2000, "y": 1300 },
   "veggies-61": { "x": 2000, "y": 1360 }
-};
-
-export const NORTH_OFFSETS = {
-  // Add per-stall compass offsets here if their panorama's orientation differs from the global one.
-  "meat-empty3": 315,
-  "meat-empty2": 315
+}; "meat-empty2": 315
 };
