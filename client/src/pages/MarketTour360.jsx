@@ -975,7 +975,7 @@ export default function MarketTour360() {
         if (stateRef.current.currentStall && stateRef.current.currentStall.id === '1(u)') {
           northOffset = -90; // Calibrate left turn to point to Stall #13
         } else if (stateRef.current.currentStall && upsideDownStalls.includes(stateRef.current.currentStall.id)) {
-          northOffset = 180; // Correct cone pointing DOWN instead of UP the aisle
+          northOffset = -90; // Correct cone to align with the actual camera orientation for the entire row
         }
 
         // Sync compass rotation (0 deg = North)
