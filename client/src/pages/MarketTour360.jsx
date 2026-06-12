@@ -913,7 +913,7 @@ export default function MarketTour360() {
           } else if (hit.object.userData.type === 'go_forward') {
             const target = hit.object.userData.targetStallInfo;
             if (target) {
-               dynamicLabel = `Move to ${target.stall.name || 'Stall ' + target.stall.id}`;
+               dynamicLabel = `Forward to ${target.stall.name || 'Stall ' + target.stall.id}`;
             }
           }
 
@@ -1133,14 +1133,11 @@ export default function MarketTour360() {
 
       {/* Screen Fade Transition Overlay with Loading Animation */}
       <div
-        className={`absolute inset-0 bg-black/80 backdrop-blur-md z-10 transition-all duration-300 pointer-events-none flex flex-col items-center justify-center ${transitioning ? 'opacity-100' : 'opacity-0'
+        className={`absolute inset-0 bg-black z-10 transition-all duration-300 pointer-events-none flex flex-col items-center justify-center ${transitioning ? 'opacity-100' : 'opacity-0'
           }`}
       >
-        <div className="w-12 h-12 border-4 border-[#1a5c2a]/30 border-t-[#e07b00] rounded-full animate-spin mb-4 shadow-[0_0_15px_rgba(224,123,0,0.5)]" />
-        <div className="text-white font-black tracking-widest uppercase text-xs animate-pulse drop-shadow-md">Loading Environment...</div>
-        <div className="w-48 h-1 bg-white/10 rounded-full mt-3 overflow-hidden shadow-inner">
-          <div className="h-full bg-gradient-to-r from-[#1a5c2a] to-[#e07b00] transition-all duration-100" style={{ width: `${loadingProgress}%` }} />
-        </div>
+        <div className="w-8 h-8 border-4 border-white/20 border-t-white rounded-full animate-spin mb-3" />
+        <div className="text-white font-semibold text-xs tracking-wider animate-pulse">Loading...</div>
       </div>
 
 
@@ -1151,7 +1148,7 @@ export default function MarketTour360() {
           className="absolute z-40 bg-white/95 text-slate-800 text-xs font-bold px-3 py-1.5 rounded-xl pointer-events-none shadow-xl border border-black/10 -translate-x-1/2 -translate-y-12 backdrop-blur-sm transition-all"
           style={{ left: mousePos.x, top: mousePos.y }}
         >
-          {hoveredHotspot.dynamicLabel === 'Forward' ? '↑' : hoveredHotspot.dynamicLabel === 'Backward' ? '↓' : 'i'} {hoveredHotspot.dynamicLabel || hoveredHotspot.label}
+          {hoveredHotspot.type === 'go_forward' || (hoveredHotspot.dynamicLabel && hoveredHotspot.dynamicLabel.startsWith('Forward')) ? '↑' : hoveredHotspot.dynamicLabel === 'Backward' ? '↓' : 'i'} {hoveredHotspot.dynamicLabel || hoveredHotspot.label}
         </div>
       )}
 
