@@ -608,7 +608,6 @@ export default function MarketTour360() {
       return
     }
 
-    const THREE = window.THREE
     new THREE.TextureLoader().load(
       texturePath,
       (tex) => {
