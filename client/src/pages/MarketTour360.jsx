@@ -695,7 +695,25 @@ export default function MarketTour360() {
 
     if (SVG_STALL_COORDS[rawKey]) {
       x = SVG_STALL_COORDS[rawKey].x;
-      y = SVG_STALL_COORDS[rawKey].y + yOffset;
+      
+      // Targeted fix for Stall #1 variants only (preventing double offsets and swap bugs)
+      if (category === 'meat' && cleanNum === '1') {
+        if (stall.id === '1') {
+          // '1' is in Zone E (bottom). Raw was 820, offset 250 = 1070 (wrong). True absolute is 1350.
+          y = 1350;
+        } else if (stall.id === '1(u)') {
+          // '1(u)' is in Zone A (top). Raw was 1350, offset 0 = 1350 (wrong). True absolute is 820.
+          y = 820;
+        } else if (stall.id === '1(u2)') {
+          // '1(u2)' is in Zone F (bottom). Raw was 1360, offset 250 = 1610 (wrong). True absolute is 1360.
+          y = 1360;
+        } else {
+          y = SVG_STALL_COORDS[rawKey].y + yOffset;
+        }
+      } else {
+        // Normal logic for all other stalls
+        y = SVG_STALL_COORDS[rawKey].y + yOffset;
+      }
     } else if (SVG_STALL_COORDS[cleanKey]) {
       x = SVG_STALL_COORDS[cleanKey].x;
       y = SVG_STALL_COORDS[cleanKey].y + yOffset;
