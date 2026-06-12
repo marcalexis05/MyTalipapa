@@ -749,9 +749,9 @@ export default function MarketTour360() {
         const dy = targetCoords.y - currentCoords.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
 
-        // Filter distance: max 320px so it doesn't jump through walls across the map, min 10px
-        // (320px prevents jumping the 330px gap between x=100 and x=430)
-        if (distance < 10 || distance > 320) return;
+        // Filter distance: max 410px so it doesn't jump through walls across the map, min 10px
+        // (410px allows jumping the 400px gap between x=30 and x=430 for Zone E Stall 1 to 13)
+        if (distance < 10 || distance > 410) return;
 
         const mapAngleRad = Math.atan2(dy, dx);
         const mapAngleDeg = (mapAngleRad * 180) / Math.PI;
@@ -940,7 +940,11 @@ export default function MarketTour360() {
           } else if (hit.object.userData.type === 'go_forward') {
             const target = hit.object.userData.targetStallInfo;
             if (target) {
-              dynamicLabel = `Forward to ${target.stall.name || 'Stall ' + target.stall.id}`;
+              if (stateRef.current.currentStall.id === '1(u)' && target.stall.id === '13(u)') {
+                dynamicLabel = `Go Left to ${target.stall.name || 'Stall ' + target.stall.id}`;
+              } else {
+                dynamicLabel = `Forward to ${target.stall.name || 'Stall ' + target.stall.id}`;
+              }
             }
           }
 
@@ -965,9 +969,15 @@ export default function MarketTour360() {
         const z = Math.sin(phi) * Math.sin(theta)
         camera.lookAt(x, y, z)
 
+        // Apply specific northOffset correction for Zone E - Stall #1
+        let northOffset = 0;
+        if (stateRef.current.currentStall && stateRef.current.currentStall.id === '1(u)') {
+          northOffset = -90; // Calibrate left turn to point to Stall #13
+        }
+
         // Sync compass rotation (0 deg = North)
-        const deg = Math.round((theta * 180) / Math.PI) % 360
-        const compassDeg = (deg + 360) % 360; // ensure positive
+        const deg = Math.round((theta * 180) / Math.PI) + northOffset;
+        const compassDeg = ((deg % 360) + 360) % 360; // ensure positive
 
         // Optimize: Only recalculate heavy math and React state if the degree actually changed
         if (stateRef.current.lastCompassDeg !== compassDeg) {
@@ -990,7 +1000,11 @@ export default function MarketTour360() {
               forwardMesh.position.set(arrowX, -350, arrowZ);
 
               // Rotate the arrow to point in the direction of the camera
-              forwardMesh.rotation.set(-Math.PI / 2, 0, -theta - Math.PI / 2);
+              let arrowRotationOffset = -Math.PI / 2;
+              if (currentStall.id === '1(u)' && nearestStallInfo.stall.id === '13(u)') {
+                arrowRotationOffset = 0; // Point left instead of forward
+              }
+              forwardMesh.rotation.set(-Math.PI / 2, 0, -theta + arrowRotationOffset);
               forwardMesh.userData.targetStallInfo = nearestStallInfo;
 
               // Preload target stall's image
@@ -1184,7 +1198,7 @@ export default function MarketTour360() {
           className="absolute z-40 bg-white/95 text-slate-800 text-xs font-bold px-3 py-1.5 rounded-xl pointer-events-none shadow-xl border border-black/10 -translate-x-1/2 -translate-y-12 backdrop-blur-sm transition-all"
           style={{ left: mousePos.x, top: mousePos.y }}
         >
-          {hoveredHotspot.type === 'go_forward' || (hoveredHotspot.dynamicLabel && hoveredHotspot.dynamicLabel.startsWith('Forward')) ? '↑' : hoveredHotspot.dynamicLabel === 'Backward' ? '↓' : 'i'} {hoveredHotspot.dynamicLabel || hoveredHotspot.label}
+          {hoveredHotspot.dynamicLabel && hoveredHotspot.dynamicLabel.startsWith('Go Left') ? '←' : (hoveredHotspot.type === 'go_forward' || (hoveredHotspot.dynamicLabel && hoveredHotspot.dynamicLabel.startsWith('Forward'))) ? '↑' : hoveredHotspot.dynamicLabel === 'Backward' ? '↓' : 'i'} {hoveredHotspot.dynamicLabel || hoveredHotspot.label}
         </div>
       )}
 
