@@ -562,9 +562,11 @@ export default function MarketTour360() {
 
   // Pre-load texture helper with percentage progress simulation
   const triggerSceneTransition = (texturePath, preserveTheta = false) => {
+    console.log("[DEBUG] triggerSceneTransition path:", texturePath);
     const THREE = window.THREE
 
     if (textureCache.current[texturePath] && textureCache.current[texturePath] !== 'loading') {
+      console.log("[DEBUG] Texture hit in cache:", texturePath);
       // Texture is fully cached, do an instant transition without spinner
       const tex = textureCache.current[texturePath]
       materialRef.current.map = tex
@@ -583,12 +585,22 @@ export default function MarketTour360() {
         cameraRef.current.position.set(0, 0, 0.001);
         cameraRef.current.updateProjectionMatrix();
       }
+      
+      setLoaded(true);
+      setTransitioning(false); // FIX: Ensure we clear transitioning state!
       return
     }
 
     setTransitioning(true)
     setLoaded(false)
     setLoadingProgress(10)
+
+    // Safety timeout to prevent permanent stuck state
+    const safetyTimeout = setTimeout(() => {
+      console.warn("[DEBUG] TextureLoader Safety Timeout! Forcing transition complete.");
+      setLoaded(true);
+      setTransitioning(false);
+    }, 5000);
 
     // Simulate progress while loading
     const interval = setInterval(() => {
@@ -603,6 +615,7 @@ export default function MarketTour360() {
 
     if (!window.THREE || !materialRef.current || !sceneRef.current) {
       clearInterval(interval)
+      clearTimeout(safetyTimeout)
       setLoaded(true)
       setTransitioning(false)
       return
@@ -611,6 +624,8 @@ export default function MarketTour360() {
     new THREE.TextureLoader().load(
       texturePath,
       (tex) => {
+        console.log("[DEBUG] TextureLoader onLoad success:", texturePath);
+        clearTimeout(safetyTimeout)
         textureCache.current[texturePath] = tex;
         clearInterval(interval)
         setLoadingProgress(100)
@@ -637,7 +652,8 @@ export default function MarketTour360() {
       },
       null,
       (err) => {
-        console.error('Failed to load panorama', err)
+        console.error('[DEBUG] Failed to load panorama (onError):', err)
+        clearTimeout(safetyTimeout)
         clearInterval(interval)
         setLoaded(true)
         setTransitioning(false)
@@ -912,6 +928,7 @@ export default function MarketTour360() {
           } else if (uData.type === 'go_forward') {
             if (uData.targetStallInfo) {
               const { sectionKey, index } = uData.targetStallInfo;
+              console.log("[DEBUG] go_forward click handler started. target:", uData.targetStallInfo);
               if (transitioning) return;
               
               setTransitioning(true);
