@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 
 import { useNavigate, useLocation } from 'react-router-dom'
 import mapImage from '../images/map.png'
-import { SVG_STALL_COORDS } from '../utils/coords_dict'
+import { SVG_STALL_COORDS, NORTH_OFFSETS } from '../utils/coords_dict'
 import {
   ArrowLeft,
   X,
@@ -1020,8 +1020,18 @@ export default function MarketTour360() {
 
         // Sync compass rotation (0 deg = North)
         const deg = Math.round((theta * 180) / Math.PI) % 360
-        // FIX: Add 90° offset so theta=0 (+X) aligns with map East (90°).
-        const compassDeg = (deg + 90 + 360) % 360;
+        
+        // Apply custom per-stall offset if defined, otherwise default to global +90 (so theta=0 (+X) aligns with map East)
+        const currentStallInfo = stateRef.current.currentStall;
+        const rawKey = `${stateRef.current.activeSectionKey}-${currentStallInfo.id}`;
+        const cleanStallId = getCleanDbStallNumber(currentStallInfo.id);
+        const cleanKey = `${stateRef.current.activeSectionKey}-${cleanStallId}`;
+        
+        let offset = 90; // Default global offset
+        if (NORTH_OFFSETS[rawKey] !== undefined) offset = NORTH_OFFSETS[rawKey];
+        else if (NORTH_OFFSETS[cleanKey] !== undefined) offset = NORTH_OFFSETS[cleanKey];
+
+        const compassDeg = (deg + offset + 360) % 360;
         
         // Optimize: Only recalculate heavy math and React state if the degree actually changed
         if (stateRef.current.lastCompassDeg !== compassDeg) {
