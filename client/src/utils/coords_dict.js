@@ -186,5 +186,4 @@ export const SVG_STALL_COORDS = {
   "veggies-63": { "x": 2000, "y": 1240 },
   "veggies-62": { "x": 2000, "y": 1300 },
   "veggies-61": { "x": 2000, "y": 1360 }
-}; "meat-empty2": 315
 };
