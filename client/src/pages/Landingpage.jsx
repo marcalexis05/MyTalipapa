@@ -20,6 +20,7 @@ function useInView(threshold = 0.15) {
 }
 
 export default function Landingpage() {
+  const SHOW_AR_FINDER = false;
   const [stats, setStats] = useState({ totalStalls: 120, availableStalls: 15, occupiedStalls: 105 });
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(null);
@@ -101,10 +102,10 @@ export default function Landingpage() {
         <p class="mb-4">MyTalipapa is committed to ensuring our platform is accessible to all users, including those with disabilities. We strive to meet WCAG 2.1 Level AA standards across our web and mobile applications.</p>
         <h3 class="text-white font-semibold mb-2">Features We Support</h3>
         <p class="mb-4">Our platform is designed with keyboard navigation support, screen reader compatibility, sufficient color contrast ratios, resizable text without loss of content, and descriptive alt text for all meaningful images.</p>
-        <h3 class="text-white font-semibold mb-2">AR and 360° Features</h3>
-        <p class="mb-4">For users who cannot access our AR navigation or 360° market tour due to visual or motor impairments, we provide an accessible text-based stall directory as an equivalent alternative.</p>
+        <h3 class="text-white font-semibold mb-2">${SHOW_AR_FINDER ? 'AR and ' : ''}360° Features</h3>
+        <p class="mb-4">For users who cannot access our ${SHOW_AR_FINDER ? 'AR navigation or ' : ''}360° market tour due to visual or motor impairments, we provide an accessible text-based stall directory as an equivalent alternative.</p>
         <h3 class="text-white font-semibold mb-2">Known Limitations</h3>
-        <p class="mb-4">We are actively working to improve accessibility in our AR navigation feature and certain data visualization components. Updates are ongoing.</p>
+        <p class="mb-4">We are actively working to improve accessibility in our ${SHOW_AR_FINDER ? 'AR navigation feature and ' : ''}certain data visualization components. Updates are ongoing.</p>
         <h3 class="text-white font-semibold mb-2">Get Help</h3>
         <p>If you experience any accessibility barriers, contact us at mytalipapa@gmail.com and we will respond within 2 business days.</p>
       `
@@ -299,28 +300,30 @@ export default function Landingpage() {
             </h2>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <div className={`grid grid-cols-1 ${SHOW_AR_FINDER ? 'lg:grid-cols-2' : ''} gap-6 mb-6`}>
             {/* AR Stall Navigation */}
-            <div
-              className="rounded-2xl overflow-hidden shadow-md bg-white card-hover"
-              style={slideLeft(featuresInView, 0.15)}
-            >
-              <div className="h-48 sm:h-56 bg-gradient-to-br from-gray-700 to-gray-900 relative overflow-hidden image-zoom">
-                <img src={arImage} alt="AR Navigation" className="w-full h-full object-cover" />
-                <div className="absolute top-4 left-4 bg-green-600 text-white text-xs font-bold px-3 py-1 rounded">
-                  INNOVATION
+            {SHOW_AR_FINDER && (
+              <div
+                className="rounded-2xl overflow-hidden shadow-md bg-white card-hover"
+                style={slideLeft(featuresInView, 0.15)}
+              >
+                <div className="h-48 sm:h-56 bg-gradient-to-br from-gray-700 to-gray-900 relative overflow-hidden image-zoom">
+                  <img src={arImage} alt="AR Navigation" className="w-full h-full object-cover" />
+                  <div className="absolute top-4 left-4 bg-green-600 text-white text-xs font-bold px-3 py-1 rounded">
+                    INNOVATION
+                  </div>
+                </div>
+                <div className="p-6 sm:p-8">
+                  <h3 className="text-2xl font-bold text-gray-900 mb-3">AR Stall Navigation</h3>
+                  <p className="text-gray-600 mb-4">Never get lost in the market again. Real-time digital paths guiding your customers directly to their favorite vendors.</p>
                 </div>
               </div>
-              <div className="p-6 sm:p-8">
-                <h3 className="text-2xl font-bold text-gray-900 mb-3">AR Stall Navigation</h3>
-                <p className="text-gray-600 mb-4">Never get lost in the market again. Real-time digital paths guiding your customers directly to their favorite vendors.</p>
-              </div>
-            </div>
+            )}
 
             {/* Easy Rental */}
             <div
               className="rounded-2xl overflow-hidden shadow-md bg-orange-50 card-hover"
-              style={slideRight(featuresInView, 0.25)}
+              style={SHOW_AR_FINDER ? slideRight(featuresInView, 0.25) : slideLeft(featuresInView, 0.15)}
             >
               <div className="p-6 sm:p-8 h-full flex flex-col justify-center">
                 <div className="text-4xl mb-4" style={{ display: 'inline-block', animation: featuresInView ? 'float 3s ease-in-out infinite' : 'none' }}></div>

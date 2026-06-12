@@ -17,6 +17,8 @@ import {
 } from 'lucide-react'
 import NotificationBell from '../../components/NotificationBell'
 
+const SHOW_AR_FINDER = false;
+
 const dashStyles = `
   @keyframes fadeSlideUp {
     from { opacity: 0; transform: translateY(20px); }
@@ -303,7 +305,7 @@ export default function RenterDashboard({ onNavigate, onOpenStall }) {
           </div>
 
           {/* ── ACTION BUTTONS ── */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className={`grid ${SHOW_AR_FINDER ? 'grid-cols-2' : 'grid-cols-1'} gap-3`}>
             <button
               onClick={() => navigate('/renter/market-tour')}
               className="dash-action-btn stagger-1 flex flex-col items-center justify-center gap-2 rounded-2xl py-6 px-4 text-white font-bold text-sm"
@@ -315,16 +317,18 @@ export default function RenterDashboard({ onNavigate, onOpenStall }) {
               <span className="text-center leading-tight">View 360° Market Tour</span>
             </button>
 
-            <button
-              onClick={() => navigate('/renter/ar-finder')}
-              className="dash-action-btn flex flex-col items-center justify-center gap-2 rounded-2xl py-6 px-4 text-white font-bold text-sm"
-              style={{ backgroundColor: '#e07b00', animation: 'cardPop 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both' }}
-            >
-              <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
-                <Camera size={20} />
-              </div>
-              <span className="text-center leading-tight">Find Stall via AR</span>
-            </button>
+            {SHOW_AR_FINDER && (
+              <button
+                onClick={() => navigate('/renter/ar-finder')}
+                className="dash-action-btn flex flex-col items-center justify-center gap-2 rounded-2xl py-6 px-4 text-white font-bold text-sm"
+                style={{ backgroundColor: '#e07b00', animation: 'cardPop 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both' }}
+              >
+                <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                  <Camera size={20} />
+                </div>
+                <span className="text-center leading-tight">Find Stall via AR</span>
+              </button>
+            )}
           </div>
 
           {/* ── APPLICATIONS OVERVIEW ── */}

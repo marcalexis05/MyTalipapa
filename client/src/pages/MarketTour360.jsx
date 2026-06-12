@@ -559,7 +559,7 @@ export default function MarketTour360() {
   }
 
   // Pre-load texture helper with percentage progress simulation
-  const triggerSceneTransition = (texturePath) => {
+  const triggerSceneTransition = (texturePath, preserveTheta = false) => {
     setTransitioning(true)
     setLoaded(false)
     setLoadingProgress(10)
@@ -598,7 +598,14 @@ export default function MarketTour360() {
 
             // Reset camera viewing angle slightly to default
             spherical.current.phi = Math.PI / 2
-            spherical.current.theta = 0
+            if (!preserveTheta) {
+              spherical.current.theta = 0
+            }
+            if (cameraRef.current) {
+              cameraRef.current.fov = 70;
+              cameraRef.current.position.set(0, 0, 0.001);
+              cameraRef.current.updateProjectionMatrix();
+            }
 
             setLoaded(true)
             setTransitioning(false)
@@ -872,10 +879,32 @@ export default function MarketTour360() {
             if (uData.targetStallInfo) {
               const { sectionKey, index } = uData.targetStallInfo;
               if (transitioning) return;
-              setActiveSectionKey(sectionKey);
-              setStallIndex(index);
-              const stalls = sectionsData[sectionKey].stalls;
-              triggerSceneTransition(getStallImagePath(stalls[index].id, sectionKey));
+              
+              setTransitioning(true);
+              const startFov = camera.fov;
+              const targetFov = Math.max(30, startFov - 25);
+              const duration = 400; // 400ms zoom animation
+              const startTime = performance.now();
+              
+              const animateForward = (time) => {
+                const elapsed = time - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                // Ease in out
+                const ease = progress < 0.5 ? 2 * progress * progress : -1 + (4 - 2 * progress) * progress;
+                
+                camera.fov = startFov - ((startFov - targetFov) * ease);
+                camera.updateProjectionMatrix();
+                
+                if (progress < 1) {
+                  requestAnimationFrame(animateForward);
+                } else {
+                  setActiveSectionKey(sectionKey);
+                  setStallIndex(index);
+                  const stalls = sectionsData[sectionKey].stalls;
+                  triggerSceneTransition(getStallImagePath(stalls[index].id, sectionKey), true);
+                }
+              };
+              requestAnimationFrame(animateForward);
             }
           }
         }
