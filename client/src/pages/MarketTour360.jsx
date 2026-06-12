@@ -973,6 +973,8 @@ export default function MarketTour360() {
         let northOffset = 0;
         if (stateRef.current.currentStall && stateRef.current.currentStall.id === '1(u)') {
           northOffset = -90; // Calibrate left turn to point to Stall #13
+        } else if (stateRef.current.currentStall && stateRef.current.currentStall.id === '13(u)') {
+          northOffset = 180; // Correct cone pointing DOWN instead of UP the aisle
         }
 
         // Sync compass rotation (0 deg = North)
