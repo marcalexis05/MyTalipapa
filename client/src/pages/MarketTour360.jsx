@@ -208,8 +208,10 @@ const getStallImagePath = (id, category) => {
   const stallId = String(id);
   if (category === 'meat') {
     if (stallId === '1') return '/export360/stall1(u) - meat.jpg';
-    if (stallId === '3') return '/export360/stall3  - meat.jpg';
-    if (stallId === '4') return '/export360/stall4 -  meat.jpg';
+    if (stallId === '2') return '/export360/stall2(u) - meat.jpg';
+    if (stallId === '3') return '/export360/stall3(u)-  meat.jpg';
+    if (stallId === '4') return '/export360/stall4(u)-  meat.jpg';
+    if (stallId === '5') return '/export360/stall5(u) - meat.jpg';
     if (stallId === '10') return '/export360/stall10 -  meat.jpg';
     if (stallId === '11') return '/export360/stall11-  meat.jpg';
     if (stallId === '12') return '/export360/stall12(2) - meat.jpg';
@@ -223,14 +225,14 @@ const getStallImagePath = (id, category) => {
 
     // Doubled / unoccupied / alternative stalls in meat:
     if (stallId === '1(u)') return '/export360/stall1 - meat.jpg';
-    if (stallId === '2(u)') return '/export360/stall2(u) - meat.jpg';
-    if (stallId === '5(u)') return '/export360/stall5(u) - meat.jpg';
+    if (stallId === '2(u)') return '/export360/stall2 - meat.jpg';
+    if (stallId === '5(u)') return '/export360/stall5 - meat.jpg';
     if (stallId === '1(u2)') return '/export360/stall13 - meat.jpg';
     if (stallId === '2(u2)') return '/export360/stall14 - meat.jpg';
     if (stallId === '3(u2)') return '/export360/stall15 - meat.jpg';
     if (stallId === '4(u2)') return '/export360/stall16 - meat.jpg';
-    if (stallId === '3(u)') return '/export360/stall3(u)-  meat.jpg';
-    if (stallId === '4(u)') return '/export360/stall3(u)-  meat.jpg';
+    if (stallId === '3(u)') return '/export360/stall3  - meat.jpg';
+    if (stallId === '4(u)') return '/export360/stall4 -  meat.jpg';
     if (stallId === '8(u)') return '/export360/stall20 -  meat.jpg';
     if (stallId === '9(u)') return '/export360/stall21 - meat.jpg';
     if (stallId === '10(u)') return '/export360/stall22 -  meat.jpg';
