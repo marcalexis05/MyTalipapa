@@ -3,15 +3,14 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
-  base: '/',
   plugins: [
     react(),
     tailwindcss(),
   ],
-server: {
-  proxy: {
-    '/api': { target: 'http://localhost:5000', changeOrigin: true },
-    '/verify-email': { target: 'http://localhost:5000', changeOrigin: true },
+  server: {
+    proxy: {
+      '/api': { target: 'http://localhost:5000', changeOrigin: true },
+      '/verify-email': { target: 'http://localhost:5000', changeOrigin: true },
+    },
   },
-},
 })

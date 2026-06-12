@@ -35,7 +35,7 @@ import {
 const getStallZone = (num, category) => {
   const stallId = String(num);
   if (category === 'meat') {
-    if (['1(u)', '2(u)', '3(u)', '4(u)', '5(u)', '12(u)', '13(u)'].includes(stallId) || stallId.startsWith('empty')) {
+    if (['1', '2', '3', '4', '5', '12', '13'].includes(stallId) || stallId.startsWith('empty')) {
       return 'Zone A';
     }
     if (['51', '52', '53', '54', '55', '56'].includes(stallId)) {
@@ -142,13 +142,9 @@ const generateStalls = (category, numbers) => {
     } else if (String(num).startsWith('empty')) {
       const numStr = String(num).replace('empty', '') || '1';
       displayName = `Empty Stall #${numStr}`;
-    } else if (String(num).includes('(u)') || String(num).includes('(2)') || String(num).includes('u2') || (category === 'meat' && ['Zone E', 'Zone F'].includes(zone))) {
+    } else if (String(num).includes('(u)') || String(num).includes('(2)') || String(num).includes('u2')) {
       const baseNum = String(num).match(/^\d+/)?.[0] || String(num);
-      if (category === 'meat' && zone === 'Zone A') {
-        displayName = `Stall #${baseNum}`;
-      } else {
-        displayName = `${zone} - Stall #${baseNum}`;
-      }
+      displayName = `${zone} - Stall #${baseNum}`;
     }
 
     return {
@@ -233,7 +229,7 @@ const getStallImagePath = (id, category) => {
     if (stallId === '3(u2)') return '/export360/stall15 - meat.jpg';
     if (stallId === '4(u2)') return '/export360/stall16 - meat.jpg';
     if (stallId === '3(u)') return '/export360/stall3(u)-  meat.jpg';
-    if (stallId === '4(u)') return '/export360/stall4(u)-  meat.jpg';
+    if (stallId === '4(u)') return '/export360/stall3(u)-  meat.jpg';
     if (stallId === '8(u)') return '/export360/stall20 -  meat.jpg';
     if (stallId === '9(u)') return '/export360/stall21 - meat.jpg';
     if (stallId === '10(u)') return '/export360/stall22 -  meat.jpg';
@@ -644,7 +640,7 @@ export default function MarketTour360() {
     } else if (type === 'nav') {
       // Google Street View style painted floor chevron
       ctx.clearRect(0, 0, 128, 128)
-      
+
       ctx.fillStyle = 'rgba(255, 255, 255, 0.85)'
       ctx.shadowColor = 'rgba(0, 0, 0, 0.5)'
       ctx.shadowBlur = 8
@@ -660,7 +656,7 @@ export default function MarketTour360() {
       ctx.lineTo(18, 60)
       ctx.closePath()
       ctx.fill()
-      
+
       // Faint ellipse ring around it
       ctx.shadowColor = 'transparent'
       ctx.beginPath()
@@ -690,7 +686,7 @@ export default function MarketTour360() {
     const zoneLetter = String(stall.zone || '').replace('Zone ', '').toUpperCase();
     const isBottomZone = ['E', 'F', 'G', 'H'].includes(zoneLetter);
     const yOffset = isBottomZone ? 250 : 0;
-    
+
     let x = 1020;
     let y = 635 + yOffset;
 
@@ -844,29 +840,29 @@ export default function MarketTour360() {
         const hits = raycaster.intersectObjects(hotspotMeshes.current)
 
         if (hits.length > 0) {
-        const hit = hits[0]
-        
-        let dynamicLabel = hit.object.userData.label;
-        if (hit.object.userData.type === 'next' || hit.object.userData.type === 'prev') {
-          // Calculate if the arrow is generally in front of the user's view
-          const cameraDirection = new THREE.Vector3()
-          cameraRef.current.getWorldDirection(cameraDirection)
-          
-          const arrowDirection = new THREE.Vector3().copy(hit.object.position).normalize()
-          const dot = cameraDirection.dot(arrowDirection)
-          
-          dynamicLabel = dot > 0 ? 'Forward' : 'Backward'
-        }
+          const hit = hits[0]
 
-        setHoveredHotspot({ 
-          ...hit.object.userData, 
-          dynamicLabel 
-        })
-        setCursor('pointer')
-      } else {
-        setHoveredHotspot(null)
-        setCursor('grab')
-      }
+          let dynamicLabel = hit.object.userData.label;
+          if (hit.object.userData.type === 'next' || hit.object.userData.type === 'prev') {
+            // Calculate if the arrow is generally in front of the user's view
+            const cameraDirection = new THREE.Vector3()
+            cameraRef.current.getWorldDirection(cameraDirection)
+
+            const arrowDirection = new THREE.Vector3().copy(hit.object.position).normalize()
+            const dot = cameraDirection.dot(arrowDirection)
+
+            dynamicLabel = dot > 0 ? 'Forward' : 'Backward'
+          }
+
+          setHoveredHotspot({
+            ...hit.object.userData,
+            dynamicLabel
+          })
+          setCursor('pointer')
+        } else {
+          setHoveredHotspot(null)
+          setCursor('grab')
+        }
       }
 
       window.addEventListener('mousemove', onPointerMove)
@@ -1175,15 +1171,15 @@ export default function MarketTour360() {
 
       {/* MAP OVERLAY (Mini or Expanded) */}
       {uiVisible && (
-        <div 
+        <div
           className={`absolute transition-all duration-500 ease-in-out z-30 overflow-hidden bg-slate-200 shadow-2xl 
-          ${isMapExpanded 
-            ? 'bottom-0 left-0 w-full h-1/2 rounded-t-3xl border-t-4 border-black/20' 
-            : 'bottom-36 left-4 md:bottom-6 md:left-6 w-32 h-32 md:w-48 md:h-48 rounded-2xl border border-black/20'
-          }`}
+          ${isMapExpanded
+              ? 'bottom-0 left-0 w-full h-1/2 rounded-t-3xl border-t-4 border-black/20'
+              : 'bottom-36 left-4 md:bottom-6 md:left-6 w-32 h-32 md:w-48 md:h-48 rounded-2xl border border-black/20'
+            }`}
         >
           {/* Expand/Collapse Toggle Button */}
-          <button 
+          <button
             onClick={() => {
               setIsMapExpanded(!isMapExpanded);
               // Trigger resize events during CSS transition to smooth out 360 canvas
@@ -1210,13 +1206,13 @@ export default function MarketTour360() {
               return (
                 <svg viewBox={`${vbX} ${vbY} ${zoomWidth} ${zoomHeight}`} preserveAspectRatio="xMidYMid meet" className="w-full h-full drop-shadow-xl pointer-events-none transition-all duration-700 ease-in-out">
                   <image href={mapImage} x="-20" y="-15" width="2305" height="1824" preserveAspectRatio="none" />
-                  
+
                   {/* View Cone and Dot positioned dynamically */}
                   <g transform={`translate(${mapCoords.x}, ${mapCoords.y})`}>
                     <path d="M0 0 L-100 -200 A200 200 0 0 1 100 -200 Z" fill="rgba(239, 68, 68, 0.4)" transform={`rotate(${compassAngle})`} />
                     <circle r="30" fill="#ef4444" stroke="#ffffff" strokeWidth="8" />
                     <g transform={`rotate(${compassAngle})`}>
-                       <path d="M0 -20 L15 15 L0 5 L-15 15 Z" fill="#ffffff" />
+                      <path d="M0 -20 L15 15 L0 5 L-15 15 Z" fill="#ffffff" />
                     </g>
                   </g>
                 </svg>
