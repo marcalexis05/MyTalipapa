@@ -345,7 +345,8 @@ export default function MarketTour360() {
       console.log('[MarketTour360] findIndex result for targetStallNum:', targetStallNum, 'is index:', idx);
       if (idx !== -1) return idx;
     }
-    return 0;
+    const emptyIdx = SECTIONS['meat'].stalls.findIndex(s => s.id === 'empty3');
+    return emptyIdx !== -1 ? emptyIdx : 0;
   })
   const currentStall = activeSection.stalls[stallIndex] || activeSection.stalls[0]
 
@@ -379,6 +380,7 @@ export default function MarketTour360() {
   const lastPos = useRef({ x: 0, y: 0 })
   const spherical = useRef({ phi: Math.PI / 2, theta: 0 })
   const hotspotMeshes = useRef([])
+  const textureCache = useRef({})
   const [compassAngle, setCompassAngle] = useState(0)
 
   // Sync details sheet when stall changes
@@ -560,6 +562,30 @@ export default function MarketTour360() {
 
   // Pre-load texture helper with percentage progress simulation
   const triggerSceneTransition = (texturePath, preserveTheta = false) => {
+    const THREE = window.THREE
+
+    if (textureCache.current[texturePath] && textureCache.current[texturePath] !== 'loading') {
+      // Texture is fully cached, do an instant transition without spinner
+      const tex = textureCache.current[texturePath]
+      materialRef.current.map = tex
+      materialRef.current.needsUpdate = true
+
+      // Recreate Hotspots in 3D Space
+      recreateHotspots(sceneRef.current, stateRef.current.currentStall, THREE)
+
+      // Reset camera viewing angle slightly to default
+      spherical.current.phi = Math.PI / 2
+      if (!preserveTheta) {
+        spherical.current.theta = 0
+      }
+      if (cameraRef.current) {
+        cameraRef.current.fov = 70;
+        cameraRef.current.position.set(0, 0, 0.001);
+        cameraRef.current.updateProjectionMatrix();
+      }
+      return
+    }
+
     setTransitioning(true)
     setLoaded(false)
     setLoadingProgress(10)
@@ -586,6 +612,7 @@ export default function MarketTour360() {
     new THREE.TextureLoader().load(
       texturePath,
       (tex) => {
+        textureCache.current[texturePath] = tex;
         clearInterval(interval)
         setLoadingProgress(100)
         
@@ -737,6 +764,9 @@ export default function MarketTour360() {
     let minDistance = Infinity;
 
     const sectionKeys = ['meat', 'fish', 'veggies'];
+    
+    console.log(`[DEBUG] findNearestStallInDirection from: ${currentStall.id} (${activeSectionKey})`);
+    console.log(`[DEBUG] currentCoords: x=${currentCoords.x}, y=${currentCoords.y}, compassAngle=${currentCompassAngle}`);
 
     sectionKeys.forEach((secKey) => {
       const stalls = sectionsData[secKey].stalls;
@@ -763,6 +793,7 @@ export default function MarketTour360() {
 
         // Valid if within 45 degrees field of view
         if (angleDiff <= 45) {
+          console.log(`[DEBUG] Candidate: ${stall.id} (${secKey}) | distance=${distance.toFixed(1)}px | targetCompass=${targetCompassAngle.toFixed(1)}° | angleDiff=${angleDiff.toFixed(1)}°`);
           if (distance < minDistance) {
             minDistance = distance;
             bestMatch = { sectionKey: secKey, index: idx, stall, distance };
@@ -770,6 +801,12 @@ export default function MarketTour360() {
         }
       });
     });
+
+    if (bestMatch) {
+      console.log(`[DEBUG] Selected Best Match: ${bestMatch.stall.id} (${bestMatch.sectionKey}) at distance ${bestMatch.distance.toFixed(1)}`);
+    } else {
+      console.log(`[DEBUG] No match found.`);
+    }
 
     return bestMatch;
   };
@@ -967,7 +1004,8 @@ export default function MarketTour360() {
 
         // Sync compass rotation (0 deg = North)
         const deg = Math.round((theta * 180) / Math.PI) % 360
-        const compassDeg = (deg + 360) % 360; // ensure positive
+        // FIX: Add 90° offset so theta=0 (+X) aligns with map East (90°).
+        const compassDeg = (deg + 90 + 360) % 360;
         
         // Optimize: Only recalculate heavy math and React state if the degree actually changed
         if (stateRef.current.lastCompassDeg !== compassDeg) {
@@ -995,11 +1033,12 @@ export default function MarketTour360() {
 
               // Preload target stall's image
               const targetImagePath = getStallImagePath(nearestStallInfo.stall.id, nearestStallInfo.sectionKey);
-              if (!window.__preloadedPaths) window.__preloadedPaths = new Set();
-              if (!window.__preloadedPaths.has(targetImagePath)) {
-                window.__preloadedPaths.add(targetImagePath);
-                const img = new Image();
-                img.src = targetImagePath;
+              const THREE = window.THREE;
+              if (THREE && !textureCache.current[targetImagePath]) {
+                textureCache.current[targetImagePath] = 'loading';
+                new THREE.TextureLoader().load(targetImagePath, (tex) => {
+                  textureCache.current[targetImagePath] = tex;
+                });
               }
             } else {
               forwardMesh.visible = false;
