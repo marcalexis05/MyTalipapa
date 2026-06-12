@@ -683,9 +683,9 @@ export default function MarketTour360() {
   };
 
   // Node Graph to map stalls/hallways to Map X,Y coordinates
-  const getRawCoordinates = (stall) => {
+  const getRawCoordinates = (stall, overrideCategory = null) => {
     const cleanNum = getCleanDbStallNumber(stall.id);
-    const category = activeSectionKey;
+    const category = overrideCategory || activeSectionKey;
     const zoneLetter = String(stall.zone || '').replace('Zone ', '').toUpperCase();
     const isBottomZone = ['E', 'F', 'G', 'H'].includes(zoneLetter);
     const yOffset = isBottomZone ? 250 : 0;
@@ -707,33 +707,62 @@ export default function MarketTour360() {
     return { x, y };
   };
 
+  const findNearestStallInDirection = (currentStall, currentCompassAngle) => {
+    const currentCoords = getRawCoordinates(currentStall, activeSectionKey);
+    let bestMatch = null;
+    let minDistance = Infinity;
+
+    const sectionKeys = ['meat', 'fish', 'veggies'];
+
+    sectionKeys.forEach((secKey) => {
+      const stalls = sectionsData[secKey].stalls;
+      stalls.forEach((stall, idx) => {
+        if (secKey === activeSectionKey && stall.id === currentStall.id) return;
+
+        const targetCoords = getRawCoordinates(stall, secKey);
+        
+        const dx = targetCoords.x - currentCoords.x;
+        const dy = targetCoords.y - currentCoords.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        // Filter distance: max 400px so it doesn't jump through walls across the map, min 10px
+        if (distance < 10 || distance > 400) return;
+
+        const mapAngleRad = Math.atan2(dy, dx);
+        const mapAngleDeg = (mapAngleRad * 180) / Math.PI;
+        // Convert Map coordinate angle to Compass Angle
+        const targetCompassAngle = (mapAngleDeg + 450) % 360;
+
+        let angleDiff = Math.abs(targetCompassAngle - currentCompassAngle);
+        if (angleDiff > 180) angleDiff = 360 - angleDiff;
+
+        // Valid if within 45 degrees field of view
+        if (angleDiff <= 45) {
+          if (distance < minDistance) {
+            minDistance = distance;
+            bestMatch = { sectionKey: secKey, index: idx, stall, distance };
+          }
+        }
+      });
+    });
+
+    return bestMatch;
+  };
+
   // Re-populate the 3D scene with relevant Hotspots
   const recreateHotspots = (scene, stall, THREE) => {
     // Clear old sprites
     hotspotMeshes.current.forEach((mesh) => scene.remove(mesh))
     hotspotMeshes.current = []
 
-    // Next Arrow Hotspot (Forward on the floor)
-    const nextTex = createHotspotTexture(THREE, 'nav', 'next')
-    const nextMat = new THREE.MeshBasicMaterial({ map: nextTex, transparent: true, depthTest: false })
-    const nextMesh = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), nextMat)
-    // Rotate to lie flat on the floor AND point forward (+X)
-    nextMesh.rotation.set(-Math.PI / 2, 0, -Math.PI / 2)
-    nextMesh.position.set(250, -350, 0) // Forward and deep on floor
-    nextMesh.userData = { type: 'next', label: 'Next' }
-    scene.add(nextMesh)
-    hotspotMeshes.current.push(nextMesh)
-
-    // Previous Arrow Hotspot (Backward on the floor)
-    const prevTex = createHotspotTexture(THREE, 'nav', 'prev')
-    const prevMat = new THREE.MeshBasicMaterial({ map: prevTex, transparent: true, depthTest: false })
-    const prevMesh = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), prevMat)
-    // Rotate to lie flat on the floor AND point backward (-X)
-    prevMesh.rotation.set(-Math.PI / 2, 0, Math.PI / 2)
-    prevMesh.position.set(-250, -350, 0) // Backward and deep on floor
-    prevMesh.userData = { type: 'prev', label: 'Previous' }
-    scene.add(prevMesh)
-    hotspotMeshes.current.push(prevMesh)
+    // Forward Arrow Hotspot (Dynamically positioned)
+    const forwardTex = createHotspotTexture(THREE, 'nav', 'next')
+    const forwardMat = new THREE.MeshBasicMaterial({ map: forwardTex, transparent: true, depthTest: false })
+    const forwardMesh = new THREE.Mesh(new THREE.PlaneGeometry(120, 120), forwardMat)
+    forwardMesh.visible = false; // Hidden until a valid forward stall is found
+    forwardMesh.userData = { type: 'go_forward', label: 'Go Forward', targetStallInfo: null }
+    scene.add(forwardMesh)
+    hotspotMeshes.current.push(forwardMesh)
   }
 
   // Main Three.js Init
@@ -819,6 +848,15 @@ export default function MarketTour360() {
             handleNextStall()
           } else if (uData.type === 'prev') {
             handlePrevStall()
+          } else if (uData.type === 'go_forward') {
+            if (uData.targetStallInfo) {
+              const { sectionKey, index } = uData.targetStallInfo;
+              if (transitioning) return;
+              setActiveSectionKey(sectionKey);
+              setStallIndex(index);
+              const stalls = sectionsData[sectionKey].stalls;
+              triggerSceneTransition(getStallImagePath(stalls[index].id, sectionKey));
+            }
           }
         }
       }
@@ -847,14 +885,16 @@ export default function MarketTour360() {
 
           let dynamicLabel = hit.object.userData.label;
           if (hit.object.userData.type === 'next' || hit.object.userData.type === 'prev') {
-            // Calculate if the arrow is generally in front of the user's view
             const cameraDirection = new THREE.Vector3()
             cameraRef.current.getWorldDirection(cameraDirection)
-
             const arrowDirection = new THREE.Vector3().copy(hit.object.position).normalize()
             const dot = cameraDirection.dot(arrowDirection)
-
             dynamicLabel = dot > 0 ? 'Forward' : 'Backward'
+          } else if (hit.object.userData.type === 'go_forward') {
+            const target = hit.object.userData.targetStallInfo;
+            if (target) {
+               dynamicLabel = `Move to ${target.stall.name || 'Stall ' + target.stall.id}`;
+            }
           }
 
           setHoveredHotspot({
@@ -880,7 +920,32 @@ export default function MarketTour360() {
 
         // Sync compass rotation (0 deg = North)
         const deg = Math.round((theta * 180) / Math.PI) % 360
-        setCompassAngle(deg)
+        const compassDeg = (deg + 360) % 360; // ensure positive
+        setCompassAngle(compassDeg)
+
+        // Find nearest stall in this direction
+        const currentStall = stateRef.current.currentStall;
+        const nearestStallInfo = findNearestStallInDirection(currentStall, compassDeg);
+
+        // Update the dynamic forward arrow
+        const forwardMesh = hotspotMeshes.current.find(m => m.userData.type === 'go_forward');
+        if (forwardMesh) {
+          if (nearestStallInfo) {
+            forwardMesh.visible = true;
+            // Place arrow 250 units in front of the camera on the floor
+            // theta=0 corresponds to looking at +X (1, 0, 0).
+            const arrowX = Math.cos(theta) * 250;
+            const arrowZ = Math.sin(theta) * 250;
+            forwardMesh.position.set(arrowX, -350, arrowZ);
+            
+            // Rotate the arrow to point in the direction of the camera
+            forwardMesh.rotation.set(-Math.PI / 2, 0, -theta - Math.PI / 2);
+            forwardMesh.userData.targetStallInfo = nearestStallInfo;
+          } else {
+            forwardMesh.visible = false;
+            forwardMesh.userData.targetStallInfo = null;
+          }
+        }
       }
       updateCamera()
 
