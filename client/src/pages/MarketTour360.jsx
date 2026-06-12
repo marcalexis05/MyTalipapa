@@ -1139,9 +1139,9 @@ export default function MarketTour360() {
           >
             <ArrowLeft size={20} />
           </button>
-          <div className="bg-white/80 backdrop-blur-md rounded-2xl px-4 py-2 flex items-center gap-2.5 shadow-lg border border-black/10 text-slate-800">
+          <div className="bg-white/80 backdrop-blur-md rounded-full sm:rounded-2xl px-3 py-2 sm:px-4 flex items-center gap-2.5 shadow-lg border border-black/10 text-slate-800">
             <MapPin size={16} className="text-[#1a5c2a] shrink-0" />
-            <div>
+            <div className="hidden sm:block">
               <span className="text-xs font-black tracking-wide block uppercase text-[#1a5c2a]">MyTalipapa Public Market</span>
               <span className="text-[10px] text-slate-500 font-semibold leading-none">Virtual 360° Stall Walkthrough</span>
             </div>
@@ -1151,11 +1151,11 @@ export default function MarketTour360() {
         <div className="pointer-events-auto flex items-center gap-2">
           <button
             onClick={() => setUiVisible(false)}
-            className="px-4.5 py-2.5 rounded-2xl bg-white/80 hover:bg-white backdrop-blur-md text-slate-800 border border-black/10 text-xs font-black flex items-center gap-2 transition-all active:scale-95 cursor-pointer shadow-lg"
+            className="px-3 py-2 sm:px-4.5 sm:py-2.5 rounded-full sm:rounded-2xl bg-white/80 hover:bg-white backdrop-blur-md text-slate-800 border border-black/10 text-xs font-black flex items-center gap-2 transition-all active:scale-95 cursor-pointer shadow-lg"
             title="Hide all overlay buttons and panels"
           >
             <EyeOff size={15} />
-            <span>Hide Controls</span>
+            <span className="hidden sm:inline">Hide Controls</span>
           </button>
           <button
             onClick={() => setHelpOpen(true)}
@@ -1170,9 +1170,9 @@ export default function MarketTour360() {
 
 
       {/* FLOATING SIDE HUD CONTROLS (Right Side) */}
-      <div className="absolute right-4 top-28 md:top-1/2 md:-translate-y-1/2 z-20 flex flex-col items-center gap-4">
+      <div className="absolute right-2 sm:right-4 top-20 sm:top-28 md:top-1/2 md:-translate-y-1/2 z-20 flex flex-col items-center gap-2 sm:gap-4">
         {/* Compass Overlay Dial */}
-        <div className={`w-12 h-12 sm:w-14 sm:h-14 mb-1 bg-white/90 backdrop-blur-md rounded-full flex items-center justify-center border border-black/10 shadow-2xl relative overflow-hidden transition-all duration-300 ${uiVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-75 pointer-events-none'}`}>
+        <div className={`w-10 h-10 sm:w-14 sm:h-14 mb-0 sm:mb-1 bg-white/90 backdrop-blur-md rounded-full flex items-center justify-center border border-black/10 shadow-2xl relative overflow-hidden transition-all duration-300 ${uiVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-75 pointer-events-none'}`}>
           <div
             className="w-10 h-10 flex items-center justify-center transition-transform duration-100"
             style={{ transform: `rotate(${compassAngle}deg)` }}
@@ -1183,7 +1183,7 @@ export default function MarketTour360() {
         </div>
 
         {/* Action Button Pad */}
-        <div className={`bg-white/90 backdrop-blur-md p-2 rounded-3xl flex flex-col gap-2.5 border border-black/10 shadow-2xl transition-all duration-300 ${uiVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-75 pointer-events-none'}`}>
+        <div className={`bg-white/90 backdrop-blur-md p-1.5 sm:p-2 rounded-[2rem] flex flex-col gap-1.5 sm:gap-2.5 border border-black/10 shadow-2xl origin-top-right scale-90 sm:scale-100 transition-all duration-300 ${uiVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
           <button
             onClick={() => setAutoRotate((prev) => !prev)}
             className={`w-10 h-10 rounded-full flex items-center justify-center transition-all cursor-pointer ${autoRotate ? 'bg-[#1a5c2a] text-white animate-pulse' : 'bg-black/5 text-slate-800 hover:bg-black/10'
@@ -1243,7 +1243,7 @@ export default function MarketTour360() {
           className={`absolute transition-all duration-500 ease-in-out z-30 overflow-hidden bg-slate-200 shadow-2xl 
           ${isMapExpanded
               ? 'bottom-0 left-0 w-full h-1/2 rounded-t-3xl border-t-4 border-black/20'
-              : 'bottom-36 left-4 md:bottom-6 md:left-6 w-32 h-32 md:w-48 md:h-48 rounded-2xl border border-black/20'
+              : 'bottom-24 left-3 sm:bottom-6 sm:left-6 w-24 h-24 sm:w-32 sm:h-32 md:w-48 md:h-48 rounded-2xl border border-black/20'
             }`}
         >
           {/* Expand/Collapse Toggle Button */}
@@ -1291,7 +1291,7 @@ export default function MarketTour360() {
       )}
 
       {/* BOTTOM CENTER STALL QUICK SWITCHER CONTROLS */}
-      <div className={`absolute left-1/2 -translate-x-1/2 z-20 transition-all duration-300 ${uiVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12 pointer-events-none'} ${detailsCollapsed ? 'bottom-20' : 'bottom-[330px] md:bottom-[240px]'} flex flex-col items-center gap-2.5`}>
+      <div className={`absolute left-1/2 -translate-x-1/2 z-20 transition-all duration-300 ${uiVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12 pointer-events-none'} ${detailsCollapsed ? 'bottom-6 sm:bottom-10' : 'bottom-[330px] md:bottom-[240px]'} flex flex-col items-center gap-1.5 sm:gap-2.5 scale-90 sm:scale-100 origin-bottom`}>
         {/* Stall Selector Button floating directly ABOVE the main switcher */}
         <div className="relative">
           <button
