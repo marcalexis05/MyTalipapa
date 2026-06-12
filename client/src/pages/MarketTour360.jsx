@@ -35,7 +35,7 @@ import {
 const getStallZone = (num, category) => {
   const stallId = String(num);
   if (category === 'meat') {
-    if (['1', '2', '3', '4', '5', '12', '13'].includes(stallId) || stallId.startsWith('empty')) {
+    if (['1(u)', '2(u)', '3(u)', '4(u)', '5(u)', '12(u)', '13(u)'].includes(stallId) || stallId.startsWith('empty')) {
       return 'Zone A';
     }
     if (['51', '52', '53', '54', '55', '56'].includes(stallId)) {
@@ -142,9 +142,13 @@ const generateStalls = (category, numbers) => {
     } else if (String(num).startsWith('empty')) {
       const numStr = String(num).replace('empty', '') || '1';
       displayName = `Empty Stall #${numStr}`;
-    } else if (String(num).includes('(u)') || String(num).includes('(2)') || String(num).includes('u2')) {
+    } else if (String(num).includes('(u)') || String(num).includes('(2)') || String(num).includes('u2') || (category === 'meat' && ['Zone E', 'Zone F'].includes(zone))) {
       const baseNum = String(num).match(/^\d+/)?.[0] || String(num);
-      displayName = `${zone} - Stall #${baseNum}`;
+      if (category === 'meat' && zone === 'Zone A') {
+        displayName = `Stall #${baseNum}`;
+      } else {
+        displayName = `${zone} - Stall #${baseNum}`;
+      }
     }
 
     return {
@@ -229,7 +233,7 @@ const getStallImagePath = (id, category) => {
     if (stallId === '3(u2)') return '/export360/stall15 - meat.jpg';
     if (stallId === '4(u2)') return '/export360/stall16 - meat.jpg';
     if (stallId === '3(u)') return '/export360/stall3(u)-  meat.jpg';
-    if (stallId === '4(u)') return '/export360/stall3(u)-  meat.jpg';
+    if (stallId === '4(u)') return '/export360/stall4(u)-  meat.jpg';
     if (stallId === '8(u)') return '/export360/stall20 -  meat.jpg';
     if (stallId === '9(u)') return '/export360/stall21 - meat.jpg';
     if (stallId === '10(u)') return '/export360/stall22 -  meat.jpg';
