@@ -571,55 +571,52 @@ export default function MarketTour360() {
           clearInterval(interval)
           return 80
         }
-        return prev + 15
+        return prev + 30
       })
-    }, 100)
+    }, 50)
 
-    setTimeout(() => {
-      if (!window.THREE || !materialRef.current || !sceneRef.current) {
+    if (!window.THREE || !materialRef.current || !sceneRef.current) {
+      clearInterval(interval)
+      setLoaded(true)
+      setTransitioning(false)
+      return
+    }
+
+    const THREE = window.THREE
+    new THREE.TextureLoader().load(
+      texturePath,
+      (tex) => {
+        clearInterval(interval)
+        setLoadingProgress(100)
+        
+        materialRef.current.map = tex
+        materialRef.current.needsUpdate = true
+
+        // Recreate Hotspots in 3D Space
+        recreateHotspots(sceneRef.current, stateRef.current.currentStall, THREE)
+
+        // Reset camera viewing angle slightly to default
+        spherical.current.phi = Math.PI / 2
+        if (!preserveTheta) {
+          spherical.current.theta = 0
+        }
+        if (cameraRef.current) {
+          cameraRef.current.fov = 70;
+          cameraRef.current.position.set(0, 0, 0.001);
+          cameraRef.current.updateProjectionMatrix();
+        }
+
+        setLoaded(true)
+        setTransitioning(false)
+      },
+      null,
+      (err) => {
+        console.error('Failed to load panorama', err)
         clearInterval(interval)
         setLoaded(true)
         setTransitioning(false)
-        return
       }
-
-      const THREE = window.THREE
-      new THREE.TextureLoader().load(
-        texturePath,
-        (tex) => {
-          clearInterval(interval)
-          setLoadingProgress(100)
-          setTimeout(() => {
-            materialRef.current.map = tex
-            materialRef.current.needsUpdate = true
-
-            // Recreate Hotspots in 3D Space
-            recreateHotspots(sceneRef.current, stateRef.current.currentStall, THREE)
-
-            // Reset camera viewing angle slightly to default
-            spherical.current.phi = Math.PI / 2
-            if (!preserveTheta) {
-              spherical.current.theta = 0
-            }
-            if (cameraRef.current) {
-              cameraRef.current.fov = 70;
-              cameraRef.current.position.set(0, 0, 0.001);
-              cameraRef.current.updateProjectionMatrix();
-            }
-
-            setLoaded(true)
-            setTransitioning(false)
-          }, 150)
-        },
-        null,
-        (err) => {
-          console.error('Failed to load panorama', err)
-          clearInterval(interval)
-          setLoaded(true)
-          setTransitioning(false)
-        }
-      )
-    }, 150)
+    )
   }
 
   // Helper to create beautiful glowing canvas textures for hotspots
@@ -752,8 +749,9 @@ export default function MarketTour360() {
         const dy = targetCoords.y - currentCoords.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
 
-        // Filter distance: max 400px so it doesn't jump through walls across the map, min 10px
-        if (distance < 10 || distance > 400) return;
+        // Filter distance: max 320px so it doesn't jump through walls across the map, min 10px
+        // (320px prevents jumping the 330px gap between x=100 and x=430)
+        if (distance < 10 || distance > 320) return;
 
         const mapAngleRad = Math.atan2(dy, dx);
         const mapAngleDeg = (mapAngleRad * 180) / Math.PI;
@@ -994,6 +992,15 @@ export default function MarketTour360() {
               // Rotate the arrow to point in the direction of the camera
               forwardMesh.rotation.set(-Math.PI / 2, 0, -theta - Math.PI / 2);
               forwardMesh.userData.targetStallInfo = nearestStallInfo;
+
+              // Preload target stall's image
+              const targetImagePath = getStallImagePath(nearestStallInfo.stall.id, nearestStallInfo.sectionKey);
+              if (!window.__preloadedPaths) window.__preloadedPaths = new Set();
+              if (!window.__preloadedPaths.has(targetImagePath)) {
+                window.__preloadedPaths.add(targetImagePath);
+                const img = new Image();
+                img.src = targetImagePath;
+              }
             } else {
               forwardMesh.visible = false;
               forwardMesh.userData.targetStallInfo = null;

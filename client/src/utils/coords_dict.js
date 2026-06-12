@@ -2,8 +2,8 @@ export const SVG_STALL_COORDS = {
   //ZONE A PO ITO
   "meat-empty3": { "x": 100, "y": 190 },
   "meat-empty2": { "x": 100, "y": 280 },
-  "meat-empty": { "x": 100, "y": 350 },
-  "meat-5": { "x": 100, "y": 450 },
+  "meat-empty": { "x": 100, "y": 370 },
+  "meat-5": { "x": 100, "y": 460 },
   "meat-4": { "x": 100, "y": 550 },
   "meat-3": { "x": 100, "y": 640 },
   "meat-2": { "x": 100, "y": 730 },
