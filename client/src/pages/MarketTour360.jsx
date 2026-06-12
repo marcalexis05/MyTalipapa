@@ -695,7 +695,7 @@ export default function MarketTour360() {
 
     if (SVG_STALL_COORDS[rawKey]) {
       x = SVG_STALL_COORDS[rawKey].x;
-      y = SVG_STALL_COORDS[rawKey].y;
+      y = SVG_STALL_COORDS[rawKey].y + yOffset;
     } else if (SVG_STALL_COORDS[cleanKey]) {
       x = SVG_STALL_COORDS[cleanKey].x;
       y = SVG_STALL_COORDS[cleanKey].y + yOffset;
