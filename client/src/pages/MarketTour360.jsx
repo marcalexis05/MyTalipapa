@@ -387,10 +387,30 @@ export default function MarketTour360() {
   }, [currentStall])
 
   // Track active references to prevent stale closures in events
-  const stateRef = useRef({ activeSectionKey, stallIndex, currentStall })
+  const stateRef = useRef({ activeSectionKey, stallIndex, currentStall, lastCompassDeg: -1 })
   useEffect(() => {
-    stateRef.current = { activeSectionKey, stallIndex, currentStall }
+    stateRef.current = { activeSectionKey, stallIndex, currentStall, lastCompassDeg: stateRef.current.lastCompassDeg }
   }, [activeSectionKey, stallIndex, currentStall])
+
+  // Image Preloader: Quietly preload adjacent panoramas into browser cache
+  useEffect(() => {
+    if (!sectionsData[activeSectionKey] || !sectionsData[activeSectionKey].stalls) return;
+    const stalls = sectionsData[activeSectionKey].stalls;
+    if (!stalls.length) return;
+
+    const nextIdx = (stallIndex + 1) % stalls.length;
+    const prevIdx = (stallIndex - 1 + stalls.length) % stalls.length;
+    
+    const preloads = [
+      getStallImagePath(stalls[nextIdx].id, activeSectionKey),
+      getStallImagePath(stalls[prevIdx].id, activeSectionKey)
+    ];
+
+    preloads.forEach(src => {
+      const img = new Image();
+      img.src = src;
+    });
+  }, [stallIndex, activeSectionKey, sectionsData]);
 
   // Fetch real stalls from database on mount and merge details into sectionsData
   useEffect(() => {
@@ -592,7 +612,7 @@ export default function MarketTour360() {
           setTransitioning(false)
         }
       )
-    }, 300)
+    }, 150)
   }
 
   // Helper to create beautiful glowing canvas textures for hotspots
@@ -921,29 +941,34 @@ export default function MarketTour360() {
         // Sync compass rotation (0 deg = North)
         const deg = Math.round((theta * 180) / Math.PI) % 360
         const compassDeg = (deg + 360) % 360; // ensure positive
-        setCompassAngle(compassDeg)
+        
+        // Optimize: Only recalculate heavy math and React state if the degree actually changed
+        if (stateRef.current.lastCompassDeg !== compassDeg) {
+          stateRef.current.lastCompassDeg = compassDeg;
+          setCompassAngle(compassDeg)
 
-        // Find nearest stall in this direction
-        const currentStall = stateRef.current.currentStall;
-        const nearestStallInfo = findNearestStallInDirection(currentStall, compassDeg);
+          // Find nearest stall in this direction
+          const currentStall = stateRef.current.currentStall;
+          const nearestStallInfo = findNearestStallInDirection(currentStall, compassDeg);
 
-        // Update the dynamic forward arrow
-        const forwardMesh = hotspotMeshes.current.find(m => m.userData.type === 'go_forward');
-        if (forwardMesh) {
-          if (nearestStallInfo) {
-            forwardMesh.visible = true;
-            // Place arrow 250 units in front of the camera on the floor
-            // theta=0 corresponds to looking at +X (1, 0, 0).
-            const arrowX = Math.cos(theta) * 250;
-            const arrowZ = Math.sin(theta) * 250;
-            forwardMesh.position.set(arrowX, -350, arrowZ);
-            
-            // Rotate the arrow to point in the direction of the camera
-            forwardMesh.rotation.set(-Math.PI / 2, 0, -theta - Math.PI / 2);
-            forwardMesh.userData.targetStallInfo = nearestStallInfo;
-          } else {
-            forwardMesh.visible = false;
-            forwardMesh.userData.targetStallInfo = null;
+          // Update the dynamic forward arrow
+          const forwardMesh = hotspotMeshes.current.find(m => m.userData.type === 'go_forward');
+          if (forwardMesh) {
+            if (nearestStallInfo) {
+              forwardMesh.visible = true;
+              // Place arrow 250 units in front of the camera on the floor
+              // theta=0 corresponds to looking at +X (1, 0, 0).
+              const arrowX = Math.cos(theta) * 250;
+              const arrowZ = Math.sin(theta) * 250;
+              forwardMesh.position.set(arrowX, -350, arrowZ);
+              
+              // Rotate the arrow to point in the direction of the camera
+              forwardMesh.rotation.set(-Math.PI / 2, 0, -theta - Math.PI / 2);
+              forwardMesh.userData.targetStallInfo = nearestStallInfo;
+            } else {
+              forwardMesh.visible = false;
+              forwardMesh.userData.targetStallInfo = null;
+            }
           }
         }
       }
@@ -1106,11 +1131,17 @@ export default function MarketTour360() {
         </div>
       )}
 
-      {/* Screen Fade Transition Overlay (prevents jarring cuts) */}
+      {/* Screen Fade Transition Overlay with Loading Animation */}
       <div
-        className={`absolute inset-0 bg-black z-10 transition-opacity duration-300 pointer-events-none ${transitioning ? 'opacity-100' : 'opacity-0'
+        className={`absolute inset-0 bg-black/80 backdrop-blur-md z-10 transition-all duration-300 pointer-events-none flex flex-col items-center justify-center ${transitioning ? 'opacity-100' : 'opacity-0'
           }`}
-      />
+      >
+        <div className="w-12 h-12 border-4 border-[#1a5c2a]/30 border-t-[#e07b00] rounded-full animate-spin mb-4 shadow-[0_0_15px_rgba(224,123,0,0.5)]" />
+        <div className="text-white font-black tracking-widest uppercase text-xs animate-pulse drop-shadow-md">Loading Environment...</div>
+        <div className="w-48 h-1 bg-white/10 rounded-full mt-3 overflow-hidden shadow-inner">
+          <div className="h-full bg-gradient-to-r from-[#1a5c2a] to-[#e07b00] transition-all duration-100" style={{ width: `${loadingProgress}%` }} />
+        </div>
+      </div>
 
 
 
