@@ -977,12 +977,18 @@ export default function MarketTour360() {
         const z = Math.sin(phi) * Math.sin(theta)
         camera.lookAt(x, y, z)
 
-        // Apply specific northOffset correction for Zone E - Stall #1
         let northOffset = 0;
         const upsideDownStalls = ['13(u)', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24'];
+        const zoneAFishUpsideDown = ['11', '12', '13', '14', '15', '16', '17', '18', '19', '20'];
+        const zoneAMeatUpsideDown = ['12', '13'];
+
+        const isZoneEMeat = stateRef.current.activeSectionKey === 'meat' && upsideDownStalls.includes(stateRef.current.currentStall.id);
+        const isZoneAFish = stateRef.current.activeSectionKey === 'fish' && zoneAFishUpsideDown.includes(stateRef.current.currentStall.id);
+        const isZoneAMeat = stateRef.current.activeSectionKey === 'meat' && zoneAMeatUpsideDown.includes(stateRef.current.currentStall.id);
+
         if (stateRef.current.currentStall && stateRef.current.currentStall.id === '1(u)') {
           northOffset = -90; // Calibrate left turn to point to Stall #13
-        } else if (stateRef.current.currentStall && upsideDownStalls.includes(stateRef.current.currentStall.id)) {
+        } else if (stateRef.current.currentStall && (isZoneEMeat || isZoneAFish || isZoneAMeat)) {
           northOffset = 180; // Correct cone to align with the actual camera orientation for the entire row
         }
 
