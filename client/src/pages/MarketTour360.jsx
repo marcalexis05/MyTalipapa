@@ -971,9 +971,10 @@ export default function MarketTour360() {
 
         // Apply specific northOffset correction for Zone E - Stall #1
         let northOffset = 0;
+        const upsideDownStalls = ['13(u)', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24'];
         if (stateRef.current.currentStall && stateRef.current.currentStall.id === '1(u)') {
           northOffset = -90; // Calibrate left turn to point to Stall #13
-        } else if (stateRef.current.currentStall && (stateRef.current.currentStall.id === '13(u)' || stateRef.current.currentStall.id === '14')) {
+        } else if (stateRef.current.currentStall && upsideDownStalls.includes(stateRef.current.currentStall.id)) {
           northOffset = 180; // Correct cone pointing DOWN instead of UP the aisle
         }
 
