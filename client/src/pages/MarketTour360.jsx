@@ -878,9 +878,9 @@ export default function MarketTour360() {
         const z = Math.sin(phi) * Math.sin(theta)
         camera.lookAt(x, y, z)
 
-        // Sync compass rotation (adding 180 degree offset to align with map correctly)
+        // Sync compass rotation (0 deg = North)
         const deg = Math.round((theta * 180) / Math.PI) % 360
-        setCompassAngle((-deg + 180) % 360)
+        setCompassAngle(deg)
       }
       updateCamera()
 
