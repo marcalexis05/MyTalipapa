@@ -942,6 +942,14 @@ export default function MarketTour360() {
             if (target) {
               if (stateRef.current.currentStall.id === '1(u)' && target.stall.id === '13(u)') {
                 dynamicLabel = `Go Left to ${target.stall.name || 'Stall ' + target.stall.id}`;
+              } else if (stateRef.current.currentStall.id === '24' && target.stall.id === '12(u)') {
+                dynamicLabel = `Go Left to ${target.stall.name || 'Stall ' + target.stall.id}`;
+              } else if (stateRef.current.currentStall.id === '24' && target.sectionKey === 'veggies' && target.stall.id === '12') {
+                dynamicLabel = `Go Right to ${target.stall.name || 'Stall ' + target.stall.id}`;
+              } else if (stateRef.current.currentStall.id === '12(u)' && target.stall.id === '24') {
+                dynamicLabel = `Go Right to ${target.stall.name || 'Stall ' + target.stall.id}`;
+              } else if (stateRef.current.currentStall.id === '13(u)' && target.stall.id === '1(u)') {
+                dynamicLabel = `Go Right to ${target.stall.name || 'Stall ' + target.stall.id}`;
               } else {
                 dynamicLabel = `Forward to ${target.stall.name || 'Stall ' + target.stall.id}`;
               }
@@ -1005,7 +1013,15 @@ export default function MarketTour360() {
               // Rotate the arrow to point in the direction of the camera
               let arrowRotationOffset = -Math.PI / 2;
               if (currentStall.id === '1(u)' && nearestStallInfo.stall.id === '13(u)') {
-                arrowRotationOffset = 0; // Point left instead of forward
+                arrowRotationOffset = 0; // Point left
+              } else if (currentStall.id === '24' && nearestStallInfo.stall.id === '12(u)') {
+                arrowRotationOffset = 0; // Point left
+              } else if (currentStall.id === '24' && nearestStallInfo.sectionKey === 'veggies' && nearestStallInfo.stall.id === '12') {
+                arrowRotationOffset = Math.PI; // Point right
+              } else if (currentStall.id === '12(u)' && nearestStallInfo.stall.id === '24') {
+                arrowRotationOffset = Math.PI; // Point right
+              } else if (currentStall.id === '13(u)' && nearestStallInfo.stall.id === '1(u)') {
+                arrowRotationOffset = Math.PI; // Point right
               }
               forwardMesh.rotation.set(-Math.PI / 2, 0, -theta + arrowRotationOffset);
               forwardMesh.userData.targetStallInfo = nearestStallInfo;
@@ -1201,7 +1217,7 @@ export default function MarketTour360() {
           className="absolute z-40 bg-white/95 text-slate-800 text-xs font-bold px-3 py-1.5 rounded-xl pointer-events-none shadow-xl border border-black/10 -translate-x-1/2 -translate-y-12 backdrop-blur-sm transition-all"
           style={{ left: mousePos.x, top: mousePos.y }}
         >
-          {hoveredHotspot.dynamicLabel && hoveredHotspot.dynamicLabel.startsWith('Go Left') ? '←' : (hoveredHotspot.type === 'go_forward' || (hoveredHotspot.dynamicLabel && hoveredHotspot.dynamicLabel.startsWith('Forward'))) ? '↑' : hoveredHotspot.dynamicLabel === 'Backward' ? '↓' : 'i'} {hoveredHotspot.dynamicLabel || hoveredHotspot.label}
+          {hoveredHotspot.dynamicLabel && hoveredHotspot.dynamicLabel.startsWith('Go Left') ? '←' : hoveredHotspot.dynamicLabel && hoveredHotspot.dynamicLabel.startsWith('Go Right') ? '→' : (hoveredHotspot.type === 'go_forward' || (hoveredHotspot.dynamicLabel && hoveredHotspot.dynamicLabel.startsWith('Forward'))) ? '↑' : hoveredHotspot.dynamicLabel === 'Backward' ? '↓' : 'i'} {hoveredHotspot.dynamicLabel || hoveredHotspot.label}
         </div>
       )}
 
