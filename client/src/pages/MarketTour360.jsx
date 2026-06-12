@@ -210,7 +210,7 @@ const getStallImagePath = (id, category) => {
     if (stallId === '1') return '/export360/stall1(u) - meat.jpg';
     if (stallId === '2') return '/export360/stall2(u) - meat.jpg';
     if (stallId === '3') return '/export360/stall3(u)-  meat.jpg';
-    if (stallId === '4') return '/export360/stall4(u)-  meat.jpg';
+    if (stallId === '4') return '/export360/stall3(u)-  meat.jpg';
     if (stallId === '5') return '/export360/stall5(u) - meat.jpg';
     if (stallId === '10') return '/export360/stall10 -  meat.jpg';
     if (stallId === '11') return '/export360/stall11-  meat.jpg';
