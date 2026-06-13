@@ -8,6 +8,7 @@ export default defineConfig({
     tailwindcss(),
   ],
   server: {
+    host: true,
     proxy: {
       '/api': { target: 'http://localhost:5000', changeOrigin: true },
       '/verify-email': { target: 'http://localhost:5000', changeOrigin: true },
