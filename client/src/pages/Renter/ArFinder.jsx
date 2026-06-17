@@ -1401,23 +1401,6 @@ export default function ArFinder({ onBack }) {
               <svg viewBox="0 0 2305 1824" preserveAspectRatio="xMidYMid meet"
                 onClick={handleMapClick} style={{ width: "100%", height: "100%", cursor: "crosshair", userSelect: "none" }}>
                 <image xlinkHref={mapImage} href={mapImage} x="-20" y="-15" width="2305" height="1824" preserveAspectRatio="none" />
-                {stallsList.filter(s => selectedCategory === "all" || s.category === selectedCategory).map(s => {
-                  const isSelected = s.id === selectedStallId;
-                  let circleColor = "rgba(226,232,240,0.9)", textColor = "#1e293b", strokeColor = "#ffffff", strokeWidth = "2.5";
-                  if (isSelected) { circleColor = "#e8621a"; textColor = "#ffffff"; strokeColor = "#ffffff"; strokeWidth = "3.5"; }
-                  else if (s.status === "available") { circleColor = "rgba(34,197,94,0.9)"; textColor = "#ffffff"; strokeColor = "#ffffff"; }
-                  else if (s.status === "occupied") { circleColor = "rgba(239,68,68,0.9)"; textColor = "#ffffff"; strokeColor = "#ffffff"; }
-                  else if (s.status === "pending") { circleColor = "rgba(245,158,11,0.9)"; textColor = "#ffffff"; strokeColor = "#ffffff"; }
-                  return (
-                    <g key={s.id} transform={`translate(${s.x},${s.y})`}>
-                      <circle r="18" fill={circleColor} stroke={strokeColor} strokeWidth={strokeWidth} />
-                      <text y="0" textAnchor="middle" dominantBaseline="middle" fontSize="13" fontWeight="900" fill={textColor}
-                        style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>
-                        {getCircleDisplayNumber(s.rawId)}
-                      </text>
-                    </g>
-                  );
-                })}
                 <polyline points={pathPoints.map(p => `${p.x},${p.y}`).join(" ")}
                   fill="none" stroke="#e8621a" strokeWidth="10"
                   strokeDasharray="15 15" strokeLinecap="round" strokeLinejoin="round" />

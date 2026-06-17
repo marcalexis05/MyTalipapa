@@ -9,6 +9,7 @@ import {
   MapPin,
   Zap,
   Maximize2,
+  Minimize2,
   RotateCcw,
   Compass as CompassIcon,
   ZoomIn,
@@ -29,8 +30,206 @@ import {
   Shield,
   ShieldOff,
   Phone,
-  User
+  User,
+  Droplet
 } from 'lucide-react'
+
+// ─── Market Pathway Graph for Route Finding ─────────────────────────────────
+// Vertical aisle X coordinates (the corridors between stall columns)
+const AISLES_X = [35, 265, 580, 840, 1050, 1300, 1570, 1845, 2120];
+
+// Horizontal corridor Y coordinates (the pathways between rows of stalls)
+// Top hallway, middle hallway, bottom hallway
+const CORRIDORS_Y = [150, 870, 1420];
+const ENTRANCE_COORDS = { x: 1050, y: 1550 };
+
+
+// Find nearest aisle X for a given stall X
+const getNearestAisleX = (x) => {
+  let best = AISLES_X[0], bestD = Math.abs(x - AISLES_X[0]);
+  for (let i = 1; i < AISLES_X.length; i++) {
+    const d = Math.abs(x - AISLES_X[i]);
+    if (d < bestD) { bestD = d; best = AISLES_X[i]; }
+  }
+  return best;
+};
+
+// Find nearest corridor Y for a given stall Y
+const getNearestCorridorY = (y) => {
+  let best = CORRIDORS_Y[0], bestD = Math.abs(y - CORRIDORS_Y[0]);
+  for (let i = 1; i < CORRIDORS_Y.length; i++) {
+    const d = Math.abs(y - CORRIDORS_Y[i]);
+    if (d < bestD) { bestD = d; best = CORRIDORS_Y[i]; }
+  }
+  return best;
+};
+
+// Dijkstra's shortest path through the corridor graph
+const findMarketRoute = (fromCoords, toCoords) => {
+  const startAisleX = getNearestAisleX(fromCoords.x);
+  const endAisleX = getNearestAisleX(toCoords.x);
+  const startCorridorY = getNearestCorridorY(fromCoords.y);
+  const endCorridorY = getNearestCorridorY(toCoords.y);
+
+  // The stall approach points — these are on the pathway, not inside stall blocks
+  const startEntry = { x: startAisleX, y: startCorridorY };
+  const endEntry   = { x: endAisleX,   y: endCorridorY   };
+
+  // Build corridor graph nodes
+  const nodes = [];
+  AISLES_X.forEach(x => {
+    nodes.push({ id: `top-${x}`, x, y: 150  });
+    nodes.push({ id: `mid-${x}`, x, y: 870  });
+    nodes.push({ id: `bot-${x}`, x, y: 1420 });
+  });
+
+  // Add dynamic entry/exit nodes
+  const startId = 'start-entry';
+  const endId   = 'end-entry';
+  nodes.push({ id: startId, ...startEntry });
+  nodes.push({ id: endId,   ...endEntry   });
+
+  // Build adjacency list
+  const adj = {};
+  nodes.forEach(n => adj[n.id] = []);
+
+  const addEdge = (uId, vId) => {
+    const u = nodes.find(n => n.id === uId);
+    const v = nodes.find(n => n.id === vId);
+    if (!u || !v) return;
+    const d = Math.hypot(u.x - v.x, u.y - v.y);
+    adj[uId].push({ to: vId, weight: d });
+    adj[vId].push({ to: uId, weight: d });
+  };
+
+  // Horizontal corridor edges (TOP Y=150)
+  for (let i = 0; i < AISLES_X.length - 1; i++) {
+    addEdge(`top-${AISLES_X[i]}`, `top-${AISLES_X[i+1]}`);
+  }
+  // Horizontal corridor edges (MID Y=870)
+  for (let i = 0; i < AISLES_X.length - 1; i++) {
+    addEdge(`mid-${AISLES_X[i]}`, `mid-${AISLES_X[i+1]}`);
+  }
+  // Horizontal corridor edges (BOTTOM Y=1420)
+  for (let i = 0; i < AISLES_X.length - 1; i++) {
+    addEdge(`bot-${AISLES_X[i]}`, `bot-${AISLES_X[i+1]}`);
+  }
+
+  // Vertical aisle edges (connecting corridor intersections)
+  AISLES_X.forEach(x => {
+    addEdge(`top-${x}`, `mid-${x}`);
+    addEdge(`mid-${x}`, `bot-${x}`);
+  });
+
+  // Connect start/end entries to their nearest corridor graph nodes
+  const connectEntry = (entryId, entryPt) => {
+    const x = entryPt.x;
+    const y = entryPt.y;
+    // Find the two corridor nodes on the same aisle (same X) that bracket this Y
+    const aisleNodes = nodes.filter(n => n.x === x && n.id !== entryId);
+    aisleNodes.sort((a, b) => a.y - b.y);
+    let connected = false;
+    for (let i = 0; i < aisleNodes.length - 1; i++) {
+      if (y >= aisleNodes[i].y && y <= aisleNodes[i+1].y) {
+        addEdge(entryId, aisleNodes[i].id);
+        addEdge(entryId, aisleNodes[i+1].id);
+        connected = true;
+        break;
+      }
+    }
+    if (!connected) {
+      // Snap to nearest aisle node
+      const nearest = aisleNodes.reduce((prev, curr) =>
+        Math.abs(curr.y - y) < Math.abs(prev.y - y) ? curr : prev
+      );
+      addEdge(entryId, nearest.id);
+    }
+  };
+
+  connectEntry(startId, startEntry);
+  connectEntry(endId, endEntry);
+
+  // Dijkstra
+  const dist = {};
+  const prev = {};
+  const visited = new Set();
+  nodes.forEach(n => dist[n.id] = Infinity);
+  dist[startId] = 0;
+
+  const pq = [startId];
+  while (pq.length > 0) {
+    pq.sort((a, b) => dist[a] - dist[b]);
+    const u = pq.shift();
+    if (visited.has(u)) continue;
+    visited.add(u);
+    if (u === endId) break;
+    (adj[u] || []).forEach(edge => {
+      if (visited.has(edge.to)) return;
+      const alt = dist[u] + edge.weight;
+      if (alt < dist[edge.to]) {
+        dist[edge.to] = alt;
+        prev[edge.to] = u;
+        pq.push(edge.to);
+      }
+    });
+  }
+
+  // Reconstruct path through graph
+  const pathIds = [];
+  let curr = endId;
+  while (curr) { pathIds.unshift(curr); curr = prev[curr]; }
+
+  if (pathIds[0] !== startId) {
+    // Fallback: L-shaped corridor path
+    return [fromCoords, { x: fromCoords.x, y: startCorridorY }, { x: toCoords.x, y: startCorridorY }, toCoords];
+  }
+
+  const graphWaypoints = pathIds.map(id => {
+    const n = nodes.find(nd => nd.id === id);
+    return { x: n.x, y: n.y };
+  });
+
+  // Remove collinear middle points
+  const simplified = [graphWaypoints[0]];
+  for (let i = 1; i < graphWaypoints.length - 1; i++) {
+    const p = graphWaypoints[i - 1], c = graphWaypoints[i], nx = graphWaypoints[i + 1];
+    const cross = (c.x - p.x) * (nx.y - p.y) - (c.y - p.y) * (nx.x - p.x);
+    if (Math.abs(cross) > 1) simplified.push(c);
+  }
+  if (graphWaypoints.length > 1) simplified.push(graphWaypoints[graphWaypoints.length - 1]);
+
+  // Build the full corridor-safe path:
+  // fromCoords → perpendicular to corridor → graph path → perpendicular to dest
+  const fullPath = [
+    fromCoords,
+    // Move perpendicular from stall to its nearest corridor Y (along stall column X)
+    { x: fromCoords.x, y: startCorridorY },
+    ...simplified,
+    // Move perpendicular from corridor to destination stall (along stall column X)
+    { x: toCoords.x, y: endCorridorY },
+    toCoords
+  ];
+
+  // Remove exact duplicates
+  const deduped = [fullPath[0]];
+  for (let i = 1; i < fullPath.length; i++) {
+    if (fullPath[i].x !== deduped[deduped.length-1].x || fullPath[i].y !== deduped[deduped.length-1].y) {
+      deduped.push(fullPath[i]);
+    }
+  }
+
+  // Final collinear simplification
+  const final = [deduped[0]];
+  for (let i = 1; i < deduped.length - 1; i++) {
+    const p = deduped[i - 1], c = deduped[i], nx = deduped[i + 1];
+    const cross = (c.x - p.x) * (nx.y - p.y) - (c.y - p.y) * (nx.x - p.x);
+    if (Math.abs(cross) > 1) final.push(c);
+  }
+  if (deduped.length > 1) final.push(deduped[deduped.length - 1]);
+
+  return final;
+};
+// ────────────────────────────────────────────────────────────────────────────
 
 const getStallZone = (num, category) => {
   const stallId = String(num);
@@ -197,7 +396,7 @@ const SECTIONS = {
     bgTheme: 'from-green-500/20 to-transparent',
     accentColor: '#10b981',
     stalls: generateStalls('veggies', [
-      '5', '6', '7', '11', '12', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', '34', '35', '36', '37', '38', '39', '40',
+      '5', '6', '7', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', '34', '35', '36', '37', '38', '39', '40',
       '41', '42', '43', '44', '45', '46', '47', '48', '50', '51', '52', '53', '54', '55', '56', '57', '58', '59', '60',
       '61', '62', '63', '64', '65', '66', '67', '68', '69', '70', '71', '72'
     ])
@@ -357,11 +556,260 @@ export default function MarketTour360() {
   const [autoRotate, setAutoRotate] = useState(false)
   const [transitioning, setTransitioning] = useState(false)
   const [uiVisible, setUiVisible] = useState(true)
-  const [detailsCollapsed, setDetailsCollapsed] = useState(false)
+  const [detailsCollapsed, setDetailsCollapsed] = useState(true)
   const [sectionDropdownOpen, setSectionDropdownOpen] = useState(false)
   const [privacyMode, setPrivacyMode] = useState(true)
+  const [showBadges, setShowBadges] = useState(true)
   const [stallDropdownOpen, setStallDropdownOpen] = useState(false)
-  const [isMapExpanded, setIsMapExpanded] = useState(false) // NEW State for split-screen map
+  const [isMapExpanded, setIsMapExpanded] = useState(false)
+  // Route finder state for the expanded map
+  const [routeFrom, setRouteFrom] = useState(null) // { secKey, stallId }
+  const [routeTo, setRouteTo] = useState(null)     // { secKey, stallId }
+  const [routePickStep, setRoutePickStep] = useState(null) // 'from' | 'to' | null
+
+  // AR Navigation State
+  const [navigationMode, setNavigationMode] = useState('360') // '360' or 'ar'
+  const [destinationStall, setDestinationStall] = useState(null)
+  const [arWaypoints, setArWaypoints] = useState([])
+  const [routeInstructions, setRouteInstructions] = useState([])
+  const [arStepIndex, setArStepIndex] = useState(0)
+  const [isWalkingSimulation, setIsWalkingSimulation] = useState(false)
+  const [arStream, setArStream] = useState(null)
+  const [arCameraError, setArCameraError] = useState(true)
+  const [dbLoading, setDbLoading] = useState(false)
+  const videoRef = useRef(null)
+
+  const startCamera = async () => {
+    try {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment' }
+        });
+        setArStream(stream);
+        setArCameraError(false);
+      } else {
+        setArCameraError(true);
+      }
+    } catch (err) {
+      console.warn("Camera access denied or unavailable, using simulated AR camera mode.", err);
+      setArCameraError(true);
+    }
+  };
+
+  const stopCamera = () => {
+    if (arStream) {
+      arStream.getTracks().forEach(track => track.stop());
+      setArStream(null);
+    }
+  };
+
+  // Sync Route Finder 'FROM' selector with the current stall position
+  useEffect(() => {
+    if (currentStall) {
+      setRouteFrom({ secKey: activeSectionKey, stallId: currentStall.id });
+    }
+  }, [currentStall, activeSectionKey]);
+
+  useEffect(() => {
+    return () => {
+      if (arStream) {
+        arStream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [arStream]);
+
+  // Bind live camera stream to video element when active
+  useEffect(() => {
+    if (videoRef.current) {
+      if (arStream) {
+        videoRef.current.srcObject = arStream;
+      } else {
+        videoRef.current.srcObject = null;
+      }
+    }
+  }, [arStream, arCameraError, navigationMode]);
+
+  // Walk simulation effect
+  useEffect(() => {
+    let timer;
+    if (isWalkingSimulation && routeInstructions.length > 0) {
+      timer = setInterval(() => {
+        setArStepIndex((prev) => {
+          if (prev >= routeInstructions.length - 1) {
+            setIsWalkingSimulation(false);
+            return prev;
+          }
+          return prev + 1;
+        });
+      }, 2200);
+    }
+    return () => clearInterval(timer);
+  }, [isWalkingSimulation, routeInstructions]);
+
+  // Sync 360 panorama view with route steps (when simulating or stepping through the route in 360 mode)
+  useEffect(() => {
+    if (navigationMode === '360' && routeInstructions.length > 0 && routeInstructions[arStepIndex]) {
+      const stepCoords = routeInstructions[arStepIndex].coords;
+      if (stepCoords) {
+        // Find the stall closest to these coordinates
+        let bestStall = null;
+        let bestSecKey = null;
+        let bestIdx = -1;
+        let minDistance = Infinity;
+        
+        Object.entries(sectionsData).forEach(([secKey, sec]) => {
+          sec.stalls.forEach((st, idx) => {
+            const coords = getRawCoordinates(st, secKey);
+            const dist = Math.sqrt((coords.x - stepCoords.x) ** 2 + (coords.y - stepCoords.y) ** 2);
+            if (dist < minDistance) {
+              minDistance = dist;
+              bestStall = st;
+              bestSecKey = secKey;
+              bestIdx = idx;
+            }
+          });
+        });
+        
+        if (bestStall && minDistance < 120) {
+          const isDifferent = bestStall.id !== currentStall.id || bestSecKey !== activeSectionKey;
+          if (isDifferent) {
+            setActiveSectionKey(bestSecKey);
+            setStallIndex(bestIdx);
+            triggerSceneTransition(getStallImagePath(bestStall.id, bestSecKey));
+          }
+        }
+      }
+    }
+  }, [arStepIndex, navigationMode, routeInstructions]);
+
+  // Sync step index when currentStall changes manually in 360 mode
+  useEffect(() => {
+    if (navigationMode === '360' && routeInstructions.length > 0 && destinationStall) {
+      const curCoords = getRawCoordinates(currentStall, activeSectionKey);
+      
+      // Find the step in routeInstructions whose coordinates are closest to curCoords
+      let bestStepIdx = arStepIndex;
+      let minDistance = Infinity;
+      
+      routeInstructions.forEach((step, idx) => {
+        if (step.coords) {
+          const dist = Math.sqrt((step.coords.x - curCoords.x) ** 2 + (step.coords.y - curCoords.y) ** 2);
+          if (dist < minDistance) {
+            minDistance = dist;
+            bestStepIdx = idx;
+          }
+        }
+      });
+      
+      if (bestStepIdx !== arStepIndex && minDistance < 60) {
+        setArStepIndex(bestStepIdx);
+      }
+    }
+  }, [currentStall, activeSectionKey, routeInstructions, destinationStall]);
+
+  const generateRouteInstructions = (waypoints) => {
+    const instructions = [];
+    if (!waypoints || waypoints.length < 2) return [{ text: "You have arrived at your destination!", distance: 0, coords: ENTRANCE_COORDS }];
+    
+    for (let i = 0; i < waypoints.length - 1; i++) {
+      const p1 = waypoints[i];
+      const p2 = waypoints[i+1];
+      const dx = p2.x - p1.x;
+      const dy = p2.y - p1.y;
+      const distPixels = Math.hypot(dx, dy);
+      const distMeters = Math.round(distPixels * 0.05); // scale pixels to meters
+      
+      const angleRad = Math.atan2(dy, dx);
+      const angleDeg = (angleRad * 180 / Math.PI + 450) % 360;
+      
+      let action = "Walk forward";
+      if (i > 0) {
+        const prevP = waypoints[i-1];
+        const prevDx = p1.x - prevP.x;
+        const prevDy = p1.y - prevP.y;
+        const prevAngleRad = Math.atan2(prevDy, prevDx);
+        const prevAngleDeg = (prevAngleRad * 180 / Math.PI + 450) % 360;
+        
+        let diff = angleDeg - prevAngleDeg;
+        if (diff > 180) diff -= 360;
+        if (diff < -180) diff += 360;
+        
+        if (diff > 45 && diff < 135) {
+          action = "Turn right";
+        } else if (diff < -45 && diff > -135) {
+          action = "Turn left";
+        } else if (Math.abs(diff) >= 135) {
+          action = "Turn around";
+        }
+      } else {
+        action = "Enter market and walk forward";
+      }
+      
+      instructions.push({
+        text: `${action} for ${distMeters} meters`,
+        distance: distMeters,
+        coords: p1
+      });
+    }
+    
+    instructions.push({
+      text: "You have arrived at your destination!",
+      distance: 0,
+      coords: waypoints[waypoints.length - 1]
+    });
+    
+    return instructions;
+  };
+
+  const handleRouteMe = (targetStall) => {
+    setDestinationStall(targetStall);
+    setSelectedStall(targetStall);
+    
+    const startStall = currentStall;
+    const startSec = activeSectionKey;
+    const startCoords = startStall ? getRawCoordinates(startStall, startSec) : { x: 1050, y: 1550 };
+    
+    // Find section of targetStall
+    let targetSec = activeSectionKey;
+    Object.entries(sectionsData).forEach(([secKey, sec]) => {
+      if (sec.stalls.some(s => s.id === targetStall.id)) {
+        targetSec = secKey;
+      }
+    });
+    
+    const targetCoords = getRawCoordinates(targetStall, targetSec);
+    const routeWaypoints = findMarketRoute(startCoords, targetCoords);
+    
+    setArWaypoints(routeWaypoints);
+    const steps = generateRouteInstructions(routeWaypoints);
+    setRouteInstructions(steps);
+    setArStepIndex(0);
+    
+    if (navigationMode === 'ar') {
+      startCamera();
+    }
+  };
+
+  const fetchStallDetailsFromDb = async (stallId, zone) => {
+    setDbLoading(true);
+    try {
+      const cleanNum = getCleanDbStallNumber(stallId);
+      const cleanZone = String(zone || '').replace('Zone ', '').toUpperCase();
+      const res = await fetch(`/api/stalls/search?zone=${cleanZone}&stallNumber=${cleanNum}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.stall) {
+          setDbLoading(false);
+          return data.stall;
+        }
+      }
+    } catch (err) {
+      console.error('Failed to query backend for stall details:', err);
+    }
+    setDbLoading(false);
+    return null;
+  };
+
 
   // Floating Tooltip State
   const [hoveredHotspot, setHoveredHotspot] = useState(null)
@@ -387,10 +835,21 @@ export default function MarketTour360() {
   }, [currentStall])
 
   // Track active references to prevent stale closures in events
-  const stateRef = useRef({ activeSectionKey, stallIndex, currentStall, lastCompassDeg: -1 })
+  const stateRef = useRef({ activeSectionKey, stallIndex, currentStall, sectionsData, showBadges, lastCompassDeg: -1, bestForward: null, bestBackward: null, destinationStall, navigationMode })
   useEffect(() => {
-    stateRef.current = { activeSectionKey, stallIndex, currentStall, lastCompassDeg: stateRef.current.lastCompassDeg }
-  }, [activeSectionKey, stallIndex, currentStall])
+    stateRef.current = {
+      activeSectionKey,
+      stallIndex,
+      currentStall,
+      sectionsData,
+      showBadges,
+      lastCompassDeg: stateRef.current.lastCompassDeg,
+      bestForward: stateRef.current.bestForward,
+      bestBackward: stateRef.current.bestBackward,
+      destinationStall,
+      navigationMode
+    }
+  }, [activeSectionKey, stallIndex, currentStall, sectionsData, showBadges, destinationStall, navigationMode])
 
   // Image Preloader: Quietly preload adjacent panoramas into browser cache
   useEffect(() => {
@@ -453,10 +912,20 @@ export default function MarketTour360() {
                     contractorName: dbStall.contractorName || 'None',
                     contractorContact: dbStall.contractorContact || 'N/A',
                     size: dbStall.size || s.size || 12,
-                    description: dbStall.description || s.description || s.name
+                    description: dbStall.description || s.description || s.name,
+                    vendorName: dbStall.vendorName || dbStall.tenant?.name || s.vendorName || 'Vibrant Local Vendor',
+                    productType: dbStall.productType || s.productType || (secKey === 'meat' ? 'Premium Meats' : secKey === 'fish' ? 'Fresh Seafood' : 'Organic Vegetables'),
+                    operatingHours: dbStall.operatingHours || s.operatingHours || '4:00 AM - 6:00 PM',
+                    phoneNumber: dbStall.phoneNumber || s.phoneNumber || 'N/A'
                   };
                 }
-                return s;
+                return {
+                  ...s,
+                  vendorName: s.vendorName || 'Vibrant Local Vendor',
+                  productType: s.productType || (secKey === 'meat' ? 'Premium Meats' : secKey === 'fish' ? 'Fresh Seafood' : 'Organic Vegetables'),
+                  operatingHours: s.operatingHours || '4:00 AM - 6:00 PM',
+                  phoneNumber: s.phoneNumber || 'N/A'
+                };
               })
             };
           });
@@ -468,6 +937,13 @@ export default function MarketTour360() {
         console.error('[MarketTour360] Failed to fetch stalls from database:', err);
       });
   }, []);
+
+  // Recreate hotspots when sectionsData, showBadges, destinationStall, or navigationMode updates
+  useEffect(() => {
+    if (sceneRef.current && currentStall && window.THREE) {
+      recreateHotspots(sceneRef.current, currentStall, window.THREE);
+    }
+  }, [sectionsData, showBadges, destinationStall, navigationMode]);
 
   const isInitialMount = useRef(true);
 
@@ -625,76 +1101,103 @@ export default function MarketTour360() {
     canvas.width = 128
     canvas.height = 128
     const ctx = canvas.getContext('2d')
-
-    // Clean drawing surface
     ctx.clearRect(0, 0, 128, 128)
 
-    // Define colors based on type
     const color = type === 'info' ? '#e07b00' : '#1a5c2a'
     const glowColor = type === 'info' ? 'rgba(224, 123, 0, ' : 'rgba(26, 92, 42, '
-
-    // Radial outer glow
     const grad = ctx.createRadialGradient(64, 64, 15, 64, 64, 55)
     grad.addColorStop(0, glowColor + '1)')
     grad.addColorStop(0.5, glowColor + '0.4)')
     grad.addColorStop(1, glowColor + '0)')
-
     ctx.fillStyle = grad
     ctx.beginPath()
     ctx.arc(64, 64, 55, 0, Math.PI * 2)
     ctx.fill()
-
-    // Inner core solid circle
     ctx.fillStyle = color
     ctx.beginPath()
     ctx.arc(64, 64, 28, 0, Math.PI * 2)
     ctx.fill()
-
-    // Border circle
     ctx.strokeStyle = '#ffffff'
     ctx.lineWidth = 3
     ctx.beginPath()
     ctx.arc(64, 64, 28, 0, Math.PI * 2)
     ctx.stroke()
-
-    // Center icon/symbol
     if (type === 'info') {
       ctx.fillStyle = '#ffffff'
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
       ctx.font = 'bold italic 36px Georgia, serif'
       ctx.fillText('i', 64, 61)
-    } else if (type === 'nav') {
-      // Google Street View style painted floor chevron
-      ctx.clearRect(0, 0, 128, 128)
-
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.85)'
-      ctx.shadowColor = 'rgba(0, 0, 0, 0.5)'
-      ctx.shadowBlur = 8
-      ctx.shadowOffsetY = 3
-
-      ctx.beginPath()
-      // Always draw UP chevron so it points away from origin when rotated flat
-      ctx.moveTo(64, 20)
-      ctx.lineTo(110, 60)
-      ctx.lineTo(90, 75)
-      ctx.lineTo(64, 50)
-      ctx.lineTo(38, 75)
-      ctx.lineTo(18, 60)
-      ctx.closePath()
-      ctx.fill()
-
-      // Faint ellipse ring around it
-      ctx.shadowColor = 'transparent'
-      ctx.beginPath()
-      ctx.ellipse(64, 64, 55, 55, 0, 0, 2 * Math.PI)
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)'
-      ctx.lineWidth = 4
-      ctx.stroke()
     }
-
     return new THREE.CanvasTexture(canvas)
   }
+
+  // Google Street View-style ground navigation line: glowing line with directional chevrons
+  const createGroundArrowTexture = (THREE) => {
+    const S = 256;
+    const canvas = document.createElement('canvas');
+    canvas.width = S;
+    canvas.height = S;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, S, S);
+    const cx = S / 2;
+
+    // Horizontal glowing green gradient for the line
+    const grad = ctx.createLinearGradient(0, 0, S, 0);
+    grad.addColorStop(0.0, 'rgba(16, 185, 129, 0.0)');
+    grad.addColorStop(0.35, 'rgba(16, 185, 129, 0.45)');
+    grad.addColorStop(0.46, 'rgba(16, 185, 129, 0.95)');
+    grad.addColorStop(0.5, 'rgba(255, 255, 255, 1.0)'); // White hot core
+    grad.addColorStop(0.54, 'rgba(16, 185, 129, 0.95)');
+    grad.addColorStop(0.65, 'rgba(16, 185, 129, 0.45)');
+    grad.addColorStop(1.0, 'rgba(16, 185, 129, 0.0)');
+
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, S, S);
+
+    // Draw small indicator arrows pointing forward down the line
+    ctx.fillStyle = '#ffffff';
+    for (let y of [60, 128, 196]) {
+      ctx.beginPath();
+      ctx.moveTo(cx - 15, y + 10);
+      ctx.lineTo(cx, y - 10);
+      ctx.lineTo(cx + 15, y + 10);
+      ctx.lineTo(cx, y + 2);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.needsUpdate = true;
+    return texture;
+  };
+
+  const createArChevronTexture = (THREE) => {
+    const S = 256;
+    const canvas = document.createElement('canvas');
+    canvas.width = S;
+    canvas.height = S;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, S, S);
+    const cx = S / 2;
+
+    // Create a beautiful horizontal gradient for the glowing route line
+    const grad = ctx.createLinearGradient(0, 0, S, 0);
+    grad.addColorStop(0.0, 'rgba(16, 185, 129, 0.0)');
+    grad.addColorStop(0.35, 'rgba(16, 185, 129, 0.45)');
+    grad.addColorStop(0.46, 'rgba(16, 185, 129, 0.95)');
+    grad.addColorStop(0.5, 'rgba(255, 255, 255, 1.0)'); // White hot core
+    grad.addColorStop(0.54, 'rgba(16, 185, 129, 0.95)');
+    grad.addColorStop(0.65, 'rgba(16, 185, 129, 0.45)');
+    grad.addColorStop(1.0, 'rgba(16, 185, 129, 0.0)');
+
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, S, S);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.needsUpdate = true;
+    return texture;
+  };
 
   const getCleanDbStallNumber = (rawId) => {
     return String(rawId)
@@ -709,7 +1212,7 @@ export default function MarketTour360() {
   // Node Graph to map stalls/hallways to Map X,Y coordinates
   const getRawCoordinates = (stall, overrideCategory = null) => {
     const cleanNum = getCleanDbStallNumber(stall.id);
-    const category = overrideCategory || activeSectionKey;
+    const category = overrideCategory || stateRef.current.activeSectionKey;
     const zoneLetter = String(stall.zone || '').replace('Zone ', '').toUpperCase();
     const isBottomZone = ['E', 'F', 'G', 'H'].includes(zoneLetter);
     const yOffset = isBottomZone ? 250 : 0;
@@ -732,16 +1235,18 @@ export default function MarketTour360() {
   };
 
   const findNearestStallInDirection = (currentStall, currentCompassAngle) => {
-    const currentCoords = getRawCoordinates(currentStall, activeSectionKey);
+    const currentSectionsData = stateRef.current.sectionsData;
+    const currentActiveSectionKey = stateRef.current.activeSectionKey;
+    const currentCoords = getRawCoordinates(currentStall, currentActiveSectionKey);
     let bestMatch = null;
     let minDistance = Infinity;
 
     const sectionKeys = ['meat', 'fish', 'veggies'];
 
     sectionKeys.forEach((secKey) => {
-      const stalls = sectionsData[secKey].stalls;
+      const stalls = currentSectionsData[secKey].stalls;
       stalls.forEach((stall, idx) => {
-        if (secKey === activeSectionKey && stall.id === currentStall.id) return;
+        if (secKey === currentActiveSectionKey && stall.id === currentStall.id) return;
 
         const targetCoords = getRawCoordinates(stall, secKey);
 
@@ -774,20 +1279,210 @@ export default function MarketTour360() {
     return bestMatch;
   };
 
+  const extractCleanNumber = (name) => {
+    if (!name) return '';
+    // Super robust extraction of raw number/ID from name (e.g. "Zone E - Stall #10" -> "#10", "Stall 12" -> "#12", "Empty Stall 2" -> "#2")
+    const hashMatch = name.match(/#\s*([a-zA-Z0-9()-]+)/i);
+    if (hashMatch) {
+      return `#${hashMatch[1]}`;
+    }
+    const numberMatch = name.match(/(\d+\s*\(?[a-zA-Z0-9]*\)?)$/i) || name.match(/(\d+)/);
+    if (numberMatch) {
+      return `#${numberMatch[1]}`;
+    }
+    // Fallback: strip Stall prefixes and truncate if too long
+    const stripped = name.replace(/Stall\s*#/gi, '').replace(/Stall/gi, '').trim();
+    return stripped.length > 5 ? stripped.substring(0, 4) + '..' : stripped;
+  };
+
+  // Helper to create beautiful Google Maps style placemarks for nearby stalls
+  const createStallPinTexture = (THREE, name, sectionKey) => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 128;
+    canvas.height = 128;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, 128, 128);
+
+    const cleanNum = extractCleanNumber(name);
+
+    // Section Colors from Legend: Meat = Brownish-red, Fishes = Cyan, Vegetables = Green
+    let categoryColor = '#00c362'; // default vegetables
+    let glowColor = 'rgba(0, 195, 98, 0.3)';
+    if (sectionKey === 'meat') {
+      categoryColor = '#8d3e3c';
+      glowColor = 'rgba(141, 62, 60, 0.3)';
+    } else if (sectionKey === 'fish') {
+      categoryColor = '#00b5e2';
+      glowColor = 'rgba(0, 181, 226, 0.3)';
+    }
+
+    const cx = 64;
+    const cy = 64;
+    const r = 24;
+
+    // Draw outer glow/ring
+    ctx.strokeStyle = glowColor;
+    ctx.lineWidth = 8;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r + 4, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Draw background circle (Solid category color)
+    ctx.fillStyle = categoryColor;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Draw thin white border
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Draw number text inside (White) - Dynamically adjust font size to prevent overflow/clipping
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    
+    let fontSize = 15;
+    if (cleanNum.length > 6) {
+      fontSize = 11;
+    } else if (cleanNum.length > 4) {
+      fontSize = 13;
+    }
+    
+    ctx.font = `bold ${fontSize}px system-ui, -apple-system, sans-serif`;
+    ctx.fillText(cleanNum, cx, cy);
+
+    return new THREE.CanvasTexture(canvas);
+  };
+
   // Re-populate the 3D scene with relevant Hotspots
   const recreateHotspots = (scene, stall, THREE) => {
     // Clear old sprites
     hotspotMeshes.current.forEach((mesh) => scene.remove(mesh))
     hotspotMeshes.current = []
 
-    // Forward Arrow Hotspot (Dynamically positioned)
-    const forwardTex = createHotspotTexture(THREE, 'nav', 'next')
-    const forwardMat = new THREE.MeshBasicMaterial({ map: forwardTex, transparent: true, depthTest: false })
-    const forwardMesh = new THREE.Mesh(new THREE.PlaneGeometry(120, 120), forwardMat)
-    forwardMesh.visible = false; // Hidden until a valid forward stall is found
-    forwardMesh.userData = { type: 'go_forward', label: 'Go Forward', targetStallInfo: null }
-    scene.add(forwardMesh)
-    hotspotMeshes.current.push(forwardMesh)
+    // Ground arrow meshes — 2 chevrons (one pointing forward, one pointing backward)
+    const arrowTex = createGroundArrowTexture(THREE);
+    for (let i = 0; i < 2; i++) {
+      const arrowMat = new THREE.MeshBasicMaterial({ map: arrowTex, transparent: true, depthTest: false, opacity: 0.0 });
+      const arrowMesh = new THREE.Mesh(new THREE.PlaneGeometry(35, 110), arrowMat);
+      arrowMesh.visible = false;
+      arrowMesh.userData = { type: 'go_forward', label: 'Go Forward', targetStallInfo: null, arrowIndex: i };
+      scene.add(arrowMesh);
+      hotspotMeshes.current.push(arrowMesh);
+    }
+
+    // Dynamic nearby stall markers (Google Maps style)
+    const currentSectionsData = stateRef.current.sectionsData;
+    const currentActiveSectionKey = stateRef.current.activeSectionKey;
+    const currentCoords = getRawCoordinates(stall, currentActiveSectionKey);
+    const sectionKeys = ['meat', 'fish', 'veggies'];
+    
+    // Prevent displaying duplicate badge numbers in the current viewport (e.g. 8 and 8(u))
+    const renderedNumbers = new Set([extractCleanNumber(stall.name)]);
+
+    // Calibrate camera direction offset
+    let northOffset = 0;
+    const upsideDownStalls = ['13(u)', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24'];
+    const zoneAFishUpsideDown = ['11', '12', '13', '14', '15', '16', '17', '18', '19', '20'];
+    const zoneAMeatUpsideDown = ['12', '13'];
+
+    const isZoneEMeat = currentActiveSectionKey === 'meat' && upsideDownStalls.includes(stall.id);
+    const isZoneAFish = currentActiveSectionKey === 'fish' && zoneAFishUpsideDown.includes(stall.id);
+    const isZoneAMeat = currentActiveSectionKey === 'meat' && zoneAMeatUpsideDown.includes(stall.id);
+
+    if (stall && stall.id === '1(u)') {
+      northOffset = -90;
+    } else if (stall && (isZoneEMeat || isZoneAFish || isZoneAMeat)) {
+      northOffset = 180;
+    }
+
+
+
+    // 3D Route Chevrons overlay directly in the 360 panorama map!
+    const activeRouteTo = stateRef.current.destinationStall;
+    if (activeRouteTo) {
+      const chevTex = createArChevronTexture(THREE);
+      const startCoords = getRawCoordinates(stall, currentActiveSectionKey);
+      
+      let targetSec = currentActiveSectionKey;
+      Object.entries(currentSectionsData).forEach(([secKey, sec]) => {
+        if (sec.stalls.some(s => s.id === activeRouteTo.id)) {
+          targetSec = secKey;
+        }
+      });
+      const endCoords = getRawCoordinates(activeRouteTo, targetSec);
+      
+      const path = findMarketRoute(startCoords, endCoords);
+      if (path && path.length > 1) {
+        let chevCount = 0;
+        const maxChevrons = 35;
+        const stepDist = 16; // space in pixels between segments
+        let leftover = 0;
+        
+        for (let i = 0; i < path.length - 1; i++) {
+          const P_start = path[i];
+          const P_end = path[i + 1];
+          const dx = P_end.x - P_start.x;
+          const dy = P_end.y - P_start.y;
+          const len = Math.sqrt(dx * dx + dy * dy);
+          if (len === 0) continue;
+          
+          const angleRad = Math.atan2(dy, dx);
+          const angleDeg = (angleRad * 180 / Math.PI + 450) % 360;
+          const segThetaDeg = (angleDeg - northOffset) % 360;
+          const segThetaRad = (segThetaDeg * Math.PI) / 180;
+          
+          let d = leftover;
+          while (d < len && chevCount < maxChevrons) {
+            const ratio = d / len;
+            const px = P_start.x + dx * ratio;
+            const py = P_start.y + dy * ratio;
+            
+            const rx = px - path[0].x;
+            const ry = py - path[0].y;
+            const rDist = Math.sqrt(rx * rx + ry * ry);
+            
+            if (rDist > 15 && rDist < 480) {
+              const rAngleRad = Math.atan2(ry, rx);
+              const rAngleDeg = (rAngleRad * 180 / Math.PI + 450) % 360;
+              const rThetaDeg = (rAngleDeg - northOffset) % 360;
+              const rThetaRad = (rThetaDeg * Math.PI) / 180;
+              
+              const sphereDist = 90 + (rDist * 0.45);
+              const cx = Math.cos(rThetaRad) * sphereDist;
+              const cz = Math.sin(rThetaRad) * sphereDist;
+              const cy = -65; // floor level
+              
+              const chevMat = new THREE.MeshBasicMaterial({
+                map: chevTex,
+                transparent: true,
+                depthWrite: false,
+                opacity: 0.85 - (rDist / 480) * 0.45
+              });
+              
+              const chevMesh = new THREE.Mesh(new THREE.PlaneGeometry(35, 35), chevMat);
+              chevMesh.position.set(cx, cy, cz);
+              chevMesh.rotation.set(-Math.PI / 2 + 0.15, 0, segThetaRad - Math.PI / 2);
+              
+              chevMesh.userData = {
+                type: 'route_chevron',
+                label: `To: ${activeRouteTo.name}`
+              };
+              
+              scene.add(chevMesh);
+              hotspotMeshes.current.push(chevMesh);
+              chevCount++;
+            }
+            d += stepDist;
+          }
+          leftover = d - len;
+        }
+      }
+    }
   }
 
   // Main Three.js Init
@@ -855,11 +1550,30 @@ export default function MarketTour360() {
       const raycaster = new THREE.Raycaster()
       const mouse = new THREE.Vector2()
 
+      let clickStartX = 0
+      let clickStartY = 0
+
+      renderer.domElement.addEventListener('mousedown', (e) => {
+        clickStartX = e.clientX
+        clickStartY = e.clientY
+      })
+
+      renderer.domElement.addEventListener('touchstart', (e) => {
+        if (e.touches && e.touches.length > 0) {
+          clickStartX = e.touches[0].clientX
+          clickStartY = e.touches[0].clientY
+        }
+      })
+
       function onPointerDown(e) {
         const rect = renderer.domElement.getBoundingClientRect()
         const touch = (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0])
         const clientX = touch ? touch.clientX : e.clientX
-        const clientY = e.touches ? e.touches[0].clientY : e.clientY
+        const clientY = touch ? touch.clientY : e.clientY
+
+        // Reject clicks that were actually camera drags/swipes
+        const dragDist = Math.sqrt((clientX - clickStartX) ** 2 + (clientY - clickStartY) ** 2)
+        if (dragDist > 8) return
 
         mouse.x = ((clientX - rect.left) / rect.width) * 2 - 1
         mouse.y = -((clientY - rect.top) / rect.height) * 2 + 1
@@ -873,9 +1587,44 @@ export default function MarketTour360() {
             handleNextStall()
           } else if (uData.type === 'prev') {
             handlePrevStall()
-          } else if (uData.type === 'go_forward') {
-            if (uData.targetStallInfo) {
-              const { sectionKey, index } = uData.targetStallInfo;
+          } else if (uData.type === 'info_button') {
+            const { sectionKey, stall } = uData;
+            if (stall) {
+              const freshSectionsData = stateRef.current.sectionsData;
+              const stalls = freshSectionsData[sectionKey].stalls;
+              const targetIdx = stalls.findIndex(s => s.id === stall.id);
+              if (targetIdx !== -1) {
+                setActiveSectionKey(sectionKey);
+                setStallIndex(targetIdx);
+                setDetailsCollapsed(false);
+                
+                // Dynamically query latest details from DB
+                const cleanZone = String(stall.zone || '').replace('Zone ', '').toUpperCase();
+                fetchStallDetailsFromDb(stall.id, cleanZone).then((dbDetails) => {
+                  if (dbDetails) {
+                    setSectionsData((prev) => {
+                      const updated = { ...prev };
+                      updated[sectionKey].stalls[targetIdx] = {
+                        ...updated[sectionKey].stalls[targetIdx],
+                        vendorName: dbDetails.vendorName || dbDetails.tenant?.name || 'Vibrant Local Vendor',
+                        productType: dbDetails.productType || 'General Produce',
+                        operatingHours: dbDetails.operatingHours || '4:00 AM - 6:00 PM',
+                        phoneNumber: dbDetails.phoneNumber || 'N/A',
+                        status: dbDetails.status ? (dbDetails.status.charAt(0).toUpperCase() + dbDetails.status.slice(1)) : 'Available',
+                        price: dbDetails.monthlyRate ? `₱${dbDetails.monthlyRate.toLocaleString()}` : updated[sectionKey].stalls[targetIdx].price,
+                        size: dbDetails.size || 12
+                      };
+                      return updated;
+                    });
+                  }
+                });
+              }
+            }
+          } else if (uData.type === 'go_forward' || uData.type === 'nearby_stall') {
+            const targetInfo = uData.type === 'go_forward' ? uData.targetStallInfo : uData;
+            if (targetInfo) {
+              const { sectionKey, stall } = targetInfo;
+              const targetStallId = stall.id;
               if (transitioning) return;
 
               setTransitioning(true);
@@ -896,10 +1645,17 @@ export default function MarketTour360() {
                 if (progress < 1) {
                   requestAnimationFrame(animateForward);
                 } else {
-                  setActiveSectionKey(sectionKey);
-                  setStallIndex(index);
-                  const stalls = sectionsData[sectionKey].stalls;
-                  triggerSceneTransition(getStallImagePath(stalls[index].id, sectionKey), true);
+                  const freshSectionsData = stateRef.current.sectionsData;
+                  const stalls = freshSectionsData[sectionKey].stalls;
+                  const targetIdx = stalls.findIndex(s => s.id === targetStallId);
+                  
+                  if (targetIdx !== -1) {
+                    setActiveSectionKey(sectionKey);
+                    setStallIndex(targetIdx);
+                    triggerSceneTransition(getStallImagePath(stalls[targetIdx].id, sectionKey), true);
+                  } else {
+                    setTransitioning(false);
+                  }
                 }
               };
               requestAnimationFrame(animateForward);
@@ -909,14 +1665,13 @@ export default function MarketTour360() {
       }
 
       renderer.domElement.addEventListener('click', onPointerDown)
-      renderer.domElement.addEventListener('touchend', onPointerDown)
 
       // Track hovering to show tooltips & change cursors
       function onPointerMove(e) {
         const rect = renderer.domElement.getBoundingClientRect()
         const touch = (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0])
         const clientX = touch ? touch.clientX : e.clientX
-        const clientY = e.touches ? e.touches[0].clientY : e.clientY
+        const clientY = touch ? touch.clientY : e.clientY
 
         // Track screen mouse positions for tooltips
         setMousePos({ x: clientX, y: clientY })
@@ -929,6 +1684,13 @@ export default function MarketTour360() {
 
         if (hits.length > 0) {
           const hit = hits[0]
+
+          if (hit.object.userData.type === 'go_forward') {
+            arrowIsHovered = true;
+            setCursor('pointer')
+            setHoveredHotspot(null)
+            return
+          }
 
           let dynamicLabel = hit.object.userData.label;
           if (hit.object.userData.type === 'next' || hit.object.userData.type === 'prev') {
@@ -954,6 +1716,10 @@ export default function MarketTour360() {
                 dynamicLabel = `Forward to ${target.stall.name || 'Stall ' + target.stall.id}`;
               }
             }
+          } else if (hit.object.userData.type === 'nearby_stall') {
+            dynamicLabel = `Visit ${hit.object.userData.label}`;
+          } else if (hit.object.userData.type === 'info_button') {
+            dynamicLabel = `View Details for ${hit.object.userData.stall.name}`;
           }
 
           setHoveredHotspot({
@@ -964,6 +1730,7 @@ export default function MarketTour360() {
         } else {
           setHoveredHotspot(null)
           setCursor('grab')
+          arrowIsHovered = false;
         }
       }
 
@@ -1005,35 +1772,65 @@ export default function MarketTour360() {
           const currentStall = stateRef.current.currentStall;
           const nearestStallInfo = findNearestStallInDirection(currentStall, compassDeg);
 
-          // Update the dynamic forward arrow
-          const forwardMesh = hotspotMeshes.current.find(m => m.userData.type === 'go_forward');
-          if (forwardMesh) {
-            if (nearestStallInfo) {
-              forwardMesh.visible = true;
-              // Place arrow 250 units in front of the camera on the floor
-              // theta=0 corresponds to looking at +X (1, 0, 0).
-              const arrowX = Math.cos(theta) * 250;
-              const arrowZ = Math.sin(theta) * 250;
-              forwardMesh.position.set(arrowX, -350, arrowZ);
+          // Update Google Street View-style ground arrow pool
+          const arrowMeshes = hotspotMeshes.current.filter(m => m.userData.type === 'go_forward');
 
-              // Rotate the arrow to point in the direction of the camera
-              let arrowRotationOffset = -Math.PI / 2;
-              if (currentStall.id === '1(u)' && nearestStallInfo.stall.id === '13(u)') {
-                arrowRotationOffset = 0; // Point left
-              } else if (currentStall.id === '24' && nearestStallInfo.stall.id === '12(u)') {
-                arrowRotationOffset = 0; // Point left
-              } else if (currentStall.id === '24' && nearestStallInfo.sectionKey === 'veggies' && nearestStallInfo.stall.id === '12') {
-                arrowRotationOffset = Math.PI; // Point right
-              } else if (currentStall.id === '12(u)' && nearestStallInfo.stall.id === '24') {
-                arrowRotationOffset = Math.PI; // Point right
-              } else if (currentStall.id === '13(u)' && nearestStallInfo.stall.id === '1(u)') {
-                arrowRotationOffset = Math.PI; // Point right
+          // Collect all navigable nearby stalls in both forward and backward directions
+          const currentSectData = stateRef.current.sectionsData;
+          const curSectionKey = stateRef.current.activeSectionKey;
+          const curCoords = getRawCoordinates(currentStall, curSectionKey);
+          
+          const forwards = [];
+          const backwards = [];
+
+          ['meat', 'fish', 'veggies'].forEach((secKey) => {
+            const stalls = currentSectData[secKey].stalls;
+            stalls.forEach((s, idx) => {
+              if (secKey === curSectionKey && s.id === currentStall.id) return;
+              const tCoords = getRawCoordinates(s, secKey);
+              const ddx = tCoords.x - curCoords.x;
+              const ddy = tCoords.y - curCoords.y;
+              const dist = Math.sqrt(ddx * ddx + ddy * ddy);
+              
+              // Only within grid walking range
+              if (dist < 10 || dist > 420) return;
+
+              const mapAngleRad = Math.atan2(ddy, ddx);
+              const mapAngleDeg = (mapAngleRad * 180) / Math.PI;
+              const tCompassAngle = (mapAngleDeg + 450) % 360;
+
+              // Angle difference relative to forward look angle (compassDeg)
+              let diffF = Math.abs(tCompassAngle - compassDeg);
+              if (diffF > 180) diffF = 360 - diffF;
+
+              // Angle difference relative to backward look angle (compassDeg + 180)
+              let diffB = Math.abs(tCompassAngle - ((compassDeg + 180) % 360));
+              if (diffB > 180) diffB = 360 - diffB;
+
+              if (diffF <= 75) {
+                forwards.push({ secKey, stall: s, idx, dist, tCompassAngle, diff: diffF });
+              } else if (diffB <= 75) {
+                backwards.push({ secKey, stall: s, idx, dist, tCompassAngle, diff: diffB });
               }
-              forwardMesh.rotation.set(-Math.PI / 2, 0, -theta + arrowRotationOffset);
-              forwardMesh.userData.targetStallInfo = nearestStallInfo;
+            });
+          });
 
-              // Preload target stall's image
-              const targetImagePath = getStallImagePath(nearestStallInfo.stall.id, nearestStallInfo.sectionKey);
+          // Sort by deviation from center of look/back cones
+          forwards.sort((a, b) => a.diff - b.diff);
+          backwards.sort((a, b) => a.diff - b.diff);
+
+          stateRef.current.bestForward = forwards[0] || null;
+          stateRef.current.bestBackward = backwards[0] || null;
+
+          arrowMeshes.forEach((arrowMesh, i) => {
+            const targetStall = i === 0 ? stateRef.current.bestForward : stateRef.current.bestBackward;
+
+            if (targetStall) {
+              const { secKey, stall: ns, idx, tCompassAngle } = targetStall;
+              arrowMesh.userData.targetStallInfo = { sectionKey: secKey, stall: ns, index: idx, tCompassAngle };
+
+              // Preload target image
+              const targetImagePath = getStallImagePath(ns.id, secKey);
               if (!window.__preloadedPaths) window.__preloadedPaths = new Set();
               if (!window.__preloadedPaths.has(targetImagePath)) {
                 window.__preloadedPaths.add(targetImagePath);
@@ -1041,23 +1838,71 @@ export default function MarketTour360() {
                 img.src = targetImagePath;
               }
             } else {
-              forwardMesh.visible = false;
-              forwardMesh.userData.targetStallInfo = null;
+              arrowMesh.userData.targetStallInfo = null;
             }
-          }
+          });
         }
+
+        // DYNAMIC POSITION & LIFT: Update chevron tilt and height on every camera update
+        const arrowMeshes = hotspotMeshes.current.filter(m => m.userData.type === 'go_forward');
+        const cameraPitchFactor = Math.max(0, Math.PI / 2 - spherical.current.phi); // positive when looking up
+        const dynamicY = -90 + cameraPitchFactor * 25;
+        const tiltAngle = Math.max(0, (Math.PI - spherical.current.phi) * 0.3);
+
+        arrowMeshes.forEach((arrowMesh) => {
+          const target = arrowMesh.userData.targetStallInfo;
+          if (target && target.tCompassAngle !== undefined) {
+            const arrowThetaRad = ((target.tCompassAngle - northOffset) * Math.PI) / 180;
+            const placeDist = 125;
+            const ax = Math.cos(arrowThetaRad) * placeDist;
+            const az = Math.sin(arrowThetaRad) * placeDist;
+            
+            arrowMesh.position.set(ax, dynamicY, az);
+            arrowMesh.scale.set(1.0, 1.0, 1.0);
+            arrowMesh.rotation.set(-Math.PI / 2 + tiltAngle, 0, arrowThetaRad - Math.PI / 2);
+          }
+        });
       }
       updateCamera()
+
+      // Mutable hover state for arrow — shared by onPointerMove and animate
+      let arrowIsHovered = false;
 
       // Animation Loop
       function animate() {
         frameRef.current = requestAnimationFrame(animate)
 
-        // Slowly rotate camera if Auto-Rotate is active
         if (autoRotate && !isDragging.current) {
           spherical.current.theta += 0.0018
           updateCamera()
         }
+
+        // Hover-driven opacity: fade in when hovered, stay at base 0.55 when visible, invisible when no target
+        const time = Date.now() * 0.004;
+        hotspotMeshes.current.forEach(m => {
+          if (m.userData.type === 'go_forward') {
+            const hasTarget = !!m.userData.targetStallInfo;
+            if (hasTarget) {
+              m.visible = true;
+              const targetOpacity = arrowIsHovered ? 0.95 : 0.55;
+              m.material.opacity += (targetOpacity - m.material.opacity) * 0.15;
+            } else {
+              m.material.opacity = Math.max(0, m.material.opacity - 0.08);
+              if (m.material.opacity <= 0) {
+                m.visible = false;
+              }
+            }
+          } else if (m.userData.type === 'route_chevron') {
+            // Marching/flowing animation along the route
+            const dist = m.position.length();
+            const phase = time - dist * 0.035;
+            const flowOpacity = 0.45 + Math.sin(phase) * 0.35;
+            m.material.opacity = flowOpacity * (1.0 - Math.min(1.0, dist / 480));
+            
+            // Subtle bounce/hover effect
+            m.position.y = -65 + Math.sin(time * 1.5 + dist * 0.02) * 1.5;
+          }
+        });
 
         renderer.render(scene, camera)
       }
@@ -1181,15 +2026,209 @@ export default function MarketTour360() {
   }
 
   // No inquiry handling needed
+  const activeSectColor = activeSectionKey === 'meat' ? '#8d3e3c' : activeSectionKey === 'fish' ? '#00b5e2' : '#00c362';
+
+  const getArrowRotation = () => {
+    const instructionText = routeInstructions[arStepIndex]?.text || '';
+    if (instructionText.toLowerCase().includes('left')) return 'rotateY(-45deg) rotateX(75deg)';
+    if (instructionText.toLowerCase().includes('right')) return 'rotateY(45deg) rotateX(75deg)';
+    return 'rotateX(75deg)';
+  };
 
   return (
     <div className="relative w-full bg-black overflow-hidden font-sans select-none" style={{ height: 'calc(var(--vh, 1vh) * 100)' }}>
+      <style>{`
+        @keyframes arMarch {
+          0% { transform: rotateX(75deg) translateZ(320px) scale(0.45); opacity: 0; }
+          15% { opacity: 0.9; }
+          85% { opacity: 0.9; }
+          100% { transform: rotateX(75deg) translateZ(0px) scale(1.2); opacity: 0; }
+        }
+        @keyframes pulseGlow {
+          0%, 100% { transform: scale(1) translate(-50%, -50%); filter: drop-shadow(0 0 10px rgba(224, 123, 0, 0.6)); }
+          50% { transform: scale(1.06) translate(-50%, -50%); filter: drop-shadow(0 0 22px rgba(224, 123, 0, 0.95)); }
+        }
+        @keyframes scan {
+          0% { top: 0%; }
+          50% { top: 100%; }
+          100% { top: 0%; }
+        }
+        @keyframes marchingLine {
+          from { stroke-dashoffset: 0; }
+          to { stroke-dashoffset: -48; }
+        }
+        .animate-marching-line {
+          animation: marchingLine 1.5s infinite linear;
+        }
+      `}</style>
+
       {/* 360 ThreeJS Viewer Mount */}
       <div
         ref={mountRef}
-        className={`absolute top-0 left-0 w-full transition-all duration-500 ease-in-out ${isMapExpanded ? 'h-1/2' : 'h-full'}`}
-        style={{ cursor, filter: privacyMode ? 'blur(6px) contrast(1.05)' : 'none' }}
+        className={`absolute top-0 left-0 w-full transition-all duration-500 ease-in-out ${(isMapExpanded && navigationMode === '360') ? 'h-[62%]' : 'h-full'}`}
+        style={{ cursor, filter: privacyMode ? 'blur(6px) contrast(1.05)' : 'none', display: navigationMode === '360' ? 'block' : 'none' }}
       />
+
+      {/* AR Camera Viewer Mount */}
+      {navigationMode === 'ar' && (
+        <div className="absolute top-0 left-0 w-full h-full z-0 overflow-hidden bg-[#0b0f19]">
+          {arCameraError ? (
+            /* Simulated AR Camera Background - Beautiful futuristic UI */
+            <div className="absolute inset-0 bg-cover bg-center filter brightness-50" style={{ backgroundImage: "url('/export360/stall1 - meat.jpg')" }}>
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-transparent to-slate-950/40 pointer-events-none" />
+              <div className="absolute inset-0 border-[20px] border-slate-950/20 pointer-events-none flex items-center justify-center">
+                <div className="w-[90%] h-[82%] border border-emerald-500/10 relative">
+                  {/* Camera corner brackets */}
+                  <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-emerald-500/60 rounded-tl-lg" />
+                  <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-emerald-500/60 rounded-tr-lg" />
+                  <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-emerald-500/60 rounded-bl-lg" />
+                  <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-emerald-500/60 rounded-br-lg" />
+                  {/* Scanning sweep */}
+                  <div className="absolute left-0 w-full h-[3px] bg-emerald-500/30 top-0 animate-[scan_5s_infinite_linear] shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* Live Camera Stream */
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className="absolute inset-0 w-full h-full object-cover brightness-50"
+            />
+          )}
+          
+          {/* Animated 3D Ground Navigation Line */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10 overflow-hidden">
+            <div className="w-full h-1/2 max-w-lg relative mt-32" style={{ perspective: '800px', transformStyle: 'preserve-3d' }}>
+              <div
+                className="absolute left-1/2 -translate-x-1/2 bottom-0 w-24 h-96 origin-bottom transition-all duration-1000"
+                style={{
+                  transform: `${getArrowRotation()} translateY(-10px)`,
+                  transformStyle: 'preserve-3d',
+                }}
+              >
+                <svg viewBox="0 0 100 400" preserveAspectRatio="none" className="w-full h-full overflow-visible">
+                  <defs>
+                    <linearGradient id="arLineGradient" x1="0" y1="1" x2="0" y2="0">
+                      <stop offset="0%" stopColor="#10b881" stopOpacity="0.1" />
+                      <stop offset="15%" stopColor="#10b881" stopOpacity="0.85" />
+                      <stop offset="85%" stopColor="#10b881" stopOpacity="0.85" />
+                      <stop offset="100%" stopColor="#10b881" stopOpacity="0.1" />
+                    </linearGradient>
+                    <filter id="arLineGlow" x="-50%" y="-50%" width="200%" height="200%">
+                      <feGaussianBlur stdDeviation="8" result="blur" />
+                      <feMerge>
+                        <feMergeNode in="blur" />
+                        <feMergeNode in="SourceGraphic" />
+                      </feMerge>
+                    </filter>
+                  </defs>
+                  
+                  {/* Glowing wide pathway boundary */}
+                  <line 
+                    x1="50" y1="400" x2="50" y2="0" 
+                    stroke="url(#arLineGradient)" 
+                    strokeWidth="32" 
+                    strokeLinecap="round" 
+                    filter="url(#arLineGlow)"
+                    opacity="0.45"
+                  />
+                  
+                  {/* Outer solid glow line */}
+                  <line 
+                    x1="50" y1="400" x2="50" y2="0" 
+                    stroke="url(#arLineGradient)" 
+                    strokeWidth="16" 
+                    strokeLinecap="round" 
+                  />
+                  
+                  {/* Core white highlight line */}
+                  <line 
+                    x1="50" y1="400" x2="50" y2="0" 
+                    stroke="#ffffff" 
+                    strokeWidth="4" 
+                    strokeLinecap="round" 
+                    opacity="0.9"
+                  />
+
+                  {/* Animated marching center line */}
+                  <line 
+                    x1="50" y1="400" x2="50" y2="0" 
+                    stroke="#ffffff" 
+                    strokeWidth="6" 
+                    strokeLinecap="round" 
+                    strokeDasharray="24, 24"
+                    className="animate-marching-line"
+                  />
+                </svg>
+              </div>
+            </div>
+          </div>
+          
+          {/* Floating Target Stall Pin in 3D AR space */}
+          {destinationStall && arStepIndex >= routeInstructions.length - 2 && (
+            <div 
+              className="absolute left-1/2 top-[35%] z-20 flex flex-col items-center animate-[pulseGlow_3s_infinite_ease-in-out]"
+              style={{ transformStyle: 'preserve-3d' }}
+            >
+              {/* Floating Profile Card */}
+              <div 
+                className="bg-[#e07b00] border-2 border-white text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 backdrop-blur-md cursor-pointer pointer-events-auto hover:bg-[#b86500] transition-all"
+                onClick={() => {
+                  setSelectedStall(destinationStall);
+                  setDetailsCollapsed(false);
+                }}
+              >
+                <Store size={18} className="animate-bounce" />
+                <div className="text-left">
+                  <span className="text-[9px] font-black uppercase tracking-wider block opacity-80 leading-none mb-0.5">Target Destination</span>
+                  <span className="text-xs font-black">{destinationStall.name}</span>
+                </div>
+                <span className="w-6 h-6 rounded-full bg-white text-[#e07b00] flex items-center justify-center font-bold text-xs shrink-0 shadow-md ml-1">i</span>
+              </div>
+              {/* Stem linking card to path */}
+              <div className="w-[3px] h-16 bg-gradient-to-b from-white to-transparent" />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Mode Switcher Tab (Top Center) */}
+      {uiVisible && (
+        <div className="absolute top-3 sm:top-5 left-1/2 -translate-x-1/2 z-30 bg-white/90 backdrop-blur-md px-1.5 py-1.5 rounded-2xl shadow-2xl border border-black/10 flex items-center gap-1.5">
+          <button
+            onClick={() => {
+              setNavigationMode('360');
+              stopCamera();
+              setIsWalkingSimulation(false);
+            }}
+            className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer ${
+              navigationMode === '360' ? 'bg-[#1a5c2a] text-white shadow-md' : 'text-slate-700 hover:bg-black/5'
+            }`}
+          >
+            <Maximize2 size={13} />
+            <span>360° Panorama Map</span>
+          </button>
+          <button
+            onClick={() => {
+              setNavigationMode('ar');
+              startCamera();
+              // Auto route to current or first stall if no target
+              if (!destinationStall) {
+                handleRouteMe(currentStall || activeSection.stalls[0]);
+              }
+            }}
+            className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer ${
+              navigationMode === 'ar' ? 'bg-[#e07b00] text-white shadow-md' : 'text-slate-700 hover:bg-black/5'
+            }`}
+          >
+            <Zap size={13} className="animate-pulse" />
+            <span>Live 3D AR Navigation</span>
+          </button>
+        </div>
+      )}
 
       {/* Floating SHOW CONTROLS Toggle Button (Visible ONLY when UI is hidden) */}
       {!uiVisible && (
@@ -1223,7 +2262,7 @@ export default function MarketTour360() {
           className="absolute z-40 bg-white/95 text-slate-800 text-xs font-bold px-3 py-1.5 rounded-xl pointer-events-none shadow-xl border border-black/10 -translate-x-1/2 -translate-y-12 backdrop-blur-sm transition-all"
           style={{ left: mousePos.x, top: mousePos.y }}
         >
-          {hoveredHotspot.dynamicLabel && hoveredHotspot.dynamicLabel.startsWith('Go Left') ? '←' : hoveredHotspot.dynamicLabel && hoveredHotspot.dynamicLabel.startsWith('Go Right') ? '→' : (hoveredHotspot.type === 'go_forward' || (hoveredHotspot.dynamicLabel && hoveredHotspot.dynamicLabel.startsWith('Forward'))) ? '↑' : hoveredHotspot.dynamicLabel === 'Backward' ? '↓' : 'i'} {hoveredHotspot.dynamicLabel || hoveredHotspot.label}
+          {hoveredHotspot.type === 'nearby_stall' ? '' : (hoveredHotspot.dynamicLabel && hoveredHotspot.dynamicLabel.startsWith('Go Left') ? '←' : hoveredHotspot.dynamicLabel && hoveredHotspot.dynamicLabel.startsWith('Go Right') ? '→' : (hoveredHotspot.type === 'go_forward' || (hoveredHotspot.dynamicLabel && hoveredHotspot.dynamicLabel.startsWith('Forward'))) ? '↑' : hoveredHotspot.dynamicLabel === 'Backward' ? '↓' : 'i')}{hoveredHotspot.type === 'nearby_stall' ? '' : ' '}{hoveredHotspot.dynamicLabel || hoveredHotspot.label}
         </div>
       )}
 
@@ -1270,7 +2309,94 @@ export default function MarketTour360() {
         </div>
       </div>
 
-
+      {/* AR Navigation Top HUD Panel */}
+      {uiVisible && routeInstructions.length > 0 && (
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-20 w-[90%] max-w-md pointer-events-auto">
+          <div className="bg-white/95 backdrop-blur-md rounded-3xl p-4 border border-black/10 shadow-2xl flex flex-col gap-3">
+            {/* Header info */}
+            <div className="flex items-center justify-between border-b border-black/5 pb-2">
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">
+                  {navigationMode === 'ar' ? 'Live AR Route' : '360° Panorama Route'}
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-black text-slate-800">
+                  {arStepIndex + 1} of {routeInstructions.length} Steps
+                </span>
+                <button
+                  onClick={() => {
+                    setDestinationStall(null);
+                    setRouteInstructions([]);
+                    setArWaypoints([]);
+                    setIsWalkingSimulation(false);
+                    setRouteFrom(null);
+                    setRouteTo(null);
+                  }}
+                  className="p-1 rounded-full bg-red-50 hover:bg-red-100 text-red-500 transition-all cursor-pointer border-none flex items-center justify-center"
+                  title="Cancel Route"
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            </div>
+            
+            {/* Active Instruction */}
+            <div className="flex items-start gap-3.5 my-1">
+              <div className="p-3 bg-gradient-to-br from-orange-500 to-amber-500 text-white rounded-2xl shadow-md shrink-0">
+                <CompassIcon size={20} className={isWalkingSimulation ? "animate-spin" : ""} style={{ animationDuration: '6s' }} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-black text-slate-900 leading-snug break-words">
+                  {routeInstructions[arStepIndex]?.text}
+                </p>
+                <p className="text-[10px] text-slate-500 font-bold mt-1 uppercase tracking-wider">
+                  Target: {destinationStall?.name}
+                </p>
+              </div>
+            </div>
+            
+            {/* Walk Simulation Controller */}
+            <div className="flex items-center gap-2 mt-1 pt-1.5 border-t border-black/5">
+              <button
+                onClick={() => setArStepIndex(prev => Math.max(0, prev - 1))}
+                disabled={arStepIndex === 0}
+                className="flex-1 py-2 rounded-xl border border-black/10 text-slate-700 hover:bg-slate-50 text-[11px] font-bold transition-all disabled:opacity-40 cursor-pointer"
+              >
+                ← Prev Step
+              </button>
+              
+              <button
+                onClick={() => setIsWalkingSimulation(!isWalkingSimulation)}
+                className={`flex-1 py-2 rounded-xl text-[11px] font-black text-white transition-all shadow-md cursor-pointer flex items-center justify-center gap-1.5 ${
+                  isWalkingSimulation 
+                    ? 'bg-red-500 hover:bg-red-600' 
+                    : 'bg-[#1a5c2a] hover:bg-[#12421e]'
+                }`}
+              >
+                {isWalkingSimulation ? <Pause size={12} /> : <Play size={12} />}
+                <span>{isWalkingSimulation ? "Pause Walk" : "Simulate Walk"}</span>
+              </button>
+              
+              <button
+                onClick={() => {
+                  if (arStepIndex < routeInstructions.length - 1) {
+                    setArStepIndex(prev => prev + 1);
+                  } else {
+                    // Arrived! Show bottom sheet
+                    setSelectedStall(destinationStall);
+                    setDetailsCollapsed(false);
+                  }
+                }}
+                className="flex-1 py-2 rounded-xl border border-black/10 text-slate-700 hover:bg-slate-50 text-[11px] font-bold transition-all cursor-pointer"
+              >
+                {arStepIndex === routeInstructions.length - 1 ? "Open Details" : "Next Step →"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* FLOATING SIDE HUD CONTROLS (Right Side) */}
       <div className="absolute right-2 sm:right-4 top-20 sm:top-28 md:top-1/2 md:-translate-y-1/2 z-20 flex flex-col items-center gap-2 sm:gap-4">
@@ -1316,6 +2442,7 @@ export default function MarketTour360() {
           >
             <RotateCcw size={17} />
           </button>
+
           <button
             onClick={() => setPrivacyMode(prev => !prev)}
             className={`w-10 h-10 rounded-full flex items-center justify-center transition-all cursor-pointer ${privacyMode ? 'bg-[#1a5c2a] text-white' : 'bg-black/5 text-slate-800 hover:bg-black/10'
@@ -1341,60 +2468,391 @@ export default function MarketTour360() {
       </div>
 
       {/* MAP OVERLAY (Mini or Expanded) */}
-      {uiVisible && (
-        <div
-          className={`absolute transition-all duration-500 ease-in-out z-30 overflow-hidden bg-slate-200 shadow-2xl 
-          ${isMapExpanded
-              ? 'bottom-0 left-0 w-full h-1/2 rounded-t-3xl border-t-4 border-black/20'
-              : 'bottom-24 left-3 sm:bottom-6 sm:left-6 w-24 h-24 sm:w-32 sm:h-32 md:w-48 md:h-48 rounded-2xl border border-black/20'
-            }`}
-        >
-          {/* Expand/Collapse Toggle Button */}
-          <button
-            onClick={() => {
-              setIsMapExpanded(!isMapExpanded);
-              // Trigger resize events during CSS transition to smooth out 360 canvas
-              let count = 0;
-              const interval = setInterval(() => {
-                window.dispatchEvent(new Event('resize'));
-                if (count++ > 30) clearInterval(interval);
-              }, 16);
-            }}
-            className="absolute top-3 right-3 z-40 bg-white/90 backdrop-blur-md p-2 rounded-full shadow-lg border border-black/10 hover:bg-white text-slate-800 transition-all cursor-pointer active:scale-95"
-            title={isMapExpanded ? "Collapse Map" : "Expand Map"}
-          >
-            {isMapExpanded ? <ChevronDown size={18} /> : <Maximize2 size={16} />}
-          </button>
+      {/* MAP OVERLAY (Mini or Expanded) */}
+      {/* 3D Isometric Mini Map (Tilted at bottom-left) */}
+      {/* MAP OVERLAY (Mini or Expanded) */}
+      {uiVisible && navigationMode === '360' && isMapExpanded && (
+        <div 
+          onClick={() => {
+            setIsMapExpanded(false);
+            let count = 0;
+            const interval = setInterval(() => {
+              window.dispatchEvent(new Event('resize'));
+              if (count++ > 30) clearInterval(interval);
+            }, 16);
+          }}
+          className="fixed inset-0 bg-transparent backdrop-blur-md z-30 cursor-pointer animate-fade-in" 
+        />
+      )}
 
-          <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
+      {uiVisible && navigationMode === '360' && (
+        <div
+          onClick={!isMapExpanded ? () => {
+            setIsMapExpanded(true);
+            let count = 0;
+            const interval = setInterval(() => {
+              window.dispatchEvent(new Event('resize'));
+              if (count++ > 30) clearInterval(interval);
+            }, 16);
+          } : undefined}
+          className={`absolute transition-all duration-500 ease-out z-40 border border-white/10 flex flex-col rounded-3xl ${
+            isMapExpanded
+              ? 'bottom-[12.5vh] left-[4vw] sm:left-[calc(50%-28rem)] w-[92vw] h-[75vh] max-w-4xl p-4 sm:p-5 bg-slate-950/15 backdrop-blur-md overflow-hidden'
+              : 'bottom-24 left-3 sm:bottom-6 sm:left-6 w-28 h-28 sm:w-36 sm:h-36 md:w-48 md:h-48 overflow-hidden cursor-pointer bg-slate-950/85 backdrop-blur-md hover:-translate-y-2'
+          }`}
+          style={{
+            transform: isMapExpanded
+              ? 'perspective(1500px) rotateX(0deg) rotateY(0deg) rotateZ(0deg)'
+              : 'perspective(850px) rotateX(38deg) rotateY(0deg) rotateZ(-22deg)',
+            transformStyle: 'preserve-3d',
+            boxShadow: isMapExpanded
+              ? '0 25px 50px rgba(0, 0, 0, 0.5)'
+              : '-10px 20px 30px rgba(0, 0, 0, 0.45), 0 0 20px rgba(16, 185, 129, 0.15)'
+          }}
+        >
+          {/* Collapse/Minimize Button or Route Finder Header */}
+          {isMapExpanded ? (
+            <div className="flex items-center justify-between py-2 shrink-0 z-10 mb-4 px-1" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center gap-2 overflow-x-auto pr-2">
+                <span className="text-[10px] sm:text-xs font-black text-slate-400 uppercase tracking-widest shrink-0">Route Finder</span>
+                
+                {/* FROM selector */}
+                <div className="flex items-center gap-1 shrink-0">
+                  <span className="w-3.5 h-3.5 rounded-full bg-[#22c55e] border-2 border-white shadow-sm shrink-0" />
+                  <select
+                    className="text-[11px] font-bold text-white bg-slate-900 border border-white/20 rounded-lg px-2 py-1 cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-400"
+                    value={routeFrom ? `${routeFrom.secKey}::${routeFrom.stallId}` : ''}
+                    onChange={e => {
+                      if (!e.target.value) { setRouteFrom(null); return; }
+                      const [secKey, stallId] = e.target.value.split('::');
+                      setRouteFrom({ secKey, stallId });
+                      const targetSec = sectionsData[secKey];
+                      if (targetSec) {
+                        const idx = targetSec.stalls.findIndex(s => s.id === stallId);
+                        if (idx !== -1 && !transitioning) {
+                          setActiveSectionKey(secKey);
+                          setStallIndex(idx);
+                          triggerSceneTransition(getStallImagePath(stallId, secKey));
+                        }
+                      }
+                    }}
+                  >
+                    <option value="">From stall…</option>
+                    {Object.entries(sectionsData).map(([secKey, sec]) =>
+                      sec.stalls.map(st => (
+                        <option key={`f-${secKey}-${st.id}`} value={`${secKey}::${st.id}`} className="bg-slate-900 text-white">
+                          [{secKey === 'meat' ? '🥩' : secKey === 'fish' ? '🐟' : '🥦'}] {st.name}
+                        </option>
+                      ))
+                    )}
+                  </select>
+                </div>
+
+                <span className="text-slate-500 font-black shrink-0">→</span>
+
+                {/* TO selector */}
+                <div className="flex items-center gap-1 shrink-0">
+                  <span className="w-3.5 h-3.5 rounded-full bg-[#ef4444] border-2 border-white shadow-sm shrink-0" />
+                  <select
+                    className="text-[11px] font-bold text-white bg-slate-900 border border-white/20 rounded-lg px-2 py-1 cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-400"
+                    value={routeTo ? `${routeTo.secKey}::${routeTo.stallId}` : ''}
+                    onChange={e => {
+                      if (!e.target.value) {
+                        setRouteTo(null);
+                        setDestinationStall(null);
+                        setRouteInstructions([]);
+                        setArWaypoints([]);
+                        setIsWalkingSimulation(false);
+                        return;
+                      }
+                      const [secKey, stallId] = e.target.value.split('::');
+                      setRouteTo({ secKey, stallId });
+                      const targetStall = sectionsData[secKey]?.stalls.find(s => s.id === stallId);
+                      if (targetStall) {
+                        handleRouteMe(targetStall);
+                      }
+                    }}
+                  >
+                    <option value="">To stall…</option>
+                    {Object.entries(sectionsData).map(([secKey, sec]) =>
+                      sec.stalls.map(st => (
+                        <option key={`t-${secKey}-${st.id}`} value={`${secKey}::${st.id}`} className="bg-slate-900 text-white">
+                          [{secKey === 'meat' ? '🥩' : secKey === 'fish' ? '🐟' : '🥦'}] {st.name}
+                        </option>
+                      ))
+                    )}
+                  </select>
+                </div>
+
+                {(routeFrom || routeTo) && (
+                  <button
+                    onClick={() => {
+                      setRouteFrom(null);
+                      setRouteTo(null);
+                      setDestinationStall(null);
+                      setRouteInstructions([]);
+                      setArWaypoints([]);
+                      setIsWalkingSimulation(false);
+                    }}
+                    className="text-[10px] font-black text-slate-400 hover:text-red-400 transition-colors shrink-0 px-2 py-1 rounded-lg hover:bg-white/5 cursor-pointer ml-1"
+                  >
+                    ✕ Clear
+                  </button>
+                )}
+              </div>
+
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsMapExpanded(false);
+                  let count = 0;
+                  const interval = setInterval(() => {
+                    window.dispatchEvent(new Event('resize'));
+                    if (count++ > 30) clearInterval(interval);
+                  }, 16);
+                }}
+                className="bg-white/10 hover:bg-white/20 p-2 rounded-full text-white transition-all cursor-pointer active:scale-95 flex items-center justify-center shrink-0 ml-4 shadow-lg border border-white/5"
+                title="Collapse Map"
+              >
+                <Minimize2 size={16} />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsMapExpanded(true);
+                let count = 0;
+                const interval = setInterval(() => {
+                  window.dispatchEvent(new Event('resize'));
+                  if (count++ > 30) clearInterval(interval);
+                }, 16);
+              }}
+              className="absolute top-2.5 right-2.5 z-40 bg-white/95 backdrop-blur-sm p-1.5 rounded-full shadow-lg border border-black/10 hover:bg-white text-slate-800 transition-all cursor-pointer active:scale-95 flex items-center justify-center"
+              title="Expand Map"
+            >
+              <Maximize2 size={13} />
+            </button>
+          )}
+
+          {/* Map Body Content */}
+          <div className="flex-1 min-h-0 w-full flex items-center justify-center overflow-hidden" onClick={(e) => e.stopPropagation()}>
             {(() => {
               const mapCoords = getRawCoordinates(currentStall);
-              // When expanded, show the full map (2305x1824). When collapsed, zoom in (600x600).
-              const zoomWidth = isMapExpanded ? 2305 : 600;
-              const zoomHeight = isMapExpanded ? 1824 : 600;
-              const vbX = isMapExpanded ? 0 : Math.max(0, Math.min(2305 - zoomWidth, mapCoords.x - zoomWidth / 2));
-              const vbY = isMapExpanded ? 0 : Math.max(0, Math.min(1824 - zoomHeight, mapCoords.y - zoomHeight / 2));
-              return (
-                <svg viewBox={`${vbX} ${vbY} ${zoomWidth} ${zoomHeight}`} preserveAspectRatio="xMidYMid meet" className="w-full h-full drop-shadow-xl pointer-events-none transition-all duration-700 ease-in-out">
-                  <image href={mapImage} x="-20" y="-15" width="2305" height="1824" preserveAspectRatio="none" />
+              
+              // Resolve route coords
+              let fromCoords = null;
+              let toCoords = null;
+              
+              if (destinationStall) {
+                fromCoords = getRawCoordinates(currentStall, activeSectionKey);
+                let targetSec = activeSectionKey;
+                Object.entries(sectionsData).forEach(([secKey, sec]) => {
+                  if (sec.stalls.some(s => s.id === destinationStall.id)) {
+                    targetSec = secKey;
+                  }
+                });
+                toCoords = getRawCoordinates(destinationStall, targetSec);
+              } else {
+                const fromStall = routeFrom ? sectionsData[routeFrom.secKey]?.stalls.find(s => s.id === routeFrom.stallId) : null;
+                const toStall = routeTo ? sectionsData[routeTo.secKey]?.stalls.find(s => s.id === routeTo.stallId) : null;
+                fromCoords = fromStall ? getRawCoordinates(fromStall, routeFrom.secKey) : null;
+                toCoords = toStall ? getRawCoordinates(toStall, routeTo.secKey) : null;
+              }
 
-                  {/* View Cone and Dot positioned dynamically */}
-                  <g transform={`translate(${mapCoords.x}, ${mapCoords.y})`}>
-                    <path d="M0 0 L-100 -200 A200 200 0 0 1 100 -200 Z" fill="rgba(239, 68, 68, 0.4)" transform={`rotate(${compassAngle})`} />
-                    <circle r="30" fill="#ef4444" stroke="#ffffff" strokeWidth="8" />
-                    <g transform={`rotate(${compassAngle})`}>
-                      <path d="M0 -20 L15 15 L0 5 L-15 15 Z" fill="#ffffff" />
-                    </g>
-                  </g>
-                </svg>
+              // Determine viewBox parameters
+              let viewBoxStr = "0 0 2305 1824";
+              if (!isMapExpanded) {
+                let centerTarget = mapCoords;
+                if (fromCoords && toCoords) {
+                  const waypoints = findMarketRoute(fromCoords, toCoords);
+                  if (waypoints.length > 1) {
+                    const nextWp = waypoints[1];
+                    centerTarget = {
+                      x: (mapCoords.x + nextWp.x) / 2,
+                      y: (mapCoords.y + nextWp.y) / 2
+                    };
+                  }
+                }
+                const zoomWidth = 550;
+                const zoomHeight = 550;
+                const vbX = Math.max(0, Math.min(2305 - zoomWidth, centerTarget.x - zoomWidth / 2));
+                const vbY = Math.max(0, Math.min(1824 - zoomHeight, centerTarget.y - zoomHeight / 2));
+                viewBoxStr = `${vbX} ${vbY} ${zoomWidth} ${zoomHeight}`;
+              }
+
+              return (
+                <div 
+                  className="w-full h-full transition-all duration-1000 ease-out flex items-center justify-center p-2 max-h-full max-w-full"
+                  style={{
+                    filter: isMapExpanded ? 'drop-shadow(0 20px 40px rgba(0,0,0,0.75))' : 'none'
+                  }}
+                >
+                  <svg 
+                    viewBox={viewBoxStr} 
+                    preserveAspectRatio="xMidYMid meet" 
+                    className="max-w-full max-h-full transition-all duration-700"
+                    style={{ pointerEvents: isMapExpanded ? 'auto' : 'none' }}
+                  >
+                    <defs>
+                      <linearGradient id="pinStemGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#ef4444" />
+                        <stop offset="100%" stopColor="#ef4444" stopOpacity="0.1" />
+                      </linearGradient>
+                      <linearGradient id="startPinStemGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#22c55e" />
+                        <stop offset="100%" stopColor="#22c55e" stopOpacity="0.1" />
+                      </linearGradient>
+                      <filter id="routeGlow" x="-20%" y="-20%" width="140%" height="140%">
+                        <feGaussianBlur stdDeviation="8" result="blur" />
+                        <feMerge>
+                          <feMergeNode in="blur" />
+                          <feMergeNode in="SourceGraphic" />
+                        </feMerge>
+                      </filter>
+                      <linearGradient id="routeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#00f2fe" />
+                        <stop offset="100%" stopColor="#4facfe" />
+                      </linearGradient>
+                    </defs>
+
+                    <image href={mapImage} x="-20" y="-15" width="2305" height="1824" preserveAspectRatio="none" style={{ pointerEvents: 'none', opacity: 0.75 }} />
+
+                    {/* Google Maps–style corridor route */}
+                    {fromCoords && toCoords && (() => {
+                      const waypoints = findMarketRoute(fromCoords, toCoords);
+                      const pathWaypoints = waypoints.slice(1, -1);
+                      const pts = pathWaypoints.map(p => `${p.x},${p.y}`).join(' ');
+                      
+                      // Animated directional arrows overlay
+                      const arrows = [];
+                      if (pathWaypoints.length >= 2) {
+                        for (let i = 0; i < pathWaypoints.length - 1; i++) {
+                          const p1 = pathWaypoints[i];
+                          const p2 = pathWaypoints[i+1];
+                          const dx = p2.x - p1.x;
+                          const dy = p2.y - p1.y;
+                          const dist = Math.hypot(dx, dy);
+                          const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+                          
+                          // Place arrows every 120 pixels along each segment
+                          const step = 120;
+                          for (let d = step; d < dist; d += step) {
+                            const ratio = d / dist;
+                            arrows.push({
+                              mx: p1.x + dx * ratio,
+                              my: p1.y + dy * ratio,
+                              angle
+                            });
+                          }
+                        }
+                      }
+
+                      return (
+                        <g>
+                          {pathWaypoints.length >= 2 && (
+                            <>
+                              <polyline points={pts} fill="none" stroke="#3b82f6" strokeWidth={isMapExpanded ? "26" : "18"} strokeLinecap="round" strokeLinejoin="round" opacity="0.35" filter="url(#routeGlow)" />
+                              <polyline points={pts} fill="none" stroke="#ffffff" strokeWidth={isMapExpanded ? "18" : "12"} strokeLinecap="round" strokeLinejoin="round" />
+                              <polyline points={pts} fill="none" stroke="url(#routeGradient)" strokeWidth={isMapExpanded ? "10" : "6"} strokeLinecap="round" strokeLinejoin="round" />
+                            </>
+                          )}
+
+                          {/* Render arrows */}
+                          {arrows.map((a, i) => (
+                            <g key={i} transform={`translate(${a.mx},${a.my}) rotate(${a.angle})`}>
+                              <polygon points="-14,-9 0,0 -14,9" fill="#ffffff" opacity="0.95" />
+                              <polygon points="-12,-7 0,0 -12,7" fill="#00f2fe" opacity="0.9" />
+                            </g>
+                          ))}
+
+                          {/* START marker — green 3D vertical pin */}
+                          <g>
+                            <ellipse cx={fromCoords.x} cy={fromCoords.y} rx={isMapExpanded ? "20" : "12"} ry={isMapExpanded ? "10" : "6"} fill="rgba(0,0,0,0.25)" />
+                            <line x1={fromCoords.x} y1={fromCoords.y} x2={fromCoords.x} y2={fromCoords.y - (isMapExpanded ? 100 : 60)} stroke="url(#startPinStemGradient)" strokeWidth={isMapExpanded ? 6 : 4} />
+                            <circle cx={fromCoords.x} cy={fromCoords.y - (isMapExpanded ? 100 : 60)} r={isMapExpanded ? 20 : 12} fill="#22c55e" stroke="#ffffff" strokeWidth={isMapExpanded ? 5 : 3.5} />
+                            <text x={fromCoords.x} y={fromCoords.y - (isMapExpanded ? 92 : 55)} textAnchor="middle" fill="#fff" fontSize={isMapExpanded ? 20 : 12} fontWeight="900" fontFamily="system-ui">A</text>
+                          </g>
+
+                          {/* END marker — red 3D vertical pin */}
+                          <g>
+                            <ellipse cx={toCoords.x} cy={toCoords.y} rx={isMapExpanded ? "20" : "12"} ry={isMapExpanded ? "10" : "6"} fill="rgba(0,0,0,0.25)" />
+                            <line x1={toCoords.x} y1={toCoords.y} x2={toCoords.x} y2={toCoords.y - (isMapExpanded ? 100 : 60)} stroke="url(#pinStemGradient)" strokeWidth={isMapExpanded ? 6 : 4} />
+                            <circle cx={toCoords.x} cy={toCoords.y - (isMapExpanded ? 100 : 60)} r={isMapExpanded ? 20 : 12} fill="#ef4444" stroke="#ffffff" strokeWidth={isMapExpanded ? 5 : 3.5} className="animate-pulse" />
+                            <text x={toCoords.x} y={toCoords.y - (isMapExpanded ? 92 : 55)} textAnchor="middle" fill="#fff" fontSize={isMapExpanded ? 20 : 12} fontWeight="900" fontFamily="system-ui">B</text>
+                          </g>
+                        </g>
+                      );
+                    })()}
+
+                    {/* Clickable Stall Hotspots on Map (only when expanded) */}
+                    {isMapExpanded && Object.entries(sectionsData).map(([secKey, sec]) => {
+                      return sec.stalls.map((st, idx) => {
+                        const coords = getRawCoordinates(st, secKey);
+                        if (coords.x === 1020 && (coords.y === 635 || coords.y === 885)) return null;
+                        const isCurrent = secKey === activeSectionKey && idx === stallIndex;
+                        const isFrom = routeFrom && routeFrom.secKey === secKey && routeFrom.stallId === st.id;
+                        const isTo = routeTo && routeTo.secKey === secKey && routeTo.stallId === st.id;
+                        return (
+                          <circle
+                            key={`${secKey}-${st.id}`}
+                            cx={coords.x}
+                            cy={coords.y}
+                            r={isFrom || isTo ? 30 : 24}
+                            fill={isFrom ? 'rgba(34,197,94,0.35)' : isTo ? 'rgba(239,68,68,0.35)' : 'transparent'}
+                            stroke={isFrom ? '#22c55e' : isTo ? '#ef4444' : 'transparent'}
+                            strokeWidth={isFrom || isTo ? 6 : 0}
+                            style={{ pointerEvents: 'auto', cursor: 'pointer', transition: 'all 0.2s ease-in-out' }}
+                            title={`Go to ${st.name}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (routeFrom && !routeTo) {
+                                setRouteTo({ secKey, stallId: st.id });
+                                handleRouteMe(st);
+                              } else {
+                                setRouteFrom({ secKey, stallId: st.id });
+                              }
+                            }}
+                          />
+                        );
+                      });
+                    })}
+
+                    {/* View Cone and Pin positioned accurately on the coordinate (hidden when route is active) */}
+                    {!(routeFrom && routeTo) && (
+                      <g transform={`translate(${mapCoords.x}, ${mapCoords.y})`}>
+                        {/* View Cone */}
+                        <path d="M0 0 L-100 -200 A200 200 0 0 1 100 -200 Z" fill="rgba(239, 68, 68, 0.25)" transform={`rotate(${compassAngle})`} style={{ pointerEvents: 'none' }} />
+                        
+                        {/* Base Shadow */}
+                        <ellipse cx="0" cy="0" rx="20" ry="10" fill="rgba(0,0,0,0.2)" />
+                        
+                        {/* Pin Circle */}
+                        <circle r="22" fill="#ef4444" stroke="#ffffff" strokeWidth="4" className="animate-pulse" />
+                        
+                        {/* Basket Icon */}
+                        <g transform="translate(-9, -9)" stroke="#ffffff" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M2 9h14" />
+                          <path d="m13 9-3-5" />
+                          <path d="m3 9 3-5" />
+                          <path d="M3.5 9v4a4.5 4.5 0 0 0 9 0V9" />
+                          <path d="M6.5 12h5" />
+                        </g>
+                      </g>
+                    )}
+                  </svg>
+                </div>
               );
             })()}
           </div>
         </div>
       )}
 
+
+
       {/* BOTTOM CENTER STALL QUICK SWITCHER CONTROLS */}
-      <div className={`absolute left-1/2 -translate-x-1/2 z-20 transition-all duration-300 ${uiVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12 pointer-events-none'} ${detailsCollapsed ? 'bottom-6 sm:bottom-10' : 'bottom-[330px] md:bottom-[240px]'} flex flex-col items-center gap-1.5 sm:gap-2.5 scale-90 sm:scale-100 origin-bottom`}>
+      {navigationMode === '360' && (
+        <div className={`absolute left-1/2 -translate-x-1/2 z-20 transition-all duration-300 ${uiVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12 pointer-events-none'} ${detailsCollapsed ? 'bottom-6 sm:bottom-10' : 'bottom-[330px] md:bottom-[240px]'} flex flex-col items-center gap-1.5 sm:gap-2.5 scale-90 sm:scale-100 origin-bottom`}>
         {/* Stall Selector Button floating directly ABOVE the main switcher */}
         <div className="relative">
           <button
@@ -1405,27 +2863,52 @@ export default function MarketTour360() {
             className="bg-white/95 backdrop-blur-md border border-black/10 rounded-full px-5 py-2 text-xs font-black text-slate-800 shadow-xl hover:bg-white transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5"
           >
             <span>{currentStall.name} ({stallIndex + 1}/{activeSection.stalls.length})</span>
-            <ChevronDown size={12} className="text-[#1a5c2a]" />
+            <ChevronDown size={12} style={{ color: activeSectColor }} />
           </button>
 
           {stallDropdownOpen && (
-            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2.5 bg-white/95 backdrop-blur-md border border-black/10 rounded-2xl p-1.5 shadow-2xl z-50 flex flex-col gap-0.5 min-w-[200px] max-h-[220px] overflow-y-auto">
-              {activeSection.stalls.map((st, idx) => (
-                <button
-                  key={st.id}
-                  onClick={() => {
-                    setStallIndex(idx)
-                    triggerSceneTransition(getStallImagePath(st.id, activeSectionKey))
-                    setStallDropdownOpen(false)
-                  }}
-                  className={`px-3 py-1.5 rounded-xl text-left text-xs font-bold transition-all cursor-pointer ${idx === stallIndex
-                    ? 'bg-[#1a5c2a] text-white'
-                    : 'text-slate-700 hover:bg-black/5'
-                    }`}
-                >
-                  {st.name}
-                </button>
-              ))}
+            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2.5 bg-white/95 backdrop-blur-md border border-black/10 rounded-2xl p-1.5 shadow-2xl z-50 flex flex-col gap-0 min-w-[220px] max-h-[280px] overflow-y-auto">
+              {Object.entries(sectionsData).map(([secKey, sec]) => {
+                const secColor = secKey === 'meat' ? '#8d3e3c' : secKey === 'fish' ? '#00b5e2' : '#00c362';
+                const secIcon = secKey === 'meat' ? '🥩' : secKey === 'fish' ? '🐟' : '🥦';
+                return (
+                  <div key={secKey}>
+                    {/* Section Header */}
+                    <div
+                      className="px-3 py-1.5 text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 sticky top-0 bg-white/95 backdrop-blur-md"
+                      style={{ color: secColor }}
+                    >
+                      <span
+                        className="w-2.5 h-2.5 rounded-full shrink-0"
+                        style={{ backgroundColor: secColor }}
+                      />
+                      {secIcon} {sec.name}
+                    </div>
+                    {/* Stalls under this section */}
+                    {sec.stalls.map((st, idx) => {
+                      const isActive = secKey === activeSectionKey && idx === stallIndex;
+                      return (
+                        <button
+                          key={`${secKey}-${st.id}`}
+                          onClick={() => {
+                            setActiveSectionKey(secKey);
+                            setStallIndex(idx);
+                            triggerSceneTransition(getStallImagePath(st.id, secKey));
+                            setStallDropdownOpen(false);
+                          }}
+                          className="px-4 py-1.5 rounded-xl text-left text-xs font-bold transition-all cursor-pointer w-full"
+                          style={{
+                            backgroundColor: isActive ? secColor : 'transparent',
+                            color: isActive ? '#ffffff' : '#334155'
+                          }}
+                        >
+                          {st.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
@@ -1446,10 +2929,11 @@ export default function MarketTour360() {
                 setSectionDropdownOpen(prev => !prev)
                 setStallDropdownOpen(false)
               }}
-              className="text-[10px] text-[#e07b00] font-extrabold uppercase tracking-widest leading-none mb-0.5 flex items-center justify-center gap-1 mx-auto hover:text-[#b86500] cursor-pointer"
+              className="text-[11px] font-black uppercase tracking-widest leading-none mb-1.5 flex items-center justify-center gap-1.5 mx-auto hover:opacity-85 active:scale-95 transition-all cursor-pointer"
+              style={{ color: activeSectColor }}
             >
               <span>{activeSection.name}</span>
-              <ChevronDown size={10} />
+              <ChevronDown size={11} style={{ color: activeSectColor }} />
             </button>
             <p className="text-[10px] text-slate-500 font-bold leading-none">
               Section Selector
@@ -1464,22 +2948,29 @@ export default function MarketTour360() {
             )}
 
             {sectionDropdownOpen && (
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 bg-white/95 backdrop-blur-md border border-black/10 rounded-2xl p-1.5 shadow-2xl z-50 flex flex-col gap-1 min-w-[140px]">
-                {Object.values(sectionsData).map((sect) => (
-                  <button
-                    key={sect.id}
-                    onClick={() => {
-                      selectSection(sect.id)
-                      setSectionDropdownOpen(false)
-                    }}
-                    className={`px-3 py-1.5 rounded-xl text-left text-xs font-bold transition-all cursor-pointer ${sect.id === activeSectionKey
-                      ? 'bg-[#1a5c2a] text-white'
-                      : 'text-slate-700 hover:bg-black/5'
-                      }`}
-                  >
-                    {sect.icon} {sect.name}
-                  </button>
-                ))}
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 bg-white/95 backdrop-blur-md border border-black/10 rounded-2xl p-1.5 shadow-2xl z-50 flex flex-col gap-1 min-w-[155px]">
+                {Object.values(sectionsData).map((sect) => {
+                  const sectColor = sect.id === 'meat' ? '#8d3e3c' : sect.id === 'fish' ? '#00b5e2' : '#00c362';
+                  return (
+                    <button
+                      key={sect.id}
+                      onClick={() => {
+                        selectSection(sect.id)
+                        setSectionDropdownOpen(false)
+                      }}
+                      className={`px-3 py-2 rounded-xl text-left text-xs font-black transition-all cursor-pointer flex items-center gap-2.5 ${sect.id === activeSectionKey
+                        ? 'bg-slate-100 text-slate-900 font-extrabold shadow-sm'
+                        : 'text-slate-600 hover:bg-black/5 hover:text-slate-900'
+                        }`}
+                    >
+                      <span 
+                        className="w-3.5 h-3.5 rounded-full border border-black/10 shadow-sm shrink-0" 
+                        style={{ backgroundColor: sectColor }} 
+                      />
+                      <span>{sect.name}</span>
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -1493,83 +2984,188 @@ export default function MarketTour360() {
           </button>
         </div>
       </div>
+    )}
 
       {/* STALL DETAILS DRAWER (Bottom Panel) */}
       {selectedStall && uiVisible && !detailsCollapsed && (
-        <div className="absolute bottom-16 md:bottom-0 left-0 right-0 z-20 px-4 pb-4">
-          <div className="max-w-2xl mx-auto relative">
-            <div className="max-w-2xl mx-auto bg-white/95 backdrop-blur-md rounded-3xl p-5 border border-black/10 shadow-2xl flex flex-col md:flex-row gap-5 relative overflow-hidden">
-              {/* Collapse Toggle */}
-              <button
-                onClick={() => setDetailsCollapsed(true)}
-                className="absolute top-3 right-3 z-30 bg-white/80 hover:bg-white border border-black/10 rounded-full p-1.5 text-slate-600 hover:text-slate-900 transition-colors shadow-sm cursor-pointer"
-                title="Collapse details"
-              >
-                <ChevronDown size={16} />
-              </button>
-              {/* Background Ambient Glow */}
-              <div className={`absolute -right-32 -bottom-32 w-64 h-64 rounded-full bg-gradient-to-br ${activeSection.bgTheme} blur-3xl opacity-40 pointer-events-none`} />
+        <div className="absolute bottom-16 md:bottom-6 left-0 right-0 z-20 px-4">
+          <div className="max-w-4xl mx-auto bg-white/95 backdrop-blur-md rounded-3xl p-5 border border-black/10 shadow-2xl flex flex-col md:flex-row gap-5 relative overflow-hidden">
+            {/* Collapse button */}
+            <button
+              onClick={() => setDetailsCollapsed(true)}
+              className="absolute top-4 right-4 z-30 bg-slate-100 hover:bg-slate-200 rounded-full p-2 text-slate-600 hover:text-slate-900 transition-colors shadow-sm cursor-pointer"
+              title="Hide details"
+            >
+              <ChevronDown size={18} />
+            </button>
+            {/* Background Ambient Glow */}
+            <div className={`absolute -right-32 -bottom-32 w-64 h-64 rounded-full bg-gradient-to-br ${activeSection.bgTheme} blur-3xl opacity-40 pointer-events-none`} />
 
-              {/* Main Info */}
-              <div className="flex-1 min-w-0 z-10">
-                <div className="flex items-center gap-2 mb-2 flex-wrap">
-                  <span className="px-2.5 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider bg-black/10 text-slate-800">
-                    {selectedStall.zone}
+            {/* Main Info */}
+            <div className="flex-1 min-w-0 z-10">
+              <div className="flex items-center gap-2 mb-2 flex-wrap">
+                <span className="px-2.5 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider bg-black/10 text-slate-800">
+                  {selectedStall.zone || 'Zone A'}
+                </span>
+                
+                {/* Open Status Badge */}
+                {selectedStall.status === 'Occupied' ? (
+                  <span className="px-2.5 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 shadow-sm flex items-center gap-1">
+                    <span className="w-1 h-1 rounded-full bg-emerald-500 animate-ping" />
+                    Open Now
                   </span>
-                </div>
-                <h3 className="text-lg font-black text-slate-900 truncate leading-tight">
-                  {selectedStall.name}
-                </h3>
-                <p className="text-xs text-slate-600 mt-1 flex flex-col gap-0.5">
-                  <span>Category: {activeSection.name}</span>
-                  <span className="text-[10px] text-slate-500 font-medium">Utilities: {selectedStall.utilities}</span>
-                </p>
-
-                {/* Stats Grid */}
-                <div className="grid grid-cols-2 gap-3 mt-4">
-                  <div className="flex items-center gap-2 bg-black/5 rounded-2xl p-3 border border-black/5 hover:bg-black/10 transition-all">
-                    <Zap size={15} className="text-[#1a5c2a] shrink-0" />
-                    <div>
-                      <p className="text-[9px] text-slate-500 font-black uppercase tracking-wider">Electricity</p>
-                      <p className="text-xs font-bold text-slate-800">{selectedStall.electricitySetup}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 bg-black/5 rounded-2xl p-3 border border-black/5 hover:bg-black/10 transition-all">
-                    <MapPin size={15} className="text-[#1a5c2a] shrink-0" />
-                    <div>
-                      <p className="text-[9px] text-slate-500 font-black uppercase tracking-wider">Water Access</p>
-                      <p className="text-xs font-bold text-slate-800">{selectedStall.waterAccess}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 bg-black/5 rounded-2xl p-3 border border-black/5 hover:bg-black/10 transition-all">
-                    <User size={15} className="text-[#1a5c2a] shrink-0" />
-                    <div>
-                      <p className="text-[9px] text-slate-500 font-black uppercase tracking-wider">Contractor</p>
-                      <p className="text-xs font-bold text-slate-800">{selectedStall.contractorName || 'None'}</p>
-                    </div>
-                  </div>
-                  {selectedStall.contractorName && selectedStall.contractorName !== 'None' && (
-                    <div className="flex items-center gap-2 bg-black/5 rounded-2xl p-3 border border-black/5 hover:bg-black/10 transition-all">
-                      <Phone size={15} className="text-[#1a5c2a] shrink-0" />
-                      <div>
-                        <p className="text-[9px] text-slate-500 font-black uppercase tracking-wider">Contact</p>
-                        <p className="text-xs font-bold text-slate-800">{selectedStall.contractorContact || 'N/A'}</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                ) : (
+                  <span className="px-2.5 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider bg-blue-500/10 text-blue-600 border border-blue-500/20 shadow-sm flex items-center gap-1">
+                    <span className="w-1 h-1 rounded-full bg-blue-500" />
+                    Available
+                  </span>
+                )}
+                {dbLoading && (
+                  <span className="px-2.5 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-600 border border-amber-500/20 shadow-sm animate-pulse">
+                    Updating...
+                  </span>
+                )}
               </div>
+              
+              <h3 className="text-xl font-black text-slate-900 truncate leading-tight flex items-center gap-2">
+                <Store size={18} className="text-[#1a5c2a]" />
+                {selectedStall.name}
+              </h3>
+              
+              <p className="text-xs text-slate-600 mt-1 flex flex-col gap-0.5">
+                <span className="font-bold">Category: <span className="text-[#1a5c2a]">{selectedStall.productType || activeSection.name}</span></span>
+                <span className="text-[10px] text-slate-500 font-medium">Utilities: {selectedStall.utilities}</span>
+              </p>
 
-              {/* Price Details Block */}
-              <div className="w-full md:w-52 shrink-0 flex flex-col justify-center border-t md:border-t-0 md:border-l border-black/10 pt-4 md:pt-0 md:pl-5 z-10">
-                <div>
-                  <p className="text-xl sm:text-2xl font-black text-[#e07b00] leading-none whitespace-nowrap">
-                    {selectedStall.price}
-                  </p>
-                  <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest mt-1">per month (negotiable)</p>
+              {/* Utilities Cards Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
+                {/* Electricity Setup card */}
+                <div className="bg-slate-100/80 rounded-2xl p-3 flex items-start gap-2.5 border border-slate-200/50">
+                  <Zap size={16} className="text-emerald-600 mt-0.5 shrink-0" />
+                  <div>
+                    <span className="text-[8px] font-bold text-slate-400 block tracking-wider uppercase leading-none mb-1">Electricity</span>
+                    <span className="text-xs font-black text-slate-700 leading-tight block">
+                      {selectedStall.electricitySetup || (parseInt(selectedStall.id) % 2 === 0 ? 'Sub-metered' : 'Shared Meter')}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Water Access card */}
+                <div className="bg-slate-100/80 rounded-2xl p-3 flex items-start gap-2.5 border border-slate-200/50">
+                  <Droplet size={16} className="text-blue-600 mt-0.5 shrink-0" />
+                  <div>
+                    <span className="text-[8px] font-bold text-slate-400 block tracking-wider uppercase leading-none mb-1">Water Access</span>
+                    <span className="text-xs font-black text-slate-700 leading-tight block">
+                      {selectedStall.waterAccess || (parseInt(selectedStall.id) % 3 === 0 ? 'Near CR (Easy Access)' : 'Far from CR (Fetching Required)')}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Contractor card */}
+                <div className="bg-slate-100/80 rounded-2xl p-3 flex items-start gap-2.5 border border-slate-200/50">
+                  <User size={16} className="text-slate-500 mt-0.5 shrink-0" />
+                  <div>
+                    <span className="text-[8px] font-bold text-slate-400 block tracking-wider uppercase leading-none mb-1">Contractor</span>
+                    <span className="text-xs font-black text-slate-700 leading-tight block">
+                      {selectedStall.contractor || 'None'}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
+
+            {/* Price & Navigation Button Block */}
+            <div className="w-full md:w-56 shrink-0 flex flex-col justify-between border-t md:border-t-0 md:border-l border-black/10 pt-4 md:pt-0 md:pl-5 z-10">
+              <div className="mb-2">
+                <p className="text-xl sm:text-2xl font-black text-[#e07b00] leading-none whitespace-nowrap">
+                  {selectedStall.price}
+                </p>
+                <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest mt-1">per month (negotiable)</p>
+              </div>
+              
+              {/* Route Me Button */}
+              <button
+                onClick={() => {
+                  handleRouteMe(selectedStall);
+                  setDetailsCollapsed(true);
+                }}
+                className="w-full mt-2.5 py-3 px-4 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-black text-xs transition-all flex items-center justify-center gap-2 shadow-lg active:scale-95 cursor-pointer"
+              >
+                <Zap size={14} className="animate-pulse shrink-0" />
+                <span>Route Me (3D AR)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mini Map in AR Mode */}
+      {navigationMode === 'ar' && uiVisible && (
+        <div 
+          className="absolute bottom-24 left-3 sm:bottom-6 sm:left-6 w-32 h-32 sm:w-40 sm:h-40 rounded-2xl border border-white/20 bg-slate-950/85 backdrop-blur-md overflow-hidden z-20 shadow-2xl transition-all duration-500 hover:-translate-y-2"
+          style={{
+            transform: 'perspective(800px) rotateX(38deg) rotateY(0deg) rotateZ(-22deg)',
+            transformStyle: 'preserve-3d',
+            boxShadow: '-10px 20px 30px rgba(0, 0, 0, 0.45), 0 0 20px rgba(34, 197, 94, 0.15)'
+          }}
+        >
+          <div className="w-full h-full p-1.5 relative">
+            {(() => {
+              const mapCoords = routeInstructions[arStepIndex]?.coords || ENTRANCE_COORDS;
+              const zoomWidth = 620;
+              const zoomHeight = 620;
+              const vbX = Math.max(0, Math.min(2305 - zoomWidth, mapCoords.x - zoomWidth / 2));
+              const vbY = Math.max(0, Math.min(1824 - zoomHeight, mapCoords.y - zoomHeight / 2));
+              
+              // Route path points
+              const pathWaypoints = arWaypoints.slice(1, -1);
+              const pts = pathWaypoints.map(p => `${p.x},${p.y}`).join(' ');
+              
+              return (
+                <svg viewBox={`${vbX} ${vbY} ${zoomWidth} ${zoomHeight}`} preserveAspectRatio="xMidYMid meet" className="w-full h-full">
+                  <defs>
+                    <linearGradient id="arPinStemGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#22c55e" />
+                      <stop offset="100%" stopColor="#22c55e" stopOpacity="0.1" />
+                    </linearGradient>
+                  </defs>
+
+                  <image href={mapImage} x="-20" y="-15" width="2305" height="1824" preserveAspectRatio="none" style={{ pointerEvents: 'none', opacity: 0.65 }} />
+                  
+                  {/* Render route path in mini map */}
+                  {pathWaypoints.length >= 2 && (
+                    <g>
+                      <polyline points={pts} fill="none" stroke="rgba(0,0,0,0.35)" strokeWidth="20" strokeLinecap="round" strokeLinejoin="round" />
+                      <polyline points={pts} fill="none" stroke="#ffffff" strokeWidth="16" strokeLinecap="round" strokeLinejoin="round" />
+                      <polyline points={pts} fill="none" stroke="#3b82f6" strokeWidth="10" strokeLinecap="round" strokeLinejoin="round" />
+                    </g>
+                  )}
+                  
+                  {/* View Cone and Pin positioned accurately on the coordinate in AR mini map */}
+                  <g transform={`translate(${mapCoords.x}, ${mapCoords.y})`}>
+                    {/* View Cone */}
+                    <path d="M0 0 L-100 -200 A200 200 0 0 1 100 -200 Z" fill="rgba(34, 197, 94, 0.3)" transform={`rotate(${compassAngle})`} style={{ pointerEvents: 'none' }} />
+                    
+
+                    
+                    {/* Base Shadow */}
+                    <ellipse cx="0" cy="0" rx="20" ry="10" fill="rgba(0,0,0,0.2)" />
+                    
+                    {/* Pin Circle */}
+                    <circle r="22" fill="#22c55e" stroke="#ffffff" strokeWidth="4" className="animate-pulse" />
+                    
+                    {/* Basket Icon */}
+                    <g transform="translate(-9, -9)" stroke="#ffffff" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M2 9h14" />
+                      <path d="m13 9-3-5" />
+                      <path d="m3 9 3-5" />
+                      <path d="M3.5 9v4a4.5 4.5 0 0 0 9 0V9" />
+                      <path d="M6.5 12h5" />
+                    </g>
+                  </g>
+                </svg>
+              );
+            })()}
           </div>
         </div>
       )}
