@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Compass, Info, HelpCircle, Navigation, RotateCw, Check, X, Camera, CameraOff, Map, ChevronDown, ChevronUp, Locate, ChevronLeft, ChevronRight, Search, Footprints } from "lucide-react";
 import mapImage from "../../images/map.png";
+import logoImage from "../../images/logo.png";
 import { SVG_STALL_COORDS } from "../../utils/coords_dict";
 
 const getStallZone = (num, category) => {
@@ -270,7 +271,7 @@ export default function ArFinder({ onBack }) {
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState(null);
   const [cameraEnabled, setCameraEnabled] = useState(true);
-  const [mapCollapsed, setMapCollapsed] = useState(true);
+  const [mapCollapsed, setMapCollapsed] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [hasOrientation, setHasOrientation] = useState(false);
   const [showCard, setShowCard] = useState(true);
@@ -1411,6 +1412,15 @@ export default function ArFinder({ onBack }) {
                     <path d="M0 -15 L12 10 L0 4 L-12 10 Z" fill="#fff" />
                   </g>
                 </g>
+
+                {/* MyTalipapa Logo — placed directly over diamond icon */}
+                <image
+                  href={logoImage}
+                  x="1960" y="1450"
+                  width="450" height="450"
+                  preserveAspectRatio="xMidYMid meet"
+                  style={{ pointerEvents: 'none' }}
+                />
               </svg>
               <div className="sim-badge">
                 <Compass size={10} className="animate-spin-slow" />
