@@ -498,6 +498,9 @@ export default function RenterApplications({ prefill }) {
   const [activeFilter, setActiveFilter] = useState('All')
   const [showFilterSheet, setShowFilterSheet] = useState(false)
   const [showStallPicker, setShowStallPicker] = useState(false)
+  const [appealOpen, setAppealOpen] = useState(false)
+  const [appealReason, setAppealReason] = useState('')
+  const [appealLoading, setAppealLoading] = useState(false)
 
   const [form, setForm] = useState({
     fullName: getUser()?.full_name || getUser()?.name || '',
@@ -649,6 +652,32 @@ export default function RenterApplications({ prefill }) {
         alert('Failed to submit application: ' + err.message)
       })
   }
+
+  /* ── Appeal a rejected application ── */
+  const handleAppeal = (app) => {
+    if (appealLoading) return
+    setAppealLoading(true)
+    fetch(`/api/renter/applications/${app.id || app._id}/appeal`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: getUser()?.email || app.email || '', appealReason }),
+    })
+      .then(res => { if (!res.ok) return res.json().then(e => { throw new Error(e.error || 'Appeal failed') }); return res.json() })
+      .then(() => {
+        setAppealLoading(false)
+        setAppealOpen(false)
+        setAppealReason('')
+        setSelectedApp(null)
+        fetchApplications()
+      })
+      .catch(err => {
+        setAppealLoading(false)
+        alert(err.message || 'Failed to submit appeal.')
+      })
+  }
+
+  // Reset the appeal form whenever the detail modal opens a different app / closes
+  useEffect(() => { setAppealOpen(false); setAppealReason('') }, [selectedApp])
 
   /* ── Active filter display info ── */
   const filterInfo = FILTER_OPTIONS.find(f => f.key === activeFilter)
@@ -1015,6 +1044,36 @@ export default function RenterApplications({ prefill }) {
                   </span>
                 </div>
 
+                {/* Proceed to payment — approved but not yet paid */}
+                {selectedApp.status === 'Approved' && selectedApp.paymentPending && (
+                  <div className="rounded-xl border border-[#fde8d8] bg-[#fff8f4] p-3.5 flex gap-3" style={{ animation: 'fadeSlideUp 0.3s ease both' }}>
+                    <div className="w-8 h-8 rounded-lg bg-[#e8621a] flex items-center justify-center shrink-0 mt-0.5">
+                      <Clock size={15} color="white" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-[#e8621a] mb-0.5">Please proceed to payment</p>
+                      <p className="text-xs text-gray-600 leading-relaxed">
+                        {selectedApp.statusNote || 'Your application is approved. Complete your initial payment to activate your stall.'}
+                        {selectedApp.monthlyRate ? ` Amount due: ₱${Number(selectedApp.monthlyRate).toLocaleString()}.` : ''}
+                      </p>
+                      <p className="text-[11px] text-gray-400 mt-1">
+                        Settle your payment with your contractor{selectedApp.contractorName && selectedApp.contractorName !== 'None' ? ` (${selectedApp.contractorName})` : ''} to finalize.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Why is this pending? */}
+                {selectedApp.status === 'Pending' && selectedApp.statusNote && (
+                  <div className="rounded-xl border border-orange-100 bg-orange-50 p-3 flex gap-2.5" style={{ animation: 'fadeSlideUp 0.3s ease both' }}>
+                    <AlertCircle size={16} className="text-[#e8621a] shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-xs font-bold text-[#e8621a] mb-0.5">Why is this pending?</p>
+                      <p className="text-xs text-gray-600 leading-relaxed">{selectedApp.statusNote}</p>
+                    </div>
+                  </div>
+                )}
+
                 <div>
                   <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-2 px-1">Stall Information</p>
                   <div className="grid grid-cols-2 gap-2">
@@ -1064,6 +1123,44 @@ export default function RenterApplications({ prefill }) {
                     <span className="text-[9px] font-bold text-red-500 uppercase tracking-wider">Rejection Reason</span>
                     <p className="text-xs text-red-700 leading-relaxed">{selectedApp.rejectionReason}</p>
                   </div>
+                )}
+
+                {/* Appeal / resubmit a rejected application */}
+                {selectedApp.status === 'Rejected' && (
+                  !appealOpen ? (
+                    <button
+                      onClick={() => setAppealOpen(true)}
+                      className="w-full flex items-center justify-center gap-2 rounded-xl border border-[#1a5c2a] text-[#1a5c2a] font-bold text-xs py-2.5 hover:bg-[#edf5ed] transition-colors"
+                    >
+                      Appeal / Resubmit Application
+                    </button>
+                  ) : (
+                    <div className="rounded-xl border border-gray-200 bg-[#f9fafb] p-3 flex flex-col gap-2">
+                      <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Appeal this decision</span>
+                      <textarea
+                        value={appealReason}
+                        onChange={e => setAppealReason(e.target.value)}
+                        rows={3}
+                        placeholder="Add new info or address the rejection reason (optional)…"
+                        className="w-full text-xs rounded-lg border border-gray-200 p-2.5 focus:outline-none focus:border-[#1a5c2a] resize-none"
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => { setAppealOpen(false); setAppealReason('') }}
+                          className="flex-1 py-2 rounded-lg border border-gray-200 text-gray-600 font-semibold text-xs"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={() => handleAppeal(selectedApp)}
+                          disabled={appealLoading}
+                          className="flex-1 py-2 rounded-lg bg-[#1a5c2a] text-white font-bold text-xs disabled:opacity-50"
+                        >
+                          {appealLoading ? 'Submitting…' : 'Submit Appeal'}
+                        </button>
+                      </div>
+                    </div>
+                  )
                 )}
               </div>
 

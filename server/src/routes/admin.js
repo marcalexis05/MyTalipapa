@@ -82,4 +82,11 @@ router.post('/archive-requests/:userId/status', contractorController.updateArchi
 router.get('/admin/archive-requests', contractorController.getArchiveRequests);
 router.post('/admin/archive-requests/:userId/status', contractorController.updateArchiveRequestStatus);
 
+// Walk-in renter creation endpoint
+router.post('/walk-in-renter', contractorController.createWalkInRenter);
+
+// Stall creation and status toggle endpoints
+router.post('/stalls', contractorController.addStall);
+router.put('/stalls/:id/status', contractorController.toggleStallStatus);
+
 module.exports = router;

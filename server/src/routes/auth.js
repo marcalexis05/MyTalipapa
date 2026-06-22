@@ -46,7 +46,8 @@ router.get('/verify', async (req, res) => {
 // ---------------------------------------------------
 router.post('/register', async (req, res) => {
   const {
-    full_name,
+    first_name,
+    last_name,
     email,
     password,
     contact_number,
@@ -54,10 +55,17 @@ router.post('/register', async (req, res) => {
     agreed,
   } = req.body;
 
+  // Compose full_name from the split fields (fall back to a provided full_name)
+  const composedFullName = [first_name, last_name]
+    .map((p) => (p || '').trim())
+    .filter(Boolean)
+    .join(' ') || (req.body.full_name || '').trim();
+
   // Basic validation
-  if (!full_name || !email || !password || !contact_number || !role || agreed === undefined) {
+  if (!composedFullName || !email || !password || !contact_number || !role || agreed === undefined) {
     return res.status(400).json({ error: 'All fields are required.' });
   }
+  const full_name = composedFullName;
 
   try {
     // Duplicate email check
@@ -77,6 +85,8 @@ router.post('/register', async (req, res) => {
     // Create unverified user
     const user = await User.create({
       full_name,
+      first_name: (first_name || '').trim(),
+      last_name: (last_name || '').trim(),
       email: email.toLowerCase(),
       contact_number,
       role,
@@ -102,6 +112,8 @@ router.post('/register', async (req, res) => {
 // ---------------------------------------------------
 router.post('/contractor/register-application', async (req, res) => {
   const {
+    firstName,
+    lastName,
     fullName,
     businessName,
     email,
@@ -110,20 +122,18 @@ router.post('/contractor/register-application', async (req, res) => {
     selectedStalls,
   } = req.body;
 
+  const composedFullName = [firstName, lastName]
+    .map((p) => (p || '').trim())
+    .filter(Boolean)
+    .join(' ') || (fullName || '').trim();
+
   // Validate required fields and ensure at least one stall is selected
-  if (!fullName || !businessName || !email || !password || !contactNumber || !Array.isArray(selectedStalls) || selectedStalls.length === 0) {
+  if (!composedFullName || !businessName || !email || !password || !contactNumber || !Array.isArray(selectedStalls) || selectedStalls.length === 0) {
     return res.status(400).json({ error: 'All fields are required and at least one stall must be selected.' });
   }
-  if (
-    !fullName ||
-    !businessName ||
-    !email ||
-    !password ||
-    !contactNumber ||
-    !selectedStalls
-  ) {
-    return res.status(400).json({ error: 'All fields are required.' });
-  }
+
+  const fName = (firstName || '').trim() || composedFullName.split(' ')[0] || '';
+  const lName = (lastName || '').trim() || composedFullName.split(' ').slice(1).join(' ') || '';
 
   try {
     const userExists = await User.findOne({ email: email.toLowerCase() });
@@ -152,7 +162,9 @@ router.post('/contractor/register-application', async (req, res) => {
 
     if (userExists || appExists) {
       if (userExists) {
-        userExists.full_name = fullName;
+        userExists.full_name = composedFullName;
+        userExists.first_name = fName;
+        userExists.last_name = lName;
         userExists.contact_number = contactNumber;
         userExists.passwordHash = passwordHash;
         userExists.status = 'pending';
@@ -160,7 +172,9 @@ router.post('/contractor/register-application', async (req, res) => {
         userRecord = userExists;
       } else {
         userRecord = await User.create({
-          full_name: fullName,
+          full_name: composedFullName,
+          first_name: fName,
+          last_name: lName,
           email: email.toLowerCase(),
           contact_number: contactNumber,
           role: 'contractor',
@@ -171,7 +185,9 @@ router.post('/contractor/register-application', async (req, res) => {
       }
 
       if (appExists) {
-        appExists.fullName = fullName;
+        appExists.fullName = composedFullName;
+        appExists.firstName = fName;
+        appExists.lastName = lName;
         appExists.businessName = businessName;
         appExists.contactNumber = contactNumber;
         appExists.passwordHash = passwordHash;
@@ -184,7 +200,9 @@ router.post('/contractor/register-application', async (req, res) => {
         application = appExists;
       } else {
         application = await ContractorApplication.create({
-          fullName,
+          fullName: composedFullName,
+          firstName: fName,
+          lastName: lName,
           businessName,
           contactNumber,
           email: email.toLowerCase(),
@@ -196,7 +214,9 @@ router.post('/contractor/register-application', async (req, res) => {
       }
     } else {
       application = await ContractorApplication.create({
-        fullName,
+        fullName: composedFullName,
+        firstName: fName,
+        lastName: lName,
         businessName,
         contactNumber,
         email: email.toLowerCase(),
@@ -207,7 +227,9 @@ router.post('/contractor/register-application', async (req, res) => {
       });
 
       userRecord = await User.create({
-        full_name: fullName,
+        full_name: composedFullName,
+        first_name: fName,
+        last_name: lName,
         email: email.toLowerCase(),
         contact_number: contactNumber,
         role: 'contractor',
@@ -328,8 +350,19 @@ router.post('/login', async (req, res) => {
     }
 
     // Auto-verify past users (who registered before email verification was introduced)
+    let needsSave = false;
     if (!user.verificationToken && !user.isVerified) {
       user.isVerified = true;
+      needsSave = true;
+    }
+
+    if ((!user.first_name || !user.last_name) && user.full_name) {
+      user.first_name = user.first_name || user.full_name.split(' ')[0] || '';
+      user.last_name = user.last_name || user.full_name.split(' ').slice(1).join(' ') || '';
+      needsSave = true;
+    }
+
+    if (needsSave) {
       await user.save();
     }
 
@@ -337,7 +370,6 @@ router.post('/login', async (req, res) => {
     if (user.mustChangePassword) {
       return res.status(403).json({ error: 'Password must be changed before proceeding.', mustChangePassword: true });
     }
-
 
     const token = jwt.sign(
       { id: user._id, role: user.role },
@@ -350,6 +382,8 @@ router.post('/login', async (req, res) => {
         id: user._id,
         email: user.email,
         full_name: user.full_name,
+        first_name: user.first_name || '',
+        last_name: user.last_name || '',
         role: user.role,
         status: user.status || 'approved',
         profilePicture: user.profilePicture || null,
@@ -428,6 +462,7 @@ router.get('/profile', async (req, res) => {
       return res.status(404).json({ error: 'User not found.' });
     }
 
+    let needsSave = false;
     // Auto-expire archive access status if 24 hours have passed since approval
     if (user.archiveAccessStatus === 'approved' && user.archiveAccessApprovedAt) {
       const now = new Date();
@@ -437,8 +472,18 @@ router.get('/profile', async (req, res) => {
       if (diffMs > validityMs) {
         user.archiveAccessStatus = 'none';
         user.archiveAccessApprovedAt = null;
-        await user.save();
+        needsSave = true;
       }
+    }
+
+    if ((!user.first_name || !user.last_name) && user.full_name) {
+      user.first_name = user.first_name || user.full_name.split(' ')[0] || '';
+      user.last_name = user.last_name || user.full_name.split(' ').slice(1).join(' ') || '';
+      needsSave = true;
+    }
+
+    if (needsSave) {
+      await user.save();
     }
 
     return res.status(200).json(user);
@@ -464,8 +509,16 @@ router.put('/profile', async (req, res) => {
       return res.status(404).json({ error: 'User not found.' });
     }
 
-    const { full_name, contact_number, profilePicture } = req.body;
-    if (full_name) user.full_name = full_name;
+    const { first_name, last_name, full_name, contact_number, profilePicture } = req.body;
+    if (first_name !== undefined) user.first_name = first_name;
+    if (last_name !== undefined) user.last_name = last_name;
+    if (first_name !== undefined || last_name !== undefined) {
+      user.full_name = `${user.first_name || ''} ${user.last_name || ''}`.trim();
+    } else if (full_name) {
+      user.full_name = full_name;
+      user.first_name = full_name.split(' ')[0] || '';
+      user.last_name = full_name.split(' ').slice(1).join(' ') || '';
+    }
     if (contact_number) user.contact_number = contact_number;
     if (profilePicture !== undefined) user.profilePicture = profilePicture;
 
@@ -477,6 +530,8 @@ router.put('/profile', async (req, res) => {
         id: user._id,
         email: user.email,
         full_name: user.full_name,
+        first_name: user.first_name || '',
+        last_name: user.last_name || '',
         contact_number: user.contact_number,
         role: user.role,
         status: user.status,

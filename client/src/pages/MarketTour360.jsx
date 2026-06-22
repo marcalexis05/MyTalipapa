@@ -32,7 +32,8 @@ import {
   ShieldOff,
   Phone,
   User,
-  Droplet
+  Droplet,
+  Camera
 } from 'lucide-react'
 
 // ─── Market Pathway Graph for Route Finding ─────────────────────────────────
@@ -738,6 +739,28 @@ export default function MarketTour360() {
     const steps = generateRouteInstructions(routeWaypoints);
     setRouteInstructions(steps);
     setArStepIndex(0);
+  };
+
+  // Hand off from the panorama to the AR view, targeting the given stall.
+  // ArFinder reads this router state to focus the stall and open the QR scanner.
+  const handleOpenArView = (targetStall) => {
+    if (!targetStall) return;
+    let secKey = activeSectionKey;
+    Object.entries(sectionsData).forEach(([key, sec]) => {
+      if (sec.stalls.some(s => s.id === targetStall.id)) secKey = key;
+    });
+    navigate('/renter/ar-finder', {
+      state: {
+        stall: {
+          category: secKey,
+          rawId: targetStall.id,
+          zone: targetStall.zone,
+          stallNumber: getCleanDbStallNumber(targetStall.id),
+          name: targetStall.name,
+          fromPanorama: true,
+        },
+      },
+    });
   };
 
   const fetchStallDetailsFromDb = async (stallId, zone) => {
@@ -1885,6 +1908,14 @@ export default function MarketTour360() {
 
         <div className="pointer-events-auto flex items-center gap-2">
           <button
+            onClick={() => handleOpenArView(currentStall)}
+            className="px-3 py-2 sm:px-4.5 sm:py-2.5 rounded-full sm:rounded-2xl bg-[#1a5c2a] hover:bg-[#15491f] text-white text-xs font-black flex items-center gap-2 transition-all active:scale-95 cursor-pointer shadow-lg"
+            title="Open the live AR view for the stall you're looking at"
+          >
+            <Camera size={15} />
+            <span className="hidden sm:inline">Open AR View</span>
+          </button>
+          <button
             onClick={() => setUiVisible(false)}
             className="px-3 py-2 sm:px-4.5 sm:py-2.5 rounded-full sm:rounded-2xl bg-white/80 hover:bg-white backdrop-blur-md text-slate-800 border border-black/10 text-xs font-black flex items-center gap-2 transition-all active:scale-95 cursor-pointer shadow-lg"
             title="Hide all overlay buttons and panels"
@@ -2297,12 +2328,19 @@ export default function MarketTour360() {
                             title={`Go to ${st.name}`}
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (routeFrom && !routeTo) {
-                                setRouteTo({ secKey, stallId: st.id });
-                                handleRouteMe(st);
-                              } else {
-                                setRouteFrom({ secKey, stallId: st.id });
-                              }
+                              if (transitioning) return;
+                              // Tap-to-navigate: jump the panorama to the clicked stall,
+                              // then collapse the map so the user lands in the 360° view.
+                              setActiveSectionKey(secKey);
+                              setStallIndex(idx);
+                              setSelectedStall(st);
+                              triggerSceneTransition(getStallImagePath(st.id, secKey));
+                              setIsMapExpanded(false);
+                              let count = 0;
+                              const interval = setInterval(() => {
+                                window.dispatchEvent(new Event('resize'));
+                                if (count++ > 30) clearInterval(interval);
+                              }, 16);
                             }}
                           />
                         );
@@ -2583,6 +2621,15 @@ export default function MarketTour360() {
               >
                 <Zap size={14} className="animate-pulse shrink-0" />
                 <span>Route Me</span>
+              </button>
+
+              {/* Open AR View Button — hands off to the live AR + QR scanner */}
+              <button
+                onClick={() => handleOpenArView(selectedStall)}
+                className="w-full mt-2 py-3 px-4 rounded-xl bg-[#1a5c2a] hover:bg-[#15491f] text-white font-black text-xs transition-all flex items-center justify-center gap-2 shadow-lg active:scale-95 cursor-pointer"
+              >
+                <Camera size={14} className="shrink-0" />
+                <span>Open AR View</span>
               </button>
             </div>
           </div>

@@ -29,6 +29,8 @@ export default function ContractorApplication() {
   const [processingId, setProcessingId] = useState(null);
   const [selectedApp, setSelectedApp] = useState(null);
   const [animating, setAnimating] = useState({});
+  const [rejectTarget, setRejectTarget] = useState(null); // app being rejected (reason prompt)
+  const [rejectReason, setRejectReason] = useState("");
 
   const filteredApps = applications.filter(
     a => a.status?.toLowerCase() === tab.toLowerCase()
@@ -62,7 +64,7 @@ export default function ContractorApplication() {
   };
 
   // ── Approve / Reject — persists to backend ───────────────
-  const handleAction = async (id, action) => {
+  const handleAction = async (id, action, rejectionReason = '') => {
     setProcessingId(id);
     setAnimating(prev => ({ ...prev, [id]: action }));
 
@@ -70,7 +72,7 @@ export default function ContractorApplication() {
       const res = await fetch(`/api/contractor/applications/${id}/status`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action }), // "approve" | "reject"
+        body: JSON.stringify({ action, rejectionReason }), // "approve" | "reject" (+ reason)
       });
 
       if (!res.ok) throw new Error(`Server error: ${res.status}`);
@@ -173,7 +175,7 @@ export default function ContractorApplication() {
                 <button
                   className="btn-reject"
                   disabled={processingId === app.id}
-                  onClick={() => handleAction(app.id, "reject")}
+                  onClick={() => { setRejectReason(""); setRejectTarget(app); }}
                   aria-label="Reject"
                 >
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -289,7 +291,7 @@ export default function ContractorApplication() {
             </div>
           </main>
         </div>
-
+
 
         {/* Detail Modal */}
         {selectedApp && (
@@ -345,7 +347,7 @@ export default function ContractorApplication() {
                   <button
                     className="btn-reject"
                     style={{ flex: 1, justifyContent: "center", gap: 6 }}
-                    onClick={() => { handleAction(selectedApp.id, "reject"); setSelectedApp(null); }}
+                    onClick={() => { setRejectReason(""); setRejectTarget(selectedApp); setSelectedApp(null); }}
                   >
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                       <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
@@ -365,6 +367,44 @@ export default function ContractorApplication() {
                 </div>
               )}
               <button className="stall-modal-close" onClick={() => setSelectedApp(null)}>Close</button>
+            </div>
+          </div>
+        )}
+
+        {/* ── Reject Reason Modal ── */}
+        {rejectTarget && (
+          <div
+            onClick={() => setRejectTarget(null)}
+            style={{ position: "fixed", inset: 0, zIndex: 60, background: "rgba(0,0,0,0.5)", backdropFilter: "blur(2px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+          >
+            <div onClick={e => e.stopPropagation()} style={{ width: "100%", maxWidth: 380, background: "#fff", borderRadius: 16, padding: 20, boxShadow: "0 20px 50px rgba(0,0,0,0.25)" }}>
+              <h3 style={{ fontSize: 16, fontWeight: 800, color: "#111827", margin: "0 0 4px" }}>Reject Application</h3>
+              <p style={{ fontSize: 12, color: "#6b7280", margin: "0 0 12px" }}>
+                {rejectTarget.name ? `${rejectTarget.name} · ` : ""}{rejectTarget.stall || ""}. The applicant will see this reason and may appeal.
+              </p>
+              <textarea
+                value={rejectReason}
+                onChange={e => setRejectReason(e.target.value)}
+                placeholder="Reason for rejection (e.g. incomplete requirements, stall already reserved)…"
+                rows={4}
+                autoFocus
+                style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: "1.5px solid #e5e7eb", fontSize: 13, color: "#111827", outline: "none", resize: "vertical", fontFamily: "inherit", marginBottom: 14, boxSizing: "border-box" }}
+              />
+              <div style={{ display: "flex", gap: 8 }}>
+                <button
+                  onClick={() => setRejectTarget(null)}
+                  style={{ flex: 1, padding: "10px", borderRadius: 10, border: "1.5px solid #e5e7eb", background: "#fff", color: "#374151", fontWeight: 700, fontSize: 13, cursor: "pointer" }}
+                >
+                  Cancel
+                </button>
+                <button
+                  disabled={!rejectReason.trim() || processingId === rejectTarget.id}
+                  onClick={() => { const t = rejectTarget; setRejectTarget(null); handleAction(t.id, "reject", rejectReason.trim()); }}
+                  style={{ flex: 1, padding: "10px", borderRadius: 10, border: "none", background: rejectReason.trim() ? "#dc2626" : "#fca5a5", color: "#fff", fontWeight: 800, fontSize: 13, cursor: rejectReason.trim() ? "pointer" : "not-allowed" }}
+                >
+                  Confirm Reject
+                </button>
+              </div>
             </div>
           </div>
         )}

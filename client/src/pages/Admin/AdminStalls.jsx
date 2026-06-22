@@ -1,6 +1,8 @@
 import { useState, useMemo, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
-import { ChevronRight, Store } from "lucide-react";
+import { ChevronRight, Store, QrCode, Printer, X, Plus } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import { useCurrentUser } from '../../utils/auth';
 
 import NotificationBell from '../../components/NotificationBell';
@@ -28,6 +30,20 @@ const FLOOR_META = {
 
 const STATUS_LABEL = { available: "Available", occupied: "Occupied", pending: "Pending" };
 
+// Map the DB section names to the front-end category used by the AR scanner.
+const SECTION_TO_CATEGORY = { Meat: "meat", Fishes: "fish", Vegetables: "veggies" };
+const sectionToCategory = (section) => SECTION_TO_CATEGORY[section] || String(section || "").toLowerCase();
+
+// Build the QR payload a stall sticker should encode. The "@<zone>" suffix
+// disambiguates duplicate stall numbers that appear in more than one zone.
+// The renter AR scanner (ArFinder) parses this exact format.
+const buildStallQrPayload = (stall) => {
+  const cat = sectionToCategory(stall.section);
+  const num = String(stall.stallNumber || "").trim();
+  const zone = String(stall.zone || "").replace(/zone\s*/i, "").trim().toUpperCase();
+  return `MTP:STALL:${cat}-${num}${zone ? `@${zone}` : ""}`;
+};
+
 // Sort stalls: by numeric/alphanumeric stallNumber
 function sortStalls(list) {
   return [...list].sort((a, b) => {
@@ -46,6 +62,37 @@ export default function AdminStalls() {
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterOpen, setFilterOpen] = useState(false);
   const [selectedStall, setSelectedStall] = useState(null);
+
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newStallData, setNewStallData] = useState({
+    stallNumber: '',
+    section: 'Fishes',
+    zone: 'A',
+    monthlyRate: '',
+    size: 12,
+    isActive: true
+  });
+  const [formError, setFormError] = useState(null);
+  const [formSubmitting, setFormSubmitting] = useState(false);
+  const [togglingStatus, setTogglingStatus] = useState(false);
+
+  // Stalls queued for QR printing (single stall or the whole filtered view).
+  const [printList, setPrintList] = useState([]);
+
+  // When a print batch is queued, give the QR SVGs a moment to render, then
+  // open the browser print dialog; clear the batch once printing finishes.
+  useEffect(() => {
+    if (printList.length === 0) return;
+    const clear = () => setPrintList([]);
+    window.addEventListener("afterprint", clear);
+    const t = setTimeout(() => window.print(), 200);
+    const fallback = setTimeout(clear, 60000);
+    return () => {
+      clearTimeout(t);
+      clearTimeout(fallback);
+      window.removeEventListener("afterprint", clear);
+    };
+  }, [printList]);
 
   const [stalls, setStalls] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -162,6 +209,69 @@ export default function AdminStalls() {
   const filterOptions = ["all", "available", "occupied", "pending"];
   const getSectionMeta = (section) => SECTION_META[section] || { color: "#374151", bg: "#f3f4f6", border: "#d1d5db" };
   const handleLogout = () => navigate('/login');
+
+  const handleAddStallSubmit = (e) => {
+    e.preventDefault();
+    setFormError(null);
+    setFormSubmitting(true);
+
+    fetch('/api/admin/stalls', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newStallData)
+    })
+      .then(async res => {
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || `HTTP ${res.status}`);
+        }
+        return data;
+      })
+      .then(data => {
+        setStalls(prev => sortStalls([...prev, data.stall]));
+        setShowAddModal(false);
+        setNewStallData({
+          stallNumber: '',
+          section: 'Fishes',
+          zone: 'A',
+          monthlyRate: '',
+          size: 12,
+          isActive: true
+        });
+      })
+      .catch(err => {
+        setFormError(err.message);
+      })
+      .finally(() => {
+        setFormSubmitting(false);
+      });
+  };
+
+  const handleToggleListingStatus = (stall) => {
+    const nextActive = stall.listing?.isActive === false ? true : false;
+    setTogglingStatus(true);
+
+    fetch(`/api/admin/stalls/${stall._id}/status`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ isActive: nextActive })
+    })
+      .then(async res => {
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+        return data;
+      })
+      .then(data => {
+        setStalls(prev => prev.map(s => s._id === stall._id ? data.stall : s));
+        setSelectedStall(data.stall);
+      })
+      .catch(err => {
+        alert(`Failed to update stall listing status: ${err.message}`);
+      })
+      .finally(() => {
+        setTogglingStatus(false);
+      });
+  };
 
   return (
     <div className="flex h-screen bg-[#f5f5f0] font-sans overflow-hidden w-full">
@@ -323,7 +433,25 @@ export default function AdminStalls() {
                     {filterStatus !== 'all' ? ` · ${STATUS_LABEL[filterStatus]}` : ''}
                   </span>
                 </div>
-                <div className="stalls-filter-wrap">
+                <div className="stalls-actions-wrap">
+                  <button
+                    className="add-stall-btn"
+                    onClick={() => {
+                      setFormError(null);
+                      setShowAddModal(true);
+                    }}
+                  >
+                    <Plus size={14} /> Add Stall
+                  </button>
+                  <button
+                    className="stalls-qr-btn"
+                    onClick={() => setPrintList(displayStalls)}
+                    disabled={displayStalls.length === 0}
+                    title="Generate & print QR codes for the listed stalls"
+                  >
+                    <QrCode size={14} /> Print QR ({displayStalls.length})
+                  </button>
+                  <div className="stalls-filter-wrap">
                   <button className="stalls-filter-btn" onClick={() => setFilterOpen(o => !o)}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                       <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
@@ -344,6 +472,7 @@ export default function AdminStalls() {
                       ))}
                     </div>
                   )}
+                  </div>
                 </div>
               </div>
 
@@ -363,14 +492,18 @@ export default function AdminStalls() {
                           const key = stall._id || stall.stallNumber;
                           // Display full stallNumber as stored in DB
                           const label = stall.stallNumber || "?";
+                          const isInactive = stall.listing?.isActive === false;
                           return (
                             <button
                               key={key}
-                              className={`stall-cell stall-${stall.status}`}
+                              className={`stall-cell stall-${stall.status} ${isInactive ? 'stall-cell-inactive' : ''}`}
                               onClick={() => setSelectedStall(stall)}
-                              title={`Stall ${label} · ${stall.section} · Zone ${stall.zone} · ${STATUS_LABEL[stall.status]}`}
+                              title={`Stall ${label} · ${stall.section} · Zone ${stall.zone} · ${STATUS_LABEL[stall.status]}${isInactive ? ' (Disabled)' : ''}`}
                             >
                               {label}
+                              {isInactive && (
+                                <span className="inactive-dot-indicator" title="Listing is Disabled" />
+                              )}
                             </button>
                           );
                         })}
@@ -390,7 +523,7 @@ export default function AdminStalls() {
           )}
         </main>
       </div>
-
+
 
       {/* Stall Detail Modal */}
       {selectedStall && (
@@ -411,6 +544,9 @@ export default function AdminStalls() {
               {selectedStall.monthlyRate && (
                 <span className="stall-modal-meta-chip"> ₱{selectedStall.monthlyRate.toLocaleString()}/mo</span>
               )}
+              <span className={`stall-modal-meta-chip listing-status-badge ${selectedStall.listing?.isActive !== false ? 'listing-enabled' : 'listing-disabled'}`}>
+                Listing: {selectedStall.listing?.isActive !== false ? 'Enabled' : 'Disabled'}
+              </span>
             </div>
 
             {selectedStall.amenities?.length > 0 && (
@@ -464,13 +600,71 @@ export default function AdminStalls() {
               <p className="stall-modal-avail">This stall is available for rent.</p>
             )}
 
+            {/* Per-stall QR code — printed and posted at the stall for AR recognition */}
+            <div className="stall-qr-block">
+              <div className="stall-qr-label"><QrCode size={13} /> Stall QR Code</div>
+              <div className="stall-qr-svg">
+                <QRCodeSVG value={buildStallQrPayload(selectedStall)} size={132} level="M" marginSize={2} />
+              </div>
+              <code className="stall-qr-payload">{buildStallQrPayload(selectedStall)}</code>
+              <button className="stall-qr-print-btn" onClick={() => setPrintList([selectedStall])}>
+                <Printer size={14} /> Print this QR
+              </button>
+            </div>
+
             <button className="stall-modal-close" onClick={() => setSelectedStall(null)}>Close</button>
           </div>
         </div>
       )}
 
+      {/* ── QR PRINT SHEET (portaled to <body>; visible only when printing) ── */}
+      {printList.length > 0 && createPortal(
+        <div className="qr-print-portal">
+          <div className="qr-print-title">MyTalipapa — Stall QR Codes ({printList.length})</div>
+          <div className="qr-print-grid">
+            {printList.map((s) => (
+              <div className="qr-print-card" key={s._id || `${s.section}-${s.zone}-${s.stallNumber}`}>
+                <QRCodeSVG value={buildStallQrPayload(s)} size={150} level="M" marginSize={2} />
+                <div className="qr-print-num">Stall #{s.stallNumber}</div>
+                <div className="qr-print-meta">{s.section} · Zone {s.zone}</div>
+                <div className="qr-print-payload">{buildStallQrPayload(s)}</div>
+              </div>
+            ))}
+          </div>
+        </div>,
+        document.body
+      )}
+
       <style>{`
         .stalls-main { padding-bottom: 80px; }
+
+        /* ── Per-stall QR (detail modal) ── */
+        .stall-qr-block { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 8px; background: #f9fafb; border: 1px dashed #d1d5db; border-radius: var(--r-md); padding: 14px; margin-top: 6px; }
+        .stall-qr-label { display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: #6b7280; }
+        .stall-qr-svg { background: #fff; padding: 8px; border-radius: 8px; border: 1px solid #e5e7eb; line-height: 0; }
+        .stall-qr-payload { font-size: 10px; color: #6b7280; font-weight: 600; word-break: break-all; text-align: center; }
+        .stall-qr-print-btn { display: inline-flex; align-items: center; gap: 6px; background: #1a5c2a; color: #fff; border: none; border-radius: var(--r-sm); padding: 8px 14px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: 'Inter', sans-serif; }
+        .stall-qr-print-btn:hover { background: #15803d; }
+
+        /* ── Print QR action button ── */
+        .stalls-actions-wrap { display: flex; align-items: center; gap: 8px; }
+        .stalls-qr-btn { display: flex; align-items: center; gap: 6px; background: var(--color-surface); border: 1.5px solid var(--color-border); border-radius: var(--r-sm); padding: 7px 12px; font-size: 12px; font-weight: 700; color: var(--color-text-mid); cursor: pointer; font-family: 'Inter', sans-serif; transition: all 0.2s; white-space: nowrap; }
+        .stalls-qr-btn:hover:not(:disabled) { border-color: var(--color-brand-green); color: var(--color-brand-green); }
+        .stalls-qr-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* ── QR print sheet (screen-hidden; shown only in print) ── */
+        .qr-print-portal { display: none; }
+        @media print {
+          body * { visibility: hidden !important; }
+          .qr-print-portal, .qr-print-portal * { visibility: visible !important; }
+          .qr-print-portal { display: block !important; position: absolute; left: 0; top: 0; width: 100%; padding: 16px; background: #fff; }
+          .qr-print-title { font-size: 16px; font-weight: 800; margin-bottom: 14px; text-align: center; }
+          .qr-print-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+          .qr-print-card { border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px 8px; text-align: center; break-inside: avoid; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+          .qr-print-num { font-size: 14px; font-weight: 800; margin-top: 4px; }
+          .qr-print-meta { font-size: 11px; color: #475569; }
+          .qr-print-payload { font-size: 8px; color: #94a3b8; word-break: break-all; }
+        }
         .stalls-title-block { margin-bottom: 2px; }
         .stalls-page-title { font-size: 20px; font-weight: 800; color: var(--color-text); margin: 0 0 4px; letter-spacing: -0.3px; }
         .stalls-page-sub { font-size: 12px; color: var(--color-text-muted); margin: 0; font-weight: 500; }
@@ -581,6 +775,51 @@ export default function AdminStalls() {
         .stall-modal-avail { font-size: 13px; color: var(--color-text-muted); text-align: center; margin: 0 0 8px; }
         .stall-modal-close { width: 100%; padding: 12px; background: var(--color-brand-green); color: #fff; border: none; border-radius: var(--r-md); font-size: 14px; font-weight: 700; font-family: 'Inter', sans-serif; cursor: pointer; margin-top: 4px; transition: background 0.2s; }
         .stall-modal-close:hover { background: var(--color-green-mid); }
+
+        /* Stall list style updates */
+        .add-stall-btn { display: flex; align-items: center; gap: 6px; background: var(--color-brand-green); border: none; border-radius: var(--r-sm); padding: 7px 12px; font-size: 12px; font-weight: 700; color: #fff; cursor: pointer; font-family: 'Inter', sans-serif; transition: background 0.2s; white-space: nowrap; }
+        .add-stall-btn:hover { background: var(--color-green-mid); }
+        .stall-cell-inactive { opacity: 0.6; border: 2px dashed #9ca3af !important; background: #f3f4f6 !important; color: #4b5563 !important; position: relative; }
+        .inactive-dot-indicator { position: absolute; top: 3px; right: 3px; width: 6px; height: 6px; background: #ef4444; border-radius: 50%; }
+
+        /* Listing status chips */
+        .listing-status-badge { font-weight: 700; text-transform: uppercase; font-size: 10px; }
+        .listing-enabled { background: #dcfce7 !important; color: #15803d !important; border: 1px solid #bbf7d0 !important; }
+        .listing-disabled { background: #fee2e2 !important; color: #b91c1c !important; border: 1px solid #fca5a5 !important; }
+
+        /* Listing status toggle button */
+        .stall-listing-toggle-btn { width: 100%; padding: 10px; border-radius: var(--r-md); font-size: 13px; font-weight: 700; font-family: 'Inter', sans-serif; cursor: pointer; border: 1.5px solid; transition: all 0.2s; }
+        .stall-listing-toggle-btn.btn-disable { background: #fff; border-color: #ef4444; color: #ef4444; }
+        .stall-listing-toggle-btn.btn-disable:hover { background: #fef2f2; }
+        .stall-listing-toggle-btn.btn-enable { background: #fff; border-color: var(--color-brand-green); color: var(--color-brand-green); }
+        .stall-listing-toggle-btn.btn-enable:hover { background: #f0fdf4; }
+        .stall-listing-toggle-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        /* Add Stall Form Modal */
+        .form-modal { max-width: 420px; align-items: stretch; gap: 16px; padding: 24px; }
+        .form-modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--color-border-soft); padding-bottom: 12px; }
+        .form-modal-close-icon { background: none; border: none; color: var(--color-text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 4px; border-radius: 50%; transition: background 0.2s; }
+        .form-modal-close-icon:hover { background: #f3f4f6; color: var(--color-text); }
+        .stall-form { display: flex; flex-direction: column; gap: 14px; margin-top: 8px; }
+        .form-group { display: flex; flex-direction: column; gap: 6px; }
+        .form-group label { font-size: 11px; font-weight: 700; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        .form-group input, .form-group select { padding: 9px 12px; border-radius: 8px; border: 1.5px solid var(--color-border); font-size: 13px; font-weight: 600; font-family: 'Inter', sans-serif; outline: none; transition: border-color 0.2s; background: var(--color-surface); color: var(--color-text); }
+        .form-group input:focus, .form-group select:focus { border-color: var(--color-brand-green); }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .toggle-group { flex-direction: row; align-items: center; justify-content: space-between; padding: 8px 12px; background: #f9fafb; border-radius: 8px; border: 1px solid var(--color-border-soft); }
+        .toggle-label { display: flex; align-items: center; justify-content: space-between; width: 100%; cursor: pointer; }
+        .toggle-label span { font-size: 12px; font-weight: 700; color: var(--color-text-mid); }
+        .status-toggle-wrap { display: flex; align-items: center; }
+        .custom-toggle-btn { padding: 6px 14px; border-radius: 99px; font-size: 11px; font-weight: 800; text-transform: uppercase; cursor: pointer; transition: all 0.2s; border: 1.5px solid transparent; }
+        .custom-toggle-btn.active { background: #dcfce7; border-color: #86efac; color: #15803d; }
+        .custom-toggle-btn.inactive { background: #fee2e2; border-color: #fca5a5; color: #b91c1c; }
+        .form-actions { display: flex; gap: 10px; margin-top: 10px; }
+        .form-cancel-btn { flex: 1; padding: 10px; background: #f3f4f6; color: var(--color-text-mid); border: none; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; transition: background 0.2s; }
+        .form-cancel-btn:hover { background: #e5e7eb; }
+        .form-submit-btn { flex: 1; padding: 10px; background: var(--color-brand-green); color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; transition: background 0.2s; }
+        .form-submit-btn:hover { background: var(--color-green-mid); }
+        .form-submit-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .form-error-msg { background: #fef2f2; color: #b91c1c; border: 1px solid #fca5a5; border-radius: 8px; padding: 8px 12px; font-size: 12px; font-weight: 600; text-align: center; }
 
         @media (min-width: 640px) {
           .stalls-page-title { font-size: 24px; }

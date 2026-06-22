@@ -176,7 +176,7 @@ exports.getApplications = async (req, res) => {
 exports.updateApplicationStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { action } = req.body; // "approve" | "reject"
+    const { action, rejectionReason } = req.body; // "approve" | "reject" (+ reason)
 
     if (!['approve', 'reject'].includes(action)) {
       return res.status(400).json({ error: 'Invalid action. Use "approve" or "reject".' });
@@ -234,6 +234,10 @@ exports.updateApplicationStatus = async (req, res) => {
       }
     }
 
+    const cleanReason = action === 'reject'
+      ? (rejectionReason && String(rejectionReason).trim()) || 'Your application was not approved at this time.'
+      : null;
+
     const updatedApp = await Application.findByIdAndUpdate(
       id,
       {
@@ -241,6 +245,7 @@ exports.updateApplicationStatus = async (req, res) => {
           status: action === 'approve' ? 'approved' : 'rejected',
           reviewedAt: new Date(),
           reviewedBy: req.user?.name || req.user?.id || 'Admin',
+          rejectionReason: cleanReason,
         },
       },
       { new: true }
@@ -251,8 +256,8 @@ exports.updateApplicationStatus = async (req, res) => {
       recipient: app.email.toLowerCase(),
       title: action === 'approve' ? 'Application Approved' : 'Application Rejected',
       message: action === 'approve'
-        ? `Your application for ${app.preferredStall} has been approved.`
-        : `Your application for ${app.preferredStall} has been rejected.`,
+        ? `Your application for ${app.preferredStall} has been approved. Please proceed to payment to activate your stall.`
+        : `Your application for ${app.preferredStall} was rejected. Reason: ${cleanReason}`,
       link: '/renter/applications'
     });
 
@@ -323,6 +328,9 @@ exports.getRecords = async (req, res) => {
         lastPayment,
         section: stall?.section || '',
         history,
+        leaseStart: stall?.tenant?.leaseStart ? new Date(stall.tenant.leaseStart).toISOString().split('T')[0] : '',
+        leaseEnd: stall?.tenant?.leaseEnd ? new Date(stall.tenant.leaseEnd).toISOString().split('T')[0] : '',
+        nextDueDate: nextDueDate ? nextDueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—',
       };
     }));
     res.json(records.filter(Boolean));
@@ -434,15 +442,22 @@ exports.updateContractorApplicationStatus = async (req, res) => {
     const User = require('../models/User');
     if (action === 'approve') {
       const userExists = await User.findOne({ email: app.email.toLowerCase() });
+      const fName = app.firstName || app.fullName?.split(' ')[0] || '';
+      const lName = app.lastName || app.fullName?.split(' ').slice(1).join(' ') || '';
       if (userExists) {
         userExists.status = 'approved';
         userExists.passwordHash = app.passwordHash; // Sync the password hash in case they resubmitted with a new password
         userExists.mustChangePassword = app.isResubmitted ? true : false;
         userExists.businessName = app.businessName;
+        userExists.first_name = fName;
+        userExists.last_name = lName;
+        userExists.full_name = app.fullName;
         await userExists.save();
       } else {
         await User.create({
           full_name: app.fullName,
+          first_name: fName,
+          last_name: lName,
           email: app.email.toLowerCase(),
           contact_number: app.contactNumber,
           role: 'contractor',
@@ -875,5 +890,206 @@ exports.markAllAsRead = async (req, res) => {
     res.json({ message: 'All notifications marked as read' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to mark all notifications as read' });
+  }
+};
+
+// ── POST /api/admin/walk-in-renter ────────────────────────
+exports.createWalkInRenter = async (req, res) => {
+  try {
+    const { first_name, last_name, email, contact_number, stallId } = req.body;
+
+    if (!first_name || !last_name || !email || !contact_number || !stallId) {
+      return res.status(400).json({ error: 'All fields are required.' });
+    }
+
+    const User = require('../models/User');
+    const Stall = require('../models/Stall');
+    const Application = require('../models/Application');
+    const OccupancyRecord = require('../models/OccupancyRecord');
+    const Notification = require('../models/Notification');
+    const bcrypt = require('bcryptjs');
+
+    // 1. Find the stall
+    const stall = await Stall.findById(stallId);
+    if (!stall) {
+      return res.status(404).json({ error: 'Stall not found.' });
+    }
+    if (stall.status !== 'available') {
+      return res.status(400).json({ error: `Stall #${stall.stallNumber} is not available.` });
+    }
+
+    // 2. Check duplicate email in User
+    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    if (existingUser) {
+      return res.status(409).json({ error: 'A user account with this email already exists.' });
+    }
+
+    // 3. Generate password
+    const tempPassword = 'Welcome' + Math.floor(100 + Math.random() * 900) + '!';
+
+    // 4. Create User
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(tempPassword, salt);
+
+    const user = await User.create({
+      first_name: first_name.trim(),
+      last_name: last_name.trim(),
+      full_name: `${first_name} ${last_name}`.trim(),
+      email: email.toLowerCase(),
+      contact_number: contact_number,
+      role: 'renter',
+      passwordHash,
+      status: 'approved',
+      agreed: true,
+      mustChangePassword: true,
+      isVerified: true,
+    });
+
+    // 5. Create approved Application
+    const app = await Application.create({
+      fullName: `${first_name} ${last_name}`.trim(),
+      firstName: first_name.trim(),
+      lastName: last_name.trim(),
+      contactNumber: contact_number,
+      email: email.toLowerCase(),
+      preferredStall: stall.stallNumber,
+      stallLabel: `STALL #${stall.stallNumber}`,
+      intendedBusinessUse: stall.section || 'General',
+      stallId: stall._id,
+      contractorEmail: stall.managedBy || null,
+      status: 'approved',
+      appliedAt: new Date(),
+      reviewedAt: new Date(),
+      reviewedBy: 'Admin',
+      initials: `${first_name[0] || ''}${last_name[0] || ''}`.toUpperCase(),
+      avatarColor: '#' + Math.floor(Math.random()*16777215).toString(16),
+      archived: false,
+    });
+
+    // 6. Update Stall status to occupied
+    stall.status = 'occupied';
+    stall.tenant = {
+      name: `${first_name} ${last_name}`.trim(),
+      contact: contact_number,
+      email: email.toLowerCase(),
+      leaseStart: new Date(),
+      leaseEnd: null,
+    };
+    await stall.save();
+
+    // 7. Create OccupancyRecord
+    await OccupancyRecord.create({
+      stallId: stall._id,
+      renterId: app._id,
+      contractorEmail: stall.managedBy || 'admin',
+      startedAt: new Date(),
+    });
+
+    // 8. Create Notification
+    await Notification.create({
+      recipient: email.toLowerCase(),
+      title: 'Welcome to MyTalipapa',
+      message: `An account has been created for you by the admin. Your temporary password is ${tempPassword}. Please log in and change your password.`,
+      link: '/login'
+    });
+
+    return res.status(201).json({
+      message: 'Walk-in renter registered successfully',
+      tempPassword,
+      user: {
+        id: user._id,
+        email: user.email,
+        full_name: user.full_name,
+        role: user.role,
+        status: user.status,
+      },
+      stall: {
+        id: stall._id,
+        stallNumber: stall.stallNumber,
+      }
+    });
+
+  } catch (err) {
+    console.error('createWalkInRenter error:', err);
+    return res.status(500).json({ error: 'Server error: ' + err.message });
+  }
+};
+
+// ── POST /api/admin/stalls ────────────────────────────────
+exports.addStall = async (req, res) => {
+  try {
+    const { stallNumber, section, zone, monthlyRate, size, isActive } = req.body;
+
+    if (!stallNumber || !section || !zone || !monthlyRate) {
+      return res.status(400).json({ error: 'Stall number, section, zone, and monthly rate are required.' });
+    }
+
+    const Stall = require('../models/Stall');
+
+    // Check if stall number already exists in that zone
+    const existingStall = await Stall.findOne({
+      stallNumber: stallNumber.trim(),
+      zone: zone.toUpperCase()
+    });
+
+    if (existingStall) {
+      return res.status(409).json({ error: `Stall #${stallNumber} already exists in Zone ${zone}.` });
+    }
+
+    const newStall = await Stall.create({
+      stallNumber: stallNumber.trim(),
+      section: section.trim(),
+      zone: zone.toUpperCase(),
+      monthlyRate: Number(monthlyRate),
+      size: Number(size || 12),
+      status: 'available',
+      location: `Zone ${zone.toUpperCase()} Stall #${stallNumber.trim()}`,
+      coordinates: {
+        x: 0,
+        y: 0,
+        hallway: 'the main walkway'
+      },
+      listing: {
+        isActive: isActive !== undefined ? Boolean(isActive) : true,
+        autoRenew: false
+      }
+    });
+
+    return res.status(201).json({
+      message: 'Stall created successfully',
+      stall: newStall
+    });
+  } catch (err) {
+    console.error('addStall error:', err);
+    return res.status(500).json({ error: 'Server error: ' + err.message });
+  }
+};
+
+// ── PUT /api/admin/stalls/:id/status ──────────────────────
+exports.toggleStallStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { isActive } = req.body;
+
+    if (isActive === undefined) {
+      return res.status(400).json({ error: 'isActive property is required.' });
+    }
+
+    const Stall = require('../models/Stall');
+    const stall = await Stall.findById(id);
+    if (!stall) {
+      return res.status(404).json({ error: 'Stall not found.' });
+    }
+
+    stall.listing.isActive = Boolean(isActive);
+    await stall.save();
+
+    return res.json({
+      message: `Stall status successfully updated to ${isActive ? 'enabled' : 'disabled'}.`,
+      stall
+    });
+  } catch (err) {
+    console.error('toggleStallStatus error:', err);
+    return res.status(500).json({ error: 'Server error: ' + err.message });
   }
 };
