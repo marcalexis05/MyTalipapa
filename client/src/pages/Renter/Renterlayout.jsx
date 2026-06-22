@@ -207,7 +207,7 @@ export default function RenterLayout() {
       return <MarketTour360 />
     }
     if (location.pathname.includes('ar-finder')) {
-      return <ArFinder onBack={() => routerNavigate('/renter/dashboard')} />
+      return <ArFinder onBack={() => routerNavigate('/renter/dashboard')} initialStall={location.state?.stall} />
     }
 
     switch (activeTab) {
@@ -239,7 +239,7 @@ export default function RenterLayout() {
         return <RenterApplications onNavigate={navigate} prefill={prefillStall} />
 
       case 'ar-finder':
-        return <ArFinder onBack={() => routerNavigate('/renter/dashboard')} />
+        return <ArFinder onBack={() => routerNavigate('/renter/dashboard')} initialStall={location.state?.stall} />
 
       case 'navigate':
         return <MarketTour360 />

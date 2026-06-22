@@ -40,10 +40,10 @@ function generateDirections(stall) {
   ];
   return directions.join(' → ');
 }
-// GET /api/stalls - Retrieve all stalls
+// GET /api/stalls - Retrieve all active stalls
 router.get('/', async (req, res) => {
   try {
-    const stalls = await Stall.find({}).sort({ stallNumber: 1 });
+    const stalls = await Stall.find({ 'listing.isActive': { $ne: false } }).sort({ stallNumber: 1 });
     
     const User = require('../models/User');
     const contractors = await User.find({ role: 'contractor' }, 'email full_name contact_number');
@@ -138,6 +138,32 @@ router.get('/search', async (req, res) => {
   } catch (error) {
     console.error('Stall search error:', error);
     res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// PUT /api/stalls/:id/lease - Update stall lease dates
+router.put('/:id/lease', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { leaseStart, leaseEnd } = req.body;
+
+    const stall = await Stall.findById(id);
+    if (!stall) {
+      return res.status(404).json({ error: 'Stall not found.' });
+    }
+
+    if (leaseStart !== undefined) stall.tenant.leaseStart = leaseStart ? new Date(leaseStart) : null;
+    if (leaseEnd !== undefined) stall.tenant.leaseEnd = leaseEnd ? new Date(leaseEnd) : null;
+
+    await stall.save();
+
+    res.json({
+      message: 'Lease updated successfully.',
+      stall
+    });
+  } catch (err) {
+    console.error('Lease update error:', err);
+    res.status(500).json({ error: 'Failed to update lease.' });
   }
 });
 

@@ -37,7 +37,8 @@ export default function ContractorProfile() {
   const [user, setUser] = useState(getUser() || {})
   const [showEditModal, setShowEditModal] = useState(false)
   const [editForm, setEditForm] = useState({
-    fullName: '',
+    firstName: '',
+    lastName: '',
     contactNumber: ''
   })
 
@@ -123,7 +124,8 @@ export default function ContractorProfile() {
 
   const openEditModal = () => {
     setEditForm({
-      fullName: user.full_name || '',
+      firstName: user.first_name || '',
+      lastName: user.last_name || '',
       contactNumber: user.contact_number || ''
     })
     setShowEditModal(true)
@@ -132,7 +134,8 @@ export default function ContractorProfile() {
   const handleSaveProfile = async (e) => {
     e.preventDefault()
     await updateProfile({
-      full_name: editForm.fullName,
+      first_name: editForm.firstName,
+      last_name: editForm.lastName,
       contact_number: editForm.contactNumber
     })
     setShowEditModal(false)
@@ -292,17 +295,30 @@ export default function ContractorProfile() {
               </button>
             </div>
             {/* Modal Form */}
-            <form onSubmit={handleSaveProfile} className="p-6 space-y-4">
-              <div>
-                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 text-left">Full Name</label>
-                <input
-                  type="text"
-                  value={editForm.fullName}
-                  onChange={(e) => setEditForm(f => ({ ...f, fullName: e.target.value }))}
-                  required
-                  className="w-full bg-[#f5f5f0] border border-transparent rounded-xl px-4 py-3 text-sm text-gray-800 focus:outline-none focus:border-[#1a5c2a] focus:bg-white transition-all duration-200"
-                  placeholder="Juan Dela Cruz"
-                />
+             <form onSubmit={handleSaveProfile} className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 text-left">First Name</label>
+                  <input
+                    type="text"
+                    value={editForm.firstName}
+                    onChange={(e) => setEditForm(f => ({ ...f, firstName: e.target.value }))}
+                    required
+                    className="w-full bg-[#f5f5f0] border border-transparent rounded-xl px-4 py-3 text-sm text-gray-800 focus:outline-none focus:border-[#1a5c2a] focus:bg-white transition-all duration-200"
+                    placeholder="Juan"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 text-left">Last Name</label>
+                  <input
+                    type="text"
+                    value={editForm.lastName}
+                    onChange={(e) => setEditForm(f => ({ ...f, lastName: e.target.value }))}
+                    required
+                    className="w-full bg-[#f5f5f0] border border-transparent rounded-xl px-4 py-3 text-sm text-gray-800 focus:outline-none focus:border-[#1a5c2a] focus:bg-white transition-all duration-200"
+                    placeholder="Dela Cruz"
+                  />
+                </div>
               </div>
               <div>
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 text-left">Contact Number</label>

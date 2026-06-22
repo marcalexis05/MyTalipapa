@@ -206,6 +206,63 @@ export default function ContractorRecords() {
   const [sort, setSort] = useState("Recent");
   const [sortOpen, setSortOpen] = useState(false);
   const [selectedRenter, setSelectedRenter] = useState(null);
+  const [editingLease, setEditingLease] = useState(false);
+  const [leaseForm, setLeaseForm] = useState({
+    leaseStart: '',
+    leaseEnd: '',
+    noExpiry: true
+  });
+  const [savingLease, setSavingLease] = useState(false);
+
+  const handleSelectRenterForModal = (renter) => {
+    setSelectedRenter(renter);
+    setLeaseForm({
+      leaseStart: renter.leaseStart || '',
+      leaseEnd: renter.leaseEnd || '',
+      noExpiry: !renter.leaseEnd
+    });
+    setEditingLease(false);
+  };
+
+  const handleSaveLeaseDates = async () => {
+    setSavingLease(true);
+    try {
+      const res = await fetch(`/api/stalls/${selectedRenter.stallId}/lease`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          leaseStart: leaseForm.leaseStart || null,
+          leaseEnd: leaseForm.noExpiry ? null : (leaseForm.leaseEnd || null)
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to update lease dates');
+
+      setSelectedRenter(prev => ({
+        ...prev,
+        leaseStart: leaseForm.leaseStart,
+        leaseEnd: leaseForm.noExpiry ? '' : leaseForm.leaseEnd
+      }));
+
+      setEditingLease(false);
+      alert('Lease terms updated successfully.');
+
+      fetch(`/api/contractor/records?email=${encodeURIComponent(userEmail)}`)
+        .then(res => res.json())
+        .then(data => setRecords(data))
+        .catch(err => console.error('Error reloading records:', err));
+
+    } catch (err) {
+      console.error(err);
+      alert(err.message);
+    } finally {
+      setSavingLease(false);
+    }
+  };
+
   const [filterStatus, setFilterStatus] = useState("all");
 
   const [showPaymentForm, setShowPaymentForm] = useState(false);
@@ -655,7 +712,7 @@ export default function ContractorRecords() {
                         <span className="rec-stall-label">Stall Location</span>
                         <span className="rec-stall-value">{renter.stall}</span>
                       </div>
-                      <button className="rec-history-btn" onClick={() => setSelectedRenter(renter)}>
+                      <button className="rec-history-btn" onClick={() => handleSelectRenterForModal(renter)}>
                         View History
                       </button>
                     </div>
@@ -799,10 +856,6 @@ export default function ContractorRecords() {
                   <span className="app-detail-value">{selectedRenter.phone}</span>
                 </div>
                 <div className="rec-modal-info-item">
-                  <span className="app-detail-label">Renter Since</span>
-                  <span className="app-detail-value">{selectedRenter.since}</span>
-                </div>
-                <div className="rec-modal-info-item">
                   <span className="app-detail-label">Last Payment</span>
                   <span className="app-detail-value">{selectedRenter.lastPayment}</span>
                 </div>
@@ -812,12 +865,88 @@ export default function ContractorRecords() {
                     {selectedRenter.amountDue}
                   </span>
                 </div>
+                <div className="rec-modal-info-item">
+                  <span className="app-detail-label">Next Payment Due</span>
+                  <span className="app-detail-value text-orange-600 font-extrabold">{selectedRenter.nextDueDate || '—'}</span>
+                </div>
+
                 {selectedRenter.status === 'archived' && (
                   <div className="rec-modal-info-item" style={{ gridColumn: '1 / -1' }}>
                     <span className="app-detail-label">Moved Out / Archived Date</span>
                     <span className="app-detail-value">{selectedRenter.archivedAt}</span>
                   </div>
                 )}
+
+                <div className="rec-modal-info-item" style={{ gridColumn: '1 / -1' }}>
+                  <div className="flex justify-between items-center w-full">
+                    <span className="app-detail-label">Lease Period</span>
+                    {selectedRenter.status !== 'archived' && !editingLease && (
+                      <button
+                        onClick={() => setEditingLease(true)}
+                        className="text-xs font-bold text-[#1a5c2a] hover:underline cursor-pointer border-none bg-transparent"
+                      >
+                        ✏ Edit Lease
+                      </button>
+                    )}
+                  </div>
+                  {editingLease ? (
+                    <div className="space-y-3 mt-2 w-full">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-[9px] font-bold text-gray-400 uppercase tracking-wide mb-1 text-left">Lease Start</label>
+                          <input
+                            type="date"
+                            value={leaseForm.leaseStart}
+                            onChange={e => setLeaseForm(f => ({ ...f, leaseStart: e.target.value }))}
+                            className="w-full bg-white border border-gray-200 rounded-lg p-2 text-xs text-gray-800"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[9px] font-bold text-gray-400 uppercase tracking-wide mb-1 text-left">Lease End (Expiry)</label>
+                          <input
+                            type="date"
+                            disabled={leaseForm.noExpiry}
+                            value={leaseForm.leaseEnd}
+                            onChange={e => setLeaseForm(f => ({ ...f, leaseEnd: e.target.value }))}
+                            className="w-full bg-white border border-gray-200 rounded-lg p-2 text-xs text-gray-800 disabled:bg-gray-50 disabled:text-gray-400"
+                          />
+                        </div>
+                      </div>
+                      <label className="flex items-center gap-2 text-xs font-semibold text-gray-600 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={leaseForm.noExpiry}
+                          onChange={e => setLeaseForm(f => ({ ...f, noExpiry: e.target.checked, leaseEnd: e.target.checked ? '' : f.leaseEnd }))}
+                          className="rounded border-gray-300 text-[#1a5c2a] focus:ring-[#1a5c2a]"
+                        />
+                        No Expiry Date (Continuous Lease)
+                      </label>
+                      <div className="flex gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => setEditingLease(false)}
+                          className="px-3 py-1.5 border border-gray-200 rounded-lg text-[10px] font-bold text-gray-500 hover:bg-gray-50 cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          disabled={savingLease}
+                          onClick={handleSaveLeaseDates}
+                          className="px-3 py-1.5 bg-[#1a5c2a] hover:bg-[#154d23] text-white rounded-lg text-[10px] font-bold cursor-pointer border-none"
+                        >
+                          {savingLease ? 'Saving...' : 'Save Lease'}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <span className="app-detail-value">
+                      {selectedRenter.leaseStart ? new Date(selectedRenter.leaseStart).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+                      {' '}to{' '}
+                      {selectedRenter.leaseEnd ? new Date(selectedRenter.leaseEnd).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'No Expiry'}
+                    </span>
+                  )}
+                </div>
               </div>
               <div className="rec-modal-history">
                 <h3 className="rec-modal-history-title">Payment History</h3>

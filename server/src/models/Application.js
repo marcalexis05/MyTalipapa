@@ -4,6 +4,8 @@ const mongoose = require('mongoose');
 const applicationSchema = new mongoose.Schema({
   // From the rental inquiry form (Image 2)
   fullName:            { type: String, required: true },
+  firstName:           { type: String, default: '' },
+  lastName:            { type: String, default: '' },
   contactNumber:       { type: String, required: true },
   email:               { type: String, required: true },
   preferredStall:      { type: String, required: true },  // stallNumber ref
@@ -22,6 +24,11 @@ const applicationSchema = new mongoose.Schema({
   reviewedAt:      { type: Date, default: null },
   reviewedBy:      { type: String, default: null },
   rejectionReason: { type: String, default: null },
+
+  // Appeal / resubmission of a rejected application
+  isResubmitted:   { type: Boolean, default: false },
+  appealReason:    { type: String, default: null },
+  appealCount:     { type: Number, default: 0 },
 
   // UI display helpers
   initials:    { type: String },   // e.g. "JR"

@@ -105,6 +105,21 @@ router.get('/applications', async (req, res) => {
         })
         : '';
 
+      // Why is this application "pending", and is payment outstanding?
+      let paymentPending = false;
+      let statusNote = null;
+      if (app.status === 'pending') {
+        statusNote = app.isResubmitted
+          ? 'Resubmitted — awaiting contractor re-review.'
+          : 'Awaiting contractor review.';
+      } else if (app.status === 'approved') {
+        const hasPaid = await Payment.exists({ renter: app._id, status: 'paid' });
+        if (!hasPaid) {
+          paymentPending = true;
+          statusNote = 'Approved — please proceed to payment to activate your stall.';
+        }
+      }
+
       return {
         id: app._id.toString(),
         stall: stall ? `#${stall.stallNumber}` : (app.preferredStall.startsWith('#') ? app.preferredStall : `#${app.preferredStall}`),
@@ -124,6 +139,10 @@ router.get('/applications', async (req, res) => {
         intendedBusinessUse: app.intendedBusinessUse,
         additionalMessage: app.additionalMessage,
         rejectionReason: app.rejectionReason,
+        isResubmitted: app.isResubmitted,
+        appealCount: app.appealCount,
+        paymentPending,
+        statusNote,
         contractorName: stall && stall.managedBy ? (contractorMap[stall.managedBy.toLowerCase()] || stall.managedBy) : 'None',
         contractorContact: stall && stall.managedBy ? (contractorContactMap[stall.managedBy.toLowerCase()] || 'N/A') : 'N/A',
         // contractorName already defined at line 111; duplicate removed
@@ -308,6 +327,65 @@ router.post('/applications', async (req, res) => {
     res.status(500).json({ error: 'Failed to submit application.' });
   }
 });
+
+// ── POST /api/renter/applications/:id/appeal ──
+// Renter appeals a rejected application; it returns to "pending" for re-review.
+router.post('/applications/:id/appeal', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { email, appealReason } = req.body;
+
+    const app = await Application.findById(id);
+    if (!app) return res.status(404).json({ error: 'Application not found.' });
+
+    // Basic ownership check (renter can only appeal their own application)
+    if (email && app.email && app.email.toLowerCase() !== String(email).toLowerCase()) {
+      return res.status(403).json({ error: 'You can only appeal your own application.' });
+    }
+    if (app.status !== 'rejected') {
+      return res.status(400).json({ error: 'Only rejected applications can be appealed.' });
+    }
+
+    app.status = 'pending';
+    app.isResubmitted = true;
+    app.appealReason = appealReason ? String(appealReason).trim() : null;
+    app.appealCount = (app.appealCount || 0) + 1;
+    app.rejectionReason = null;
+    app.reviewedAt = null;
+    app.reviewedBy = null;
+    await app.save();
+
+    // Reflect renewed interest on the stall (set to pending if currently available)
+    let stall = null;
+    const mongoose = require('mongoose');
+    if (app.stallId && mongoose.Types.ObjectId.isValid(String(app.stallId))) {
+      stall = await Stall.findById(app.stallId);
+    }
+    if (!stall) {
+      stall = await Stall.findOne({ stallNumber: app.preferredStall });
+    }
+    if (stall && stall.status === 'available') {
+      await Stall.findByIdAndUpdate(stall._id, { $set: { status: 'pending' } });
+    }
+
+    // Notify the managing contractor (or admin if unmanaged)
+    const Notification = require('../models/Notification');
+    const stallLabel = stall ? `Stall #${stall.stallNumber}` : `Stall #${app.preferredStall}`;
+    const managed = stall && stall.managedBy;
+    await Notification.create({
+      recipient: managed ? stall.managedBy.toLowerCase() : 'admin',
+      title: 'Application Appeal Submitted',
+      message: `${app.fullName} has appealed and resubmitted their application for ${stallLabel}.${app.appealReason ? ` Reason: ${app.appealReason}` : ''}`,
+      link: managed ? '/contractor/applications' : '/admin/applications',
+    });
+
+    res.json({ message: 'Appeal submitted. Your application is pending review again.', application: app });
+  } catch (err) {
+    console.error('Renter appealApplication error:', err);
+    res.status(500).json({ error: 'Failed to submit appeal.' });
+  }
+});
+
 // ── POST /api/renter/stalls/:id/move-out ──
 router.post('/stalls/:id/move-out', async (req, res) => {
   try {
