@@ -625,6 +625,7 @@ export default function ArFinder({ onBack, initialStall }) {
       setUserX(Math.round(cx));
       setUserY(Math.round(cy));
       setSelectedStartId("custom");
+      setToastMsg("Start position updated on map.");
     }
   };
 
@@ -899,8 +900,15 @@ export default function ArFinder({ onBack, initialStall }) {
         <polyline points={pathPoints.map(p => `${p.x},${p.y}`).join(" ")}
           fill="none" stroke="#e8621a" strokeWidth="10"
           strokeDasharray="15 15" strokeLinecap="round" strokeLinejoin="round" />
-        {(selectedCategory === "all" ? stallsList : stallsList.filter(s => s.category === selectedCategory)).map(s => {
+        {stallsList.map(s => {
           const isDest = s.id === selectedStallId;
+          const getCircleColor = () => {
+            if (isDest) return "#e8621a";
+            if (s.category === "meat") return "rgba(220, 38, 38, 0.45)";
+            if (s.category === "fish") return "rgba(37, 99, 235, 0.45)";
+            if (s.category === "veggies") return "rgba(22, 163, 74, 0.45)";
+            return "rgba(232, 98, 26, 0.4)";
+          };
           return (
             <g
               key={s.id}
@@ -911,11 +919,14 @@ export default function ArFinder({ onBack, initialStall }) {
                 setSelectedCategory(s.category);
                 setSelectedStallId(s.id);
                 setToastMsg(`Routing to ${s.label}`);
+                if (isMobile) {
+                  setShowMapSheet(false);
+                }
               }}
             >
               <circle r="46" fill="transparent" />
               {isDest && <circle r="40" fill="none" stroke="#e8621a" strokeWidth="5" opacity="0.55" />}
-              <circle r={isDest ? 26 : 15} fill={isDest ? "#e8621a" : "rgba(232,98,26,0.4)"} stroke="#fff" strokeWidth={isDest ? 5 : 3} />
+              <circle r={isDest ? 26 : 15} fill={getCircleColor()} stroke="#fff" strokeWidth={isDest ? 5 : 3} />
             </g>
           );
         })}
