@@ -577,7 +577,7 @@ export default function MarketTour360() {
   const [uiVisible, setUiVisible] = useState(true)
   const [detailsCollapsed, setDetailsCollapsed] = useState(true)
   const [sectionDropdownOpen, setSectionDropdownOpen] = useState(false)
-  const [privacyMode, setPrivacyMode] = useState(true)
+  const [privacyMode, setPrivacyMode] = useState(false)
   const [showBadges, setShowBadges] = useState(true)
   const [stallDropdownOpen, setStallDropdownOpen] = useState(false)
   const [isMapExpanded, setIsMapExpanded] = useState(false)
@@ -1181,7 +1181,7 @@ export default function MarketTour360() {
     const category = overrideCategory || stateRef.current.activeSectionKey;
     const zoneLetter = String(stall.zone || '').replace('Zone ', '').toUpperCase();
     const isBottomZone = ['E', 'F', 'G', 'H'].includes(zoneLetter);
-    const yOffset = isBottomZone ? 250 : 0;
+    const yOffset = 0;
 
     let x = 1020;
     let y = 635 + yOffset;
@@ -1324,11 +1324,89 @@ export default function MarketTour360() {
     return new THREE.CanvasTexture(canvas);
   };
 
+  // Google Street View-style ground navigation line: glowing line with directional chevrons
+  const createGroundArrowTexture = (THREE) => {
+    const S = 256;
+    const canvas = document.createElement('canvas');
+    canvas.width = S;
+    canvas.height = S;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, S, S);
+    const cx = S / 2;
+
+    // Horizontal glowing green gradient for the line
+    const grad = ctx.createLinearGradient(0, 0, S, 0);
+    grad.addColorStop(0.0, 'rgba(16, 185, 129, 0.0)');
+    grad.addColorStop(0.35, 'rgba(16, 185, 129, 0.45)');
+    grad.addColorStop(0.46, 'rgba(16, 185, 129, 0.95)');
+    grad.addColorStop(0.5, 'rgba(255, 255, 255, 1.0)'); // White hot core
+    grad.addColorStop(0.54, 'rgba(16, 185, 129, 0.95)');
+    grad.addColorStop(0.65, 'rgba(16, 185, 129, 0.45)');
+    grad.addColorStop(1.0, 'rgba(16, 185, 129, 0.0)');
+
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, S, S);
+
+    // Draw small indicator arrows pointing forward down the line
+    ctx.fillStyle = '#ffffff';
+    for (let y of [60, 128, 196]) {
+      ctx.beginPath();
+      ctx.moveTo(cx - 15, y + 10);
+      ctx.lineTo(cx, y - 10);
+      ctx.lineTo(cx + 15, y + 10);
+      ctx.lineTo(cx, y + 2);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.needsUpdate = true;
+    return texture;
+  };
+
+  const createArChevronTexture = (THREE) => {
+    const S = 256;
+    const canvas = document.createElement('canvas');
+    canvas.width = S;
+    canvas.height = S;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, S, S);
+    const cx = S / 2;
+
+    // Create a beautiful horizontal gradient for the glowing route line
+    const grad = ctx.createLinearGradient(0, 0, S, 0);
+    grad.addColorStop(0.0, 'rgba(16, 185, 129, 0.0)');
+    grad.addColorStop(0.35, 'rgba(16, 185, 129, 0.45)');
+    grad.addColorStop(0.46, 'rgba(16, 185, 129, 0.95)');
+    grad.addColorStop(0.5, 'rgba(255, 255, 255, 1.0)'); // White hot core
+    grad.addColorStop(0.54, 'rgba(16, 185, 129, 0.95)');
+    grad.addColorStop(0.65, 'rgba(16, 185, 129, 0.45)');
+    grad.addColorStop(1.0, 'rgba(16, 185, 129, 0.0)');
+
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, S, S);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.needsUpdate = true;
+    return texture;
+  };
+
   // Re-populate the 3D scene with relevant Hotspots
   const recreateHotspots = (scene, stall, THREE) => {
     // Clear old sprites
     hotspotMeshes.current.forEach((mesh) => scene.remove(mesh))
     hotspotMeshes.current = []
+
+    // Ground arrow meshes — 2 chevrons (one pointing forward, one pointing backward)
+    const arrowTex = createGroundArrowTexture(THREE);
+    for (let i = 0; i < 2; i++) {
+      const arrowMat = new THREE.MeshBasicMaterial({ map: arrowTex, transparent: true, depthTest: false, opacity: 0.0 });
+      const arrowMesh = new THREE.Mesh(new THREE.PlaneGeometry(35, 110), arrowMat);
+      arrowMesh.visible = false;
+      arrowMesh.userData = { type: 'go_forward', label: 'Go Forward', targetStallInfo: null, arrowIndex: i };
+      scene.add(arrowMesh);
+      hotspotMeshes.current.push(arrowMesh);
+    }
 
     // Dynamic nearby stall markers (Google Maps style)
     const currentSectionsData = stateRef.current.sectionsData;
@@ -1355,9 +1433,145 @@ export default function MarketTour360() {
       northOffset = 180;
     }
 
+    // Render dynamic nearby stall markers (Google Maps style pins)
+    if (stateRef.current.showBadges) {
+      sectionKeys.forEach((secKey) => {
+        const stalls = currentSectionsData[secKey].stalls;
+        stalls.forEach((s, idx) => {
+          if (secKey === currentActiveSectionKey && s.id === stall.id) return;
+          const targetCoords = getRawCoordinates(s, secKey);
+          
+          const dx = targetCoords.x - currentCoords.x;
+          const dy = targetCoords.y - currentCoords.y;
+          const distance = Math.hypot(dx, dy);
+          
+          // Only show stalls within a reasonable radius (e.g. 420px)
+          if (distance < 10 || distance > 420) return;
+          
+          // Prevent showing duplicate badge numbers in the current viewport
+          const cleanNum = extractCleanNumber(s.name);
+          if (renderedNumbers.has(cleanNum)) return;
+          renderedNumbers.add(cleanNum);
+          
+          // Calculate compass angle
+          const mapAngleRad = Math.atan2(dy, dx);
+          const mapAngleDeg = (mapAngleRad * 180) / Math.PI;
+          const targetCompassAngle = (mapAngleDeg + 450) % 360;
+          
+          // Convert to ThreeJS spherical coordinates angle (theta) relative to camera northOffset
+          const thetaRad = ((targetCompassAngle - northOffset) * Math.PI) / 180;
+          
+          // Place the pin in 3D space on a sphere around the camera
+          const pinDist = 180 + (distance * 0.35); // sphere radius between 180 and 320
+          const px = Math.cos(thetaRad) * pinDist;
+          const pz = Math.sin(thetaRad) * pinDist;
+          const py = -25; // slightly below eye level (eye level is y = 0)
+          
+          // Create texture and material
+          const pinTex = createStallPinTexture(THREE, s.name, secKey);
+          const pinMat = new THREE.SpriteMaterial({ map: pinTex, transparent: true, depthTest: false });
+          const pinSprite = new THREE.Sprite(pinMat);
+          
+          pinSprite.position.set(px, py, pz);
+          const scale = Math.max(18, 38 - (distance * 0.05));
+          pinSprite.scale.set(scale, scale, 1.0);
+          
+          pinSprite.userData = {
+            type: 'nearby_stall',
+            label: s.name,
+            sectionKey: secKey,
+            stall: s,
+            index: idx
+          };
+          
+          scene.add(pinSprite);
+          hotspotMeshes.current.push(pinSprite);
+        });
+      });
+    }
 
-
-  }
+    // 3D Route Chevrons overlay directly in the 360 panorama map!
+    const activeRouteTo = stateRef.current.destinationStall;
+    if (activeRouteTo) {
+      const chevTex = createArChevronTexture(THREE);
+      const startCoords = getRawCoordinates(stall, currentActiveSectionKey);
+      
+      let targetSec = currentActiveSectionKey;
+      Object.entries(currentSectionsData).forEach(([secKey, sec]) => {
+        if (sec.stalls.some(s => s.id === activeRouteTo.id)) {
+          targetSec = secKey;
+        }
+      });
+      const endCoords = getRawCoordinates(activeRouteTo, targetSec);
+      
+      const path = findMarketRoute(startCoords, endCoords);
+      if (path && path.length > 1) {
+        let chevCount = 0;
+        const maxChevrons = 35;
+        const stepDist = 16; // space in pixels between segments
+        let leftover = 0;
+        
+        for (let i = 0; i < path.length - 1; i++) {
+          const P_start = path[i];
+          const P_end = path[i + 1];
+          const dx = P_end.x - P_start.x;
+          const dy = P_end.y - P_start.y;
+          const len = Math.sqrt(dx * dx + dy * dy);
+          if (len === 0) continue;
+          
+          const angleRad = Math.atan2(dy, dx);
+          const angleDeg = (angleRad * 180 / Math.PI + 450) % 360;
+          const segThetaDeg = (angleDeg - northOffset) % 360;
+          const segThetaRad = (segThetaDeg * Math.PI) / 180;
+          
+          let d = leftover;
+          while (d < len && chevCount < maxChevrons) {
+            const ratio = d / len;
+            const px = P_start.x + dx * ratio;
+            const py = P_start.y + dy * ratio;
+            
+            const rx = px - path[0].x;
+            const ry = py - path[0].y;
+            const rDist = Math.sqrt(rx * rx + ry * ry);
+            
+            if (rDist > 15 && rDist < 480) {
+              const rAngleRad = Math.atan2(ry, rx);
+              const rAngleDeg = (rAngleRad * 180 / Math.PI + 450) % 360;
+              const rThetaDeg = (rAngleDeg - northOffset) % 360;
+              const rThetaRad = (rThetaDeg * Math.PI) / 180;
+              
+              const sphereDist = 90 + (rDist * 0.45);
+              const cx = Math.cos(rThetaRad) * sphereDist;
+              const cz = Math.sin(rThetaRad) * sphereDist;
+              const cy = -65; // floor level
+              
+              const chevMat = new THREE.MeshBasicMaterial({
+                map: chevTex,
+                transparent: true,
+                depthWrite: false,
+                opacity: 0.85 - (rDist / 480) * 0.45
+              });
+              
+              const chevMesh = new THREE.Mesh(new THREE.PlaneGeometry(35, 35), chevMat);
+              chevMesh.position.set(cx, cy, cz);
+              chevMesh.rotation.set(-Math.PI / 2 + 0.15, 0, segThetaRad - Math.PI / 2);
+              
+              chevMesh.userData = {
+                type: 'route_chevron',
+                label: `To: ${activeRouteTo.name}`
+              };
+              
+              scene.add(chevMesh);
+              hotspotMeshes.current.push(chevMesh);
+              chevCount++;
+            }
+            d += stepDist;
+          }
+          leftover = d - len;
+        }
+      }
+    }
+  };
 
   // Main Three.js Init
   useEffect(() => {

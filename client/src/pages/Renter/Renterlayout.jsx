@@ -28,7 +28,7 @@ const SHOW_AR_FINDER = true;
 const NAV_ITEMS = [
   { id: 'home', label: 'Home', Icon: Home },
   { id: 'navigate', label: '360° Tour', Icon: Navigation },
-  ...(SHOW_AR_FINDER ? [{ id: 'ar-finder', label: 'AR Stall Finder', Icon: Camera }] : []),
+  ...(SHOW_AR_FINDER ? [{ id: 'ar-finder', label: 'AR View', Icon: Camera }] : []),
   { id: 'stalls', label: 'Stalls', Icon: Store },
   { id: 'applications', label: 'Applications', Icon: FileText },
   { id: 'profile', label: 'Profile', Icon: User },
