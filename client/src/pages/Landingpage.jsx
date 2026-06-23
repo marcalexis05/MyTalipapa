@@ -861,10 +861,10 @@ export default function Landingpage() {
         <div className="absolute inset-0 opacity-[0.015] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#ffffff 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
         
         <div className="max-w-6xl mx-auto relative z-10">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-12 mb-16">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-12 mb-16">
             
             {/* Brand column */}
-            <div className="space-y-4 col-span-1 sm:col-span-2 md:col-span-1" style={slideLeft(footerInView, 0)}>
+            <div className="space-y-4 col-span-1 sm:col-span-2 lg:col-span-1" style={slideLeft(footerInView, 0)}>
               <div className="flex items-center gap-2.5">
                 <img src="/logo.png" alt="MyTalipapa Logo" className="h-8 w-auto object-contain" />
                 <span className="text-white font-bold text-lg tracking-tight">MyTalipapa</span>
@@ -915,6 +915,83 @@ export default function Landingpage() {
                 <li><button onClick={() => setModal('terms')} className="text-slate-400 hover:text-white transition-colors text-left font-semibold">Terms of Service</button></li>
                 <li><button onClick={() => setModal('accessibility')} className="text-slate-400 hover:text-white transition-colors text-left font-semibold">Accessibility Commitment</button></li>
               </ul>
+            </div>
+
+            {/* Get Mobile App column */}
+            <div style={slideRight(footerInView, 0.25)} className="space-y-4">
+              <h4 className="text-white font-bold text-xs uppercase tracking-wider">Get Mobile App</h4>
+              <div className="bg-white p-2 rounded-xl inline-block shadow-md">
+                <svg width="84" height="84" viewBox="0 0 29 29" className="text-slate-950">
+                  <rect x="0" y="0" width="29" height="29" fill="white" />
+                  <rect x="1" y="1" width="7" height="7" fill="black" />
+                  <rect x="2" y="2" width="5" height="5" fill="white" />
+                  <rect x="3" y="3" width="3" height="3" fill="black" />
+                  <rect x="21" y="1" width="7" height="7" fill="black" />
+                  <rect x="22" y="2" width="5" height="5" fill="white" />
+                  <rect x="23" y="3" width="3" height="3" fill="black" />
+                  <rect x="1" y="21" width="7" height="7" fill="black" />
+                  <rect x="2" y="22" width="5" height="5" fill="white" />
+                  <rect x="3" y="23" width="3" height="3" fill="black" />
+                  <rect x="9" y="1" width="1" height="1" fill="black" />
+                  <rect x="11" y="1" width="2" height="1" fill="black" />
+                  <rect x="15" y="1" width="1" height="1" fill="black" />
+                  <rect x="17" y="1" width="1" height="1" fill="black" />
+                  <rect x="9" y="3" width="2" height="1" fill="black" />
+                  <rect x="13" y="3" width="1" height="1" fill="black" />
+                  <rect x="16" y="3" width="2" height="1" fill="black" />
+                  <rect x="19" y="3" width="1" height="1" fill="black" />
+                  <rect x="9" y="5" width="1" height="2" fill="black" />
+                  <rect x="12" y="6" width="3" height="1" fill="black" />
+                  <rect x="17" y="5" width="2" height="1" fill="black" />
+                  <rect x="11" y="9" width="1" height="1" fill="black" />
+                  <rect x="13" y="9" width="2" height="2" fill="black" />
+                  <rect x="17" y="9" width="1" height="1" fill="black" />
+                  <rect x="21" y="9" width="3" height="1" fill="black" />
+                  <rect x="26" y="9" width="2" height="1" fill="black" />
+                  <rect x="1" y="11" width="1" height="2" fill="black" />
+                  <rect x="4" y="11" width="2" height="1" fill="black" />
+                  <rect x="8" y="12" width="2" height="1" fill="black" />
+                  <rect x="11" y="12" width="1" height="2" fill="black" />
+                  <rect x="15" y="12" width="3" height="1" fill="black" />
+                  <rect x="20" y="11" width="1" height="3" fill="black" />
+                  <rect x="23" y="12" width="2" height="1" fill="black" />
+                  <rect x="27" y="11" width="1" height="2" fill="black" />
+                  <rect x="3" y="15" width="2" height="1" fill="black" />
+                  <rect x="6" y="14" width="1" height="2" fill="black" />
+                  <rect x="9" y="15" width="3" height="1" fill="black" />
+                  <rect x="14" y="15" width="1" height="1" fill="black" />
+                  <rect x="16" y="14" width="2" height="2" fill="black" />
+                  <rect x="22" y="15" width="1" height="1" fill="black" />
+                  <rect x="25" y="14" width="2" height="2" fill="black" />
+                  <rect x="1" y="18" width="3" height="1" fill="black" />
+                  <rect x="6" y="18" width="1" height="1" fill="black" />
+                  <rect x="9" y="18" width="2" height="1" fill="black" />
+                  <rect x="13" y="17" width="1" height="2" fill="black" />
+                  <rect x="16" y="18" width="3" height="1" fill="black" />
+                  <rect x="21" y="18" width="1" height="1" fill="black" />
+                  <rect x="24" y="18" width="2" height="1" fill="black" />
+                  <rect x="27" y="18" width="1" height="1" fill="black" />
+                  <rect x="9" y="21" width="2" height="2" fill="black" />
+                  <rect x="13" y="21" width="1" height="1" fill="black" />
+                  <rect x="16" y="22" width="2" height="1" fill="black" />
+                  <rect x="19" y="21" width="1" height="2" fill="black" />
+                  <rect x="12" y="24" width="3" height="1" fill="black" />
+                  <rect x="17" y="25" width="2" height="2" fill="black" />
+                  <rect x="22" y="24" width="1" height="1" fill="black" />
+                  <rect x="25" y="24" width="3" height="1" fill="black" />
+                </svg>
+              </div>
+              <p className="text-[10px] text-slate-500 leading-snug">
+                Scan QR code to visit the mobile app, or click the download button below.
+              </p>
+              <a
+                href="/mytalipapa-app.apk"
+                download
+                className="flex items-center justify-center gap-2 bg-green-700 hover:bg-green-800 active:bg-green-900 text-white font-bold text-[11px] px-4 py-2.5 rounded-xl transition shadow-sm w-max"
+              >
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
+                Download App
+              </a>
             </div>
 
           </div>

@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { getToken } from "../utils/auth";
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, HelpCircle } from 'lucide-react';
 
 export default function ChangePasswordForm({ onSuccess }) {
   const [oldPassword, setOldPassword] = useState('');
@@ -16,16 +16,28 @@ export default function ChangePasswordForm({ onSuccess }) {
   const [showOldPassword, setShowOldPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showStrengthTooltip, setShowStrengthTooltip] = useState(false);
 
-  // Criteria validation
+  // Criteria validation (aligned with Register page)
   const isMinLength = newPassword.length >= 8;
   const hasUppercase = /[A-Z]/.test(newPassword);
-  const hasLowercase = /[a-z]/.test(newPassword);
   const hasDigit = /[0-9]/.test(newPassword);
   const hasSpecial = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?~]/.test(newPassword);
-  const isPasswordValid = isMinLength && hasUppercase && hasLowercase && hasDigit && hasSpecial;
+  const isPasswordValid = isMinLength && hasUppercase && hasDigit && hasSpecial;
   
   const passwordsMatch = confirmPassword.length > 0 && confirmPassword === newPassword;
+
+  const passwordStrength = useMemo(() => {
+    if (!newPassword) return { score: 0, label: '', color: 'text-slate-400', barColor: 'bg-slate-200' };
+    if (newPassword.length < 8) return { score: 1, label: 'Weak (too short)', color: 'text-red-500', barColor: 'bg-red-500' };
+    let score = 1;
+    if (/[A-Z]/.test(newPassword)) score++;
+    if (/[0-9]/.test(newPassword)) score++;
+    if (/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?~]/.test(newPassword)) score++;
+    if (score === 4) return { score, label: 'Strong', color: 'text-green-600', barColor: 'bg-green-600' };
+    if (score === 3) return { score, label: 'Medium', color: 'text-amber-500', barColor: 'bg-amber-500' };
+    return { score, label: 'Weak', color: 'text-red-500', barColor: 'bg-red-500' };
+  }, [newPassword]);
 
   const handleOldPasswordChange = (val) => {
     setOldPassword(val);
@@ -154,21 +166,57 @@ export default function ChangePasswordForm({ onSuccess }) {
           </button>
         </div>
         
-        {/* Checklist */}
-        <div className="mt-2 space-y-1 text-[11px] bg-gray-50 p-2.5 rounded-xl border border-gray-150 text-left">
-          <p className="font-semibold text-gray-500 mb-1">Password Strength Checklist:</p>
-          {[
-            [isMinLength, 'Minimum 8 characters'],
-            [hasUppercase, 'At least 1 uppercase letter'],
-            [hasLowercase, 'At least 1 lowercase letter'],
-            [hasDigit, 'At least 1 number'],
-            [hasSpecial, 'At least 1 special character (e.g. !@#$%^&*)'],
-          ].map(([valid, label], i) => (
-            <div key={i} className="flex items-center gap-1.5">
-              <span className={valid ? 'text-green-600 font-bold' : 'text-red-500 font-bold'}>{valid ? '✓' : '✗'}</span>
-              <span className={valid ? 'text-green-700 font-medium' : 'text-gray-500'}>{label}</span>
+        {/* Password Strength Meter */}
+        <div className="mt-3 space-y-1.5 bg-slate-50 p-3 rounded-xl border border-slate-150 relative">
+          <div className="flex justify-between items-center text-[9px] sm:text-[10px]">
+            <div className="flex items-center gap-1">
+              <span className="font-bold text-slate-500 uppercase tracking-wider">Password Strength</span>
+              <div className="relative">
+                <button
+                  type="button"
+                  onMouseEnter={() => setShowStrengthTooltip(true)}
+                  onMouseLeave={() => setShowStrengthTooltip(false)}
+                  onClick={() => setShowStrengthTooltip(!showStrengthTooltip)}
+                  className="text-slate-400 hover:text-slate-600 focus:outline-none transition-colors mt-0.5 flex items-center"
+                  aria-label="Password requirements info"
+                >
+                  <HelpCircle size={11} />
+                </button>
+                {showStrengthTooltip && (
+                  <div 
+                    className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[9px] p-3 rounded-lg shadow-xl w-48 z-20 space-y-2 border border-slate-700 pointer-events-none"
+                    style={{ animation: 'slideInDown 0.2s ease both' }}
+                  >
+                    <p className="font-bold text-slate-300 border-b border-slate-700 pb-1.5 mb-1.5 text-left">Requirements:</p>
+                    <div className="flex items-center gap-2.5 text-left">
+                      <span className={isMinLength ? 'text-green-400 font-bold' : 'text-slate-500 font-bold'}>{isMinLength ? '✓' : '✗'}</span>
+                      <span className={isMinLength ? 'text-slate-100 font-semibold' : 'text-slate-400'}>Min. 8 characters</span>
+                    </div>
+                    <div className="flex items-center gap-2.5 text-left">
+                      <span className={hasUppercase ? 'text-green-400 font-bold' : 'text-slate-500 font-bold'}>{hasUppercase ? '✓' : '✗'}</span>
+                      <span className={hasUppercase ? 'text-slate-100 font-semibold' : 'text-slate-400'}>One uppercase letter</span>
+                    </div>
+                    <div className="flex items-center gap-2.5 text-left">
+                      <span className={hasDigit ? 'text-green-400 font-bold' : 'text-slate-500 font-bold'}>{hasDigit ? '✓' : '✗'}</span>
+                      <span className={hasDigit ? 'text-slate-100 font-semibold' : 'text-slate-400'}>One number</span>
+                    </div>
+                    <div className="flex items-center gap-2.5 text-left">
+                      <span className={hasSpecial ? 'text-green-400 font-bold' : 'text-slate-500 font-bold'}>{hasSpecial ? '✓' : '✗'}</span>
+                      <span className={hasSpecial ? 'text-slate-100 font-semibold' : 'text-slate-400'}>One special character</span>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
-          ))}
+            <span className={`font-bold uppercase tracking-wider ${passwordStrength.color}`}>
+              {passwordStrength.label}
+            </span>
+          </div>
+          <div className="flex gap-1 h-1.5 w-full">
+            <div className={`flex-1 h-full rounded-full transition-all duration-300 ${passwordStrength.score >= 1 ? passwordStrength.barColor : 'bg-slate-200'}`} />
+            <div className={`flex-1 h-full rounded-full transition-all duration-300 ${passwordStrength.score >= 2 ? passwordStrength.barColor : 'bg-slate-200'}`} />
+            <div className={`flex-1 h-full rounded-full transition-all duration-300 ${passwordStrength.score >= 3 ? passwordStrength.barColor : 'bg-slate-200'}`} />
+          </div>
         </div>
       </div>
 

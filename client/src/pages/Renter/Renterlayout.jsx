@@ -35,7 +35,7 @@ const NAV_ITEMS = [
 ]
 
 /* ── Sidebar (desktop) ───────────────────────────────────────── */
-function Sidebar({ active, setActive, collapsed, setCollapsed, onLogout }) {
+function Sidebar({ items = NAV_ITEMS, active, setActive, collapsed, setCollapsed, onLogout }) {
   return (
     <aside
       onMouseEnter={() => {
@@ -57,7 +57,7 @@ function Sidebar({ active, setActive, collapsed, setCollapsed, onLogout }) {
       </div>
 
       <nav className="flex-1 py-4 px-2 space-y-0.5">
-        {NAV_ITEMS.map(({ id, label, Icon }) => (
+        {items.map(({ id, label, Icon }) => (
           <button
             key={id}
             onClick={() => setActive(id)}
@@ -91,11 +91,11 @@ function Sidebar({ active, setActive, collapsed, setCollapsed, onLogout }) {
 }
 
 /* ── Mobile bottom tab bar ───────────────────────────────────── */
-function BottomBar({ active, setActive }) {
+function BottomBar({ items = NAV_ITEMS, active, setActive }) {
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
       <div className="flex justify-around items-center h-16 px-1">
-        {NAV_ITEMS.map(({ id, label, Icon }) => {
+        {items.map(({ id, label, Icon }) => {
           const isActive = active === id
           return (
             <button
@@ -138,19 +138,35 @@ const getBusinessUseFromSection = (section) => {
 export default function RenterLayout() {
   const location = useLocation()
   const routerNavigate = useNavigate()
-  const [activeTab, setActiveTab] = useState('home')
+  const [activeTab, setActiveTab] = useState(() => {
+    const p = window.location.pathname
+    if (p.includes('stalls')) return 'stalls'
+    if (p.includes('applications')) return 'applications'
+    if (p.includes('profile')) return 'profile'
+    if (p.includes('ar-finder')) return 'ar-finder'
+    if (p.includes('market-tour') || p.includes('navigate')) return 'navigate'
+    if (p.includes('dashboard')) return 'home'
+    return 'home'
+  })
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true)
   const [selectedStall, setSelectedStall] = useState(null)
   const [prefillStall, setPrefillStall] = useState(null)
   const [showLogout, setShowLogout] = useState(false)
+  // Preserve stall list state so Back from StallDetails returns to exact same filter/view
+  const [stallListFilter, setStallListFilter] = useState('All')
+  const [stallListShowAll, setStallListShowAll] = useState(true)
 
-  /* useCallback keeps navigate stable — never undefined on re-renders */
-  const navigate = useCallback((tab) => {
+  const navigate = useCallback((tab, extraState = null) => {
     setActiveTab(tab)
 
     if (tab === 'home') {
       setSelectedStall(null)
-      routerNavigate('/renter/dashboard')
+      const token = localStorage.getItem('authToken')
+      if (token) {
+        routerNavigate('/renter/dashboard')
+      } else {
+        routerNavigate('/')
+      }
     }
     else if (tab === 'stalls') {
       routerNavigate('/renter/stalls')
@@ -165,10 +181,10 @@ export default function RenterLayout() {
     }
     else if (tab === 'ar-finder') {
       setSelectedStall(null)
-      routerNavigate('/renter/ar-finder')
+      routerNavigate('/renter/ar-finder', { state: extraState })
     }
     else if (tab === 'navigate') {
-      routerNavigate('/renter/market-tour', { state: { stall: selectedStall } })
+      routerNavigate('/renter/market-tour', { state: extraState || { stall: selectedStall } })
     }
   }, [routerNavigate, selectedStall])
 
@@ -233,7 +249,16 @@ export default function RenterLayout() {
               }}
             />
           )
-          : <RenterStalls onNavigate={navigate} onOpenStall={openStallDetail} />
+          : (
+            <RenterStalls
+              onNavigate={navigate}
+              onOpenStall={openStallDetail}
+              initialFilter={stallListFilter}
+              initialShowAll={stallListShowAll}
+              onFilterChange={setStallListFilter}
+              onShowAllChange={setStallListShowAll}
+            />
+          )
 
       case 'applications':
         return <RenterApplications onNavigate={navigate} prefill={prefillStall} />
@@ -252,21 +277,30 @@ export default function RenterLayout() {
     }
   }
 
+  const isLoggedIn = !!localStorage.getItem('authToken')
+  const filteredNavItems = NAV_ITEMS.filter(item => {
+    if ((item.id === 'profile' || item.id === 'applications') && !isLoggedIn) {
+      return false
+    }
+    return true
+  })
+
   return (
     <div className="flex h-screen bg-[#f5f5f0] font-sans overflow-hidden">
       <Sidebar
+        items={filteredNavItems}
         active={activeTab}
         setActive={navigate}
         collapsed={sidebarCollapsed}
         setCollapsed={setSidebarCollapsed}
-        onLogout={() => setShowLogout(true)}
+        onLogout={isLoggedIn ? () => setShowLogout(true) : null}
       />
 
       <div className="flex-1 flex flex-col overflow-hidden pb-16 md:pb-0">
         {renderPage()}
       </div>
 
-      <BottomBar active={activeTab} setActive={navigate} />
+      <BottomBar items={filteredNavItems} active={activeTab} setActive={navigate} />
 
       {/* ── Logout Modal ── */}
       {showLogout && (

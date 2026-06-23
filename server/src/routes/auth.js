@@ -47,7 +47,9 @@ router.get('/verify', async (req, res) => {
 router.post('/register', async (req, res) => {
   const {
     first_name,
+    middle_name,
     last_name,
+    suffix,
     email,
     password,
     contact_number,
@@ -56,7 +58,7 @@ router.post('/register', async (req, res) => {
   } = req.body;
 
   // Compose full_name from the split fields (fall back to a provided full_name)
-  const composedFullName = [first_name, last_name]
+  const composedFullName = [first_name, middle_name, last_name, suffix]
     .map((p) => (p || '').trim())
     .filter(Boolean)
     .join(' ') || (req.body.full_name || '').trim();
@@ -70,17 +72,37 @@ router.post('/register', async (req, res) => {
   try {
     // Duplicate email check
     const existing = await User.findOne({ email: email.toLowerCase() });
-    if (existing) {
-      return res.status(409).json({ error: 'An account with this email already exists.' });
-    }
-
-    // Password hashing
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
-
-    // Verification token
-    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const verificationToken = Math.floor(1000 + Math.random() * 9000).toString();
     const verificationTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h
+
+    if (existing) {
+      if (existing.isVerified) {
+        return res.status(409).json({ error: 'An account with this email already exists.' });
+      }
+
+      // Update existing unverified user details
+      existing.full_name = full_name;
+      existing.first_name = (first_name || '').trim();
+      existing.middle_name = (middle_name || '').trim();
+      existing.last_name = (last_name || '').trim();
+      existing.suffix = suffix;
+      existing.contact_number = contact_number;
+      existing.role = role;
+      existing.passwordHash = passwordHash;
+      existing.agreed = agreed;
+      existing.verificationToken = verificationToken;
+      existing.verificationTokenExpires = verificationTokenExpires;
+      await existing.save();
+
+      // Send verification email
+      await sendEmailOtp(email, verificationToken, 'verify', full_name);
+
+      return res.status(201).json({ message: 'Registration updated. Please check your email for verification instructions.' });
+    }
+
+
 
     // Create unverified user
     const user = await User.create({
@@ -98,7 +120,7 @@ router.post('/register', async (req, res) => {
     });
 
     // Send verification email
-    await sendEmailOtp(email, verificationToken);
+    await sendEmailOtp(email, verificationToken, 'verify', full_name);
 
     return res.status(201).json({ message: 'Registration successful. Please check your email for verification instructions.' });
   } catch (err) {
@@ -113,7 +135,9 @@ router.post('/register', async (req, res) => {
 router.post('/contractor/register-application', async (req, res) => {
   const {
     firstName,
+    middleName,
     lastName,
+    suffix,
     fullName,
     businessName,
     email,
@@ -122,7 +146,7 @@ router.post('/contractor/register-application', async (req, res) => {
     selectedStalls,
   } = req.body;
 
-  const composedFullName = [firstName, lastName]
+  const composedFullName = [firstName, middleName, lastName, suffix]
     .map((p) => (p || '').trim())
     .filter(Boolean)
     .join(' ') || (fullName || '').trim();
@@ -142,13 +166,13 @@ router.post('/contractor/register-application', async (req, res) => {
 
     const status = (userExists && userExists.status) || (appExists && appExists.status);
 
-    if (userExists && userExists.role !== 'contractor') {
+    if (userExists && userExists.role !== 'contractor' && userExists.isVerified) {
       return res.status(409).json({ error: 'An account with this email already exists.' });
     }
     if (status === 'pending') {
       return res.status(409).json({ error: 'A pending application with this email already exists.' });
     }
-    if (status === 'approved') {
+    if (status === 'approved' && (!userExists || userExists.isVerified)) {
       return res.status(409).json({ error: 'An approved contractor account with this email already exists.' });
     }
 
@@ -168,9 +192,17 @@ router.post('/contractor/register-application', async (req, res) => {
         userExists.contact_number = contactNumber;
         userExists.passwordHash = passwordHash;
         userExists.status = 'pending';
+        userExists.role = 'contractor';
+        if (!userExists.isVerified) {
+          const verificationToken = Math.floor(1000 + Math.random() * 9000).toString();
+          userExists.verificationToken = verificationToken;
+          userExists.verificationTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+          await sendEmailOtp(email, verificationToken, 'verify', composedFullName);
+        }
         await userExists.save();
         userRecord = userExists;
       } else {
+        const verificationToken = Math.floor(1000 + Math.random() * 9000).toString();
         userRecord = await User.create({
           full_name: composedFullName,
           first_name: fName,
@@ -181,7 +213,11 @@ router.post('/contractor/register-application', async (req, res) => {
           passwordHash,
           status: 'pending',
           agreed: true,
+          isVerified: false,
+          verificationToken,
+          verificationTokenExpires: new Date(Date.now() + 24 * 60 * 60 * 1000),
         });
+        await sendEmailOtp(email, verificationToken, 'verify', composedFullName);
       }
 
       if (appExists) {
@@ -213,6 +249,7 @@ router.post('/contractor/register-application', async (req, res) => {
         });
       }
     } else {
+      const verificationToken = Math.floor(1000 + Math.random() * 9000).toString();
       application = await ContractorApplication.create({
         fullName: composedFullName,
         firstName: fName,
@@ -236,7 +273,12 @@ router.post('/contractor/register-application', async (req, res) => {
         passwordHash,
         status: 'pending',
         agreed: true,
+        isVerified: false,
+        verificationToken,
+        verificationTokenExpires: new Date(Date.now() + 24 * 60 * 60 * 1000),
       });
+
+      await sendEmailOtp(email, verificationToken, 'verify', composedFullName);
     }
 
     return res.status(201).json({
@@ -354,6 +396,23 @@ router.post('/login', async (req, res) => {
 
     if (!isMatch) {
       return res.status(401).json({ error: 'Invalid email or password.' });
+    }
+
+    // Block unverified users
+    if (!user.isVerified) {
+      // Generate new 4-digit code and send it automatically
+      const code = Math.floor(1000 + Math.random() * 9000).toString();
+      user.verificationToken = code;
+      user.verificationTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h
+      await user.save();
+      await sendEmailOtp(user.email, code, 'verify', user.full_name);
+
+      return res.status(403).json({ 
+        error: 'Please verify your email address before logging in.', 
+        unverified: true,
+        email: user.email,
+        role: user.role
+      });
     }
 
     // Block rejected contractor accounts and surface the specific rejection reason.
@@ -530,11 +589,20 @@ router.put('/profile', async (req, res) => {
       return res.status(404).json({ error: 'User not found.' });
     }
 
-    const { first_name, last_name, full_name, contact_number, profilePicture } = req.body;
+    const { first_name, middle_name, last_name, suffix, full_name, contact_number, profilePicture } = req.body;
     if (first_name !== undefined) user.first_name = first_name;
+    if (middle_name !== undefined) user.middle_name = middle_name;
     if (last_name !== undefined) user.last_name = last_name;
-    if (first_name !== undefined || last_name !== undefined) {
-      user.full_name = `${user.first_name || ''} ${user.last_name || ''}`.trim();
+    if (suffix !== undefined) user.suffix = suffix;
+
+    if (first_name !== undefined || middle_name !== undefined || last_name !== undefined || suffix !== undefined) {
+      const parts = [
+        user.first_name,
+        user.middle_name,
+        user.last_name,
+        user.suffix
+      ].map(p => (p || '').trim()).filter(Boolean);
+      user.full_name = parts.join(' ');
     } else if (full_name) {
       user.full_name = full_name;
       user.first_name = full_name.split(' ')[0] || '';
@@ -552,7 +620,9 @@ router.put('/profile', async (req, res) => {
         email: user.email,
         full_name: user.full_name,
         first_name: user.first_name || '',
+        middle_name: user.middle_name || '',
         last_name: user.last_name || '',
+        suffix: user.suffix || '',
         contact_number: user.contact_number,
         role: user.role,
         status: user.status,
@@ -572,28 +642,20 @@ router.post('/identify-account', async (req, res) => {
   const { accountName } = req.body;
 
   if (!accountName || !accountName.trim()) {
-    return res.status(400).json({ error: 'Account name or email is required.' });
+    return res.status(400).json({ error: 'Gmail address is required.' });
   }
 
   try {
-    const trimmedName = accountName.trim();
-    let user = null;
-
-    // 1. Search by email
-    user = await User.findOne({ email: trimmedName.toLowerCase() });
-
-    // 2. Search by phone number
-    if (!user) {
-      user = await User.findOne({ contact_number: trimmedName });
+    const trimmedName = accountName.trim().toLowerCase();
+    
+    if (!trimmedName.endsWith('@gmail.com')) {
+      return res.status(400).json({ error: 'Please enter a valid Gmail address (e.g., example@gmail.com).' });
     }
 
-    // 3. Search by full name (case insensitive)
-    if (!user) {
-      user = await User.findOne({ full_name: { $regex: new RegExp('^' + trimmedName + '$', 'i') } });
-    }
+    const user = await User.findOne({ email: trimmedName });
 
     if (!user) {
-      return res.status(404).json({ error: 'No account associated with that name or email was found.' });
+      return res.status(404).json({ error: 'No account associated with that Gmail address was found.' });
     }
 
     // Helper functions to mask the receivers
@@ -649,20 +711,20 @@ router.post('/forgot-password', async (req, res) => {
       return res.status(404).json({ error: 'User not found.' });
     }
 
-    // Rate limiting: Max 3 requests per 10 minutes
+    // Rate limiting: Max 5 requests per 5 minutes
     const now = Date.now();
-    const tenMinutesAgo = now - 10 * 60 * 1000;
-    user.otpRequests = (user.otpRequests || []).filter(timestamp => new Date(timestamp).getTime() > tenMinutesAgo);
+    const fiveMinutesAgo = now - 5 * 60 * 1000;
+    user.otpRequests = (user.otpRequests || []).filter(timestamp => new Date(timestamp).getTime() > fiveMinutesAgo);
 
-    if (user.otpRequests.length >= 3) {
-      return res.status(429).json({ error: 'Too many requests. You can request up to 3 OTP codes every 10 minutes.' });
+    if (user.otpRequests.length >= 5) {
+      return res.status(429).json({ error: 'Too many requests. You can request up to 5 OTP codes every 5 minutes.' });
     }
 
     // Log request timestamp
     user.otpRequests.push(new Date());
 
-    // Generate 6-digit OTP code
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    // Generate 4-digit OTP code
+    const otp = Math.floor(1000 + Math.random() * 9000).toString();
 
     // Cache plain OTP in global memory for local dev integration testing
     if (process.env.NODE_ENV !== 'production') {
@@ -680,7 +742,7 @@ router.post('/forgot-password', async (req, res) => {
 
     // Dispatch the OTP via selected method (Nodemailer or Twilio)
     if (method === 'email') {
-      await sendEmailOtp(user.email, otp, 'reset');
+      await sendEmailOtp(user.email, otp, 'reset', user.full_name);
     } else {
       await sendSmsOtp(user.contact_number, otp);
     }
@@ -905,6 +967,70 @@ router.post('/change-first-password', async (req, res) => {
     });
   } catch (err) {
     console.error('Change first password error:', err);
+    return res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// POST /api/verify-registration
+// ---------------------------------------------------
+router.post('/verify-registration', async (req, res) => {
+  const { email, code } = req.body;
+  if (!email || !code) {
+    return res.status(400).json({ error: 'Email and verification code are required.' });
+  }
+  try {
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+    if (user.isVerified) {
+      return res.json({ success: true, message: 'Account is already verified.' });
+    }
+    if (!user.verificationToken || user.verificationToken !== code.trim()) {
+      return res.status(400).json({ error: 'Invalid verification code.' });
+    }
+    if (user.verificationTokenExpires && user.verificationTokenExpires < new Date()) {
+      return res.status(400).json({ error: 'Verification code has expired.' });
+    }
+
+    user.isVerified = true;
+    user.verificationToken = undefined;
+    user.verificationTokenExpires = undefined;
+    await user.save();
+
+    return res.json({ success: true, message: 'Account verified successfully.' });
+  } catch (err) {
+    console.error('Registration verification error:', err);
+    return res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// POST /api/resend-verification
+// ---------------------------------------------------
+router.post('/resend-verification', async (req, res) => {
+  const { email } = req.body;
+  if (!email) {
+    return res.status(400).json({ error: 'Email is required.' });
+  }
+  try {
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+    if (user.isVerified) {
+      return res.status(400).json({ error: 'Account is already verified.' });
+    }
+
+    // Generate new 4-digit code
+    const code = Math.floor(1000 + Math.random() * 9000).toString();
+    user.verificationToken = code;
+    user.verificationTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h
+    await user.save();
+
+    await sendEmailOtp(user.email, code, 'verify', user.full_name);
+    return res.json({ success: true, message: 'Verification code resent successfully.' });
+  } catch (err) {
+    console.error('Resend verification code error:', err);
     return res.status(500).json({ error: 'Server error' });
   }
 });

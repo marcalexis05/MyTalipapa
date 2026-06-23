@@ -33,7 +33,9 @@ import {
   Phone,
   User,
   Droplet,
-  Camera
+  Camera,
+  FileText,
+  LogOut
 } from 'lucide-react'
 
 // ─── Market Pathway Graph for Route Finding ─────────────────────────────────
@@ -507,6 +509,14 @@ export default function MarketTour360() {
   const navigate = useNavigate()
   const location = useLocation()
   const stateStall = location.state?.stall
+  const isLoggedIn = !!localStorage.getItem('authToken');
+  const [showLogout, setShowLogout] = useState(false);
+
+  const handleLogout = () => {
+    localStorage.removeItem('authToken')
+    localStorage.removeItem('user')
+    window.location.href = '/login'
+  }
 
   // Tab State
   const [activeSectionKey, setActiveSectionKey] = useState(() => {
@@ -571,6 +581,7 @@ export default function MarketTour360() {
   const [showBadges, setShowBadges] = useState(true)
   const [stallDropdownOpen, setStallDropdownOpen] = useState(false)
   const [isMapExpanded, setIsMapExpanded] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true)
   // Route finder state for the expanded map
   const [routeFrom, setRouteFrom] = useState(null) // { secKey, stallId }
   const [routeTo, setRouteTo] = useState(null)     // { secKey, stallId }
@@ -1884,9 +1895,78 @@ export default function MarketTour360() {
 
 
   return (
-    <div className="relative w-full bg-black overflow-hidden font-sans select-none" style={{ height: 'calc(var(--vh, 1vh) * 100)' }}>
+    <div className="relative w-full bg-black overflow-hidden font-sans select-none flex" style={{ height: 'calc(var(--vh, 1vh) * 100)' }}>
       <style>{`
       `}</style>
+
+      {/* ── DESKTOP SIDEBAR ── hidden on mobile ── */}
+      <aside
+        onMouseEnter={() => setSidebarCollapsed(false)}
+        onMouseLeave={() => setSidebarCollapsed(true)}
+        className="hidden md:flex flex-col bg-white border-r border-gray-200 h-full shrink-0 z-50 transition-all duration-300 shadow-sm"
+        style={{ width: sidebarCollapsed ? '4rem' : '14rem' }}
+      >
+        {/* Logo */}
+        <div className={`flex items-center gap-2 px-4 py-5 border-b border-gray-100 ${sidebarCollapsed ? 'justify-center' : ''}`}>
+          <div className="w-8 h-8 bg-[#1a5c2a] rounded-lg flex items-center justify-center shrink-0">
+            <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M15 21v-5a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v5"/>
+              <path d="M17.774 10.31a1.12 1.12 0 0 0-1.549 0 2.5 2.5 0 0 1-3.451 0 1.12 1.12 0 0 0-1.548 0 2.5 2.5 0 0 1-3.452 0 1.12 1.12 0 0 0-1.549 0 2.5 2.5 0 0 1-3.77-3.248l2.889-4.184A2 2 0 0 1 7 2h10a2 2 0 0 1 1.653.873l2.895 4.192a2.5 2.5 0 0 1-3.774 3.244"/>
+              <path d="M4 10.95V19a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8.05"/>
+            </svg>
+          </div>
+          {!sidebarCollapsed && <span className="font-extrabold text-gray-900 text-base tracking-tight">MyTalipapa</span>}
+        </div>
+
+        {/* Nav items */}
+        <nav className="flex-1 py-4 px-2 space-y-0.5">
+          {[
+            { id: 'home',      label: 'Home',            icon: <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,   action: () => { const token = localStorage.getItem('authToken'); navigate(token ? '/renter/dashboard' : '/'); } },
+            { id: 'navigate',  label: '360° Tour',       icon: <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>,             action: null },
+            { id: 'ar-finder', label: 'AR Stall Finder', icon: <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>, action: () => handleOpenArView(currentStall) },
+            { id: 'stalls',    label: 'Stalls',          icon: <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M3 3h18v4H3zM3 10h18M3 17h18M3 14h18"/></svg>,            action: () => navigate('/renter/stalls') },
+            ...(isLoggedIn ? [
+              { id: 'applications', label: 'Applications', icon: <FileText size={18} />, action: () => navigate('/renter/applications') },
+              { id: 'profile',      label: 'Profile',      icon: <User size={18} />,     action: () => navigate('/renter/profile') }
+            ] : [])
+          ].map(({ id, label, icon, action }) => {
+            const isActive = id === 'navigate';
+            return (
+              <button
+                key={id}
+                onClick={action || undefined}
+                disabled={!action}
+                title={sidebarCollapsed ? label : ''}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 group ${
+                  isActive
+                    ? 'bg-[#edf5ed] text-[#1a5c2a]'
+                    : action ? 'text-gray-500 hover:bg-gray-50 hover:text-gray-800' : 'text-gray-400 cursor-default'
+                } ${sidebarCollapsed ? 'justify-center' : ''}`}
+              >
+                <span className={isActive ? 'text-[#1a5c2a]' : 'text-gray-400 group-hover:text-gray-600'}>{icon}</span>
+                {!sidebarCollapsed && <span>{label}</span>}
+                {!sidebarCollapsed && isActive && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[#1a5c2a]" />}
+              </button>
+            );
+          })}
+        </nav>
+
+        {isLoggedIn && (
+          <div className="p-3 border-t border-gray-150 space-y-1">
+            <button
+              onClick={() => setShowLogout(true)}
+              title={sidebarCollapsed ? 'Logout' : ''}
+              className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-red-500 hover:bg-red-50 transition-all cursor-pointer ${sidebarCollapsed ? 'justify-center' : ''}`}
+            >
+              <LogOut size={15} />
+              {!sidebarCollapsed && 'Logout'}
+            </button>
+          </div>
+        )}
+      </aside>
+
+      {/* ── CONTENT AREA (fills remaining space on desktop) ── */}
+      <div className="relative flex-1 overflow-hidden">
 
       {/* 360 ThreeJS Viewer Mount */}
       <div
@@ -1939,7 +2019,7 @@ export default function MarketTour360() {
               if (window.history.state && window.history.state.idx > 0) {
                 navigate(-1);
               } else {
-                navigate(location.pathname.startsWith('/renter') ? '/renter/dashboard' : '/');
+                navigate(location.pathname.startsWith('/renter') ? '/renter/stalls' : '/');
               }
             }}
             className="w-10 h-10 rounded-full bg-white/80 backdrop-blur-md flex items-center justify-center shadow-lg hover:bg-white active:scale-95 transition-all text-slate-800 border border-black/10 cursor-pointer"
@@ -2084,7 +2164,7 @@ export default function MarketTour360() {
           className={`absolute transition-all duration-150 ease-out z-40 flex flex-col ${
             isMapExpanded
               ? 'bottom-[12.5vh] left-[4vw] sm:left-[calc(50%-28rem)] w-[92vw] h-[75vh] max-w-4xl p-4 sm:p-5 bg-slate-950/15 backdrop-blur-md overflow-hidden rounded-3xl border border-white/10'
-              : 'bottom-24 left-3 sm:bottom-6 sm:left-6 w-36 h-36 sm:w-48 sm:h-48 md:w-56 md:h-56 overflow-hidden cursor-pointer bg-slate-950/85 backdrop-blur-md hover:scale-105 rounded-full border-[3px] sm:border-4 border-[#e8621a]'
+              : 'bottom-40 right-3 sm:bottom-6 sm:left-6 sm:right-auto w-28 h-28 sm:w-48 sm:h-48 md:w-56 md:h-56 overflow-hidden cursor-pointer bg-slate-950/85 backdrop-blur-md hover:scale-105 rounded-full border-[3px] sm:border-4 border-[#e8621a]'
           }`}
           style={{
             boxShadow: isMapExpanded
@@ -2092,11 +2172,7 @@ export default function MarketTour360() {
               : '-4px 8px 24px rgba(0, 0, 0, 0.45), 0 0 20px rgba(232, 98, 26, 0.35)'
           }}
         >
-          {!isMapExpanded && (
-            <div className="absolute top-3 left-4 z-50 text-xs sm:text-sm font-black text-white select-none pointer-events-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
-              3D
-            </div>
-          )}
+          {/* no label on minimized map */}
           {/* Collapse/Minimize Button or Route Finder Header */}
           {isMapExpanded ? (
             <div className="flex items-center justify-between py-2 shrink-0 z-10 mb-4 px-1" onClick={(e) => e.stopPropagation()}>
@@ -2428,9 +2504,40 @@ export default function MarketTour360() {
 
 
 
+      {/* BOTTOM NAV BAR — mirrors RenterLayout bottom tab bar */}
+      {uiVisible && (
+        <nav className="md:hidden absolute bottom-0 left-0 right-0 z-30 bg-white/90 backdrop-blur-md border-t border-black/10 flex justify-around items-center h-14 px-1 shadow-lg">
+          {[
+            { id: 'home',      label: 'Home',         icon: <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>, action: () => { const token = localStorage.getItem('authToken'); navigate(token ? '/renter/dashboard' : '/'); } },
+            { id: 'navigate',  label: '360° Tour',    icon: <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>, action: null },
+            { id: 'ar-finder', label: 'AR Stall Finder', icon: <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>, action: () => handleOpenArView(currentStall) },
+            { id: 'stalls',    label: 'Stalls',       icon: <Store size={16} />, action: () => navigate('/renter/stalls') },
+            ...(isLoggedIn ? [
+              { id: 'applications', label: 'Applications', icon: <FileText size={16} />, action: () => navigate('/renter/applications') },
+              { id: 'profile',      label: 'Profile',      icon: <User size={16} />,     action: () => navigate('/renter/profile') }
+            ] : [])
+          ].map(({ id, label, icon, action }) => {
+            const isActive = id === 'navigate';
+            return (
+              <button
+                key={id}
+                onClick={action || undefined}
+                disabled={!action}
+                className={`flex flex-col items-center justify-center gap-0.5 flex-1 transition-all ${!action ? 'opacity-100' : 'active:scale-90'}`}
+              >
+                <div className={`p-1.5 rounded-xl transition-all ${isActive ? 'bg-[#1a5c2a]' : ''}`}>
+                  <span className={isActive ? 'text-white' : 'text-gray-400'}>{icon}</span>
+                </div>
+                <span className={`text-[8px] font-bold leading-tight text-center ${isActive ? 'text-[#1a5c2a]' : 'text-gray-400'}`}>{label}</span>
+              </button>
+            );
+          })}
+        </nav>
+      )}
+
       {/* BOTTOM CENTER STALL QUICK SWITCHER CONTROLS */}
       {true && (
-        <div className={`absolute left-1/2 -translate-x-1/2 z-20 transition-all duration-300 ${uiVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12 pointer-events-none'} ${detailsCollapsed ? 'bottom-6 sm:bottom-10' : 'bottom-[330px] md:bottom-[240px]'} flex flex-col items-center gap-1.5 sm:gap-2.5 scale-90 sm:scale-100 origin-bottom`}>
+        <div className={`absolute left-1/2 -translate-x-1/2 z-20 transition-all duration-300 ${uiVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12 pointer-events-none'} ${detailsCollapsed ? 'bottom-16 sm:bottom-10' : 'bottom-[330px] md:bottom-[240px]'} flex flex-col items-center gap-1.5 sm:gap-2.5 scale-90 sm:scale-100 origin-bottom`}>
         {/* Stall Selector Button floating directly ABOVE the main switcher */}
         <div className="relative">
           <button
@@ -2738,6 +2845,22 @@ export default function MarketTour360() {
           </div>
         </div>
       )}
+
+      {/* ── Logout Modal ── */}
+      {showLogout && (
+        <div className="logout-overlay" style={{ zIndex: 100 }} onClick={() => setShowLogout(false)}>
+          <div className="logout-modal" onClick={e => e.stopPropagation()}>
+            <div className="logout-modal-icon"><LogOut size={20} /></div>
+            <h3 className="logout-modal-title">Log Out?</h3>
+            <p className="logout-modal-msg">You'll be signed out of your renter session.</p>
+            <div className="logout-modal-actions">
+              <button className="logout-cancel-btn" onClick={() => setShowLogout(false)}>Cancel</button>
+              <button className="logout-confirm-btn" id="confirm-logout" onClick={handleLogout}>Yes, Log Out</button>
+            </div>
+          </div>
+        </div>
+      )}
+      </div>{/* end content area */}
     </div>
   )
 }
