@@ -194,6 +194,8 @@ export default function Register() {
   const [stepDir, setStepDir] = useState('forward')
   const [stepKey, setStepKey] = useState(1)
   const [form, setForm] = useState({
+    first_name: '',
+    last_name: '',
     full_name: '',
     business_name: '',
     email: '',
@@ -228,6 +230,16 @@ export default function Register() {
     setForm({ ...form, [e.target.name]: val })
   }
 
+  // First/Last name update — keep full_name (used downstream) in sync
+  function handleNameChange(e) {
+    const { name, value } = e.target
+    setForm(prev => {
+      const next = { ...prev, [name]: value }
+      next.full_name = `${next.first_name} ${next.last_name}`.trim()
+      return next
+    })
+  }
+
   function handlePhoneChange(e) {
     let val = e.target.value.replace(/\D/g, '')
     if (val.startsWith('63')) val = val.substring(2)
@@ -245,7 +257,8 @@ export default function Register() {
   const isEmailValid = form.email.trim().includes('@')
 
   const isFormValid =
-    form.full_name.trim().length > 0 &&
+    form.first_name.trim().length > 0 &&
+    form.last_name.trim().length > 0 &&
     (form.role !== 'contractor' || form.business_name.trim().length > 0) &&
     isEmailValid && isPasswordValid && passwordsMatch && isPhoneValid && form.agreed && form.role
 
@@ -303,6 +316,8 @@ export default function Register() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          first_name: form.first_name,
+          last_name: form.last_name,
           full_name: form.full_name,
           contact_number: `+63${form.contact_number}`,
           role: form.role, email: form.email,
@@ -329,7 +344,10 @@ export default function Register() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          fullName: form.full_name, businessName: form.business_name,
+          firstName: form.first_name,
+          lastName: form.last_name,
+          fullName: form.full_name,
+          businessName: form.business_name,
           email: form.email, password: form.password,
           contactNumber: `+63${form.contact_number}`, selectedStalls,
         }),
@@ -460,12 +478,19 @@ export default function Register() {
                         </div>
                       </div>
 
-                      <div>
-                        <label className="block text-sm font-medium text-gray-600 mb-1.5">Full Name</label>
-                        <div className="input-field flex items-center gap-2 px-4 py-3 rounded-xl border border-gray-200 bg-gray-50">
-                          <User size={16} className="text-gray-400 shrink-0" />
-                          <input type="text" name="full_name" value={form.full_name} onChange={handleChange} placeholder="Juan Dela Cruz" required className="flex-1 bg-transparent text-sm focus:outline-none" />
-                          {form.full_name && <button type="button" onClick={() => setForm({ ...form, full_name: '' })} className="text-gray-400 transition-transform hover:scale-110">✕</button>}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-600 mb-1.5">First Name</label>
+                          <div className="input-field flex items-center gap-2 px-4 py-3 rounded-xl border border-gray-200 bg-gray-50">
+                            <User size={16} className="text-gray-400 shrink-0" />
+                            <input type="text" name="first_name" value={form.first_name} onChange={handleNameChange} placeholder="Juan" required className="flex-1 bg-transparent text-sm focus:outline-none min-w-0" />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-600 mb-1.5">Last Name</label>
+                          <div className="input-field flex items-center gap-2 px-4 py-3 rounded-xl border border-gray-200 bg-gray-50">
+                            <input type="text" name="last_name" value={form.last_name} onChange={handleNameChange} placeholder="Dela Cruz" required className="flex-1 bg-transparent text-sm focus:outline-none min-w-0" />
+                          </div>
                         </div>
                       </div>
 

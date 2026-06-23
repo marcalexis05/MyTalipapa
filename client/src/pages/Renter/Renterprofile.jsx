@@ -235,7 +235,7 @@ export default function RenterProfile({ onLogout }) {
   const [updating, setUpdating] = useState(false)
   const [user, setUser] = useState(getUser() || {})
   const [showEditModal, setShowEditModal] = useState(false)
-  const [editForm, setEditForm] = useState({ fullName: '', contactNumber: '' })
+  const [editForm, setEditForm] = useState({ firstName: '', lastName: '', contactNumber: '' })
   const [showPasswordModal, setShowPasswordModal] = useState(false)
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: '',
@@ -316,13 +316,21 @@ export default function RenterProfile({ onLogout }) {
   }
 
   const openEditModal = () => {
-    setEditForm({ fullName: user.full_name || '', contactNumber: user.contact_number || '' })
+    setEditForm({
+      firstName: user.first_name || '',
+      lastName: user.last_name || '',
+      contactNumber: user.contact_number || ''
+    })
     setShowEditModal(true)
   }
 
   const handleSaveProfile = async (e) => {
     e.preventDefault()
-    await updateProfile({ full_name: editForm.fullName, contact_number: editForm.contactNumber })
+    await updateProfile({
+      first_name: editForm.firstName,
+      last_name: editForm.lastName,
+      contact_number: editForm.contactNumber
+    })
     setShowEditModal(false)
   }
 
@@ -716,16 +724,29 @@ export default function RenterProfile({ onLogout }) {
                 </button>
               </div>
               <form onSubmit={handleSaveProfile} className="p-6 space-y-4">
-                <div style={{ animation: 'fadeSlideUp 0.32s ease 0.05s both' }}>
-                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Full Name</label>
-                  <input
-                    type="text"
-                    value={editForm.fullName}
-                    onChange={(e) => setEditForm(f => ({ ...f, fullName: e.target.value }))}
-                    required
-                    className="w-full bg-[#f5f5f0] border border-transparent rounded-xl px-4 py-3 text-sm text-gray-800 focus:outline-none focus:border-[#1a5c2a] focus:bg-white transition-all duration-200"
-                    placeholder="Juan Dela Cruz"
-                  />
+                <div className="grid grid-cols-2 gap-3" style={{ animation: 'fadeSlideUp 0.32s ease 0.05s both' }}>
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">First Name</label>
+                    <input
+                      type="text"
+                      value={editForm.firstName}
+                      onChange={(e) => setEditForm(f => ({ ...f, firstName: e.target.value }))}
+                      required
+                      className="w-full bg-[#f5f5f0] border border-transparent rounded-xl px-4 py-3 text-sm text-gray-800 focus:outline-none focus:border-[#1a5c2a] focus:bg-white transition-all duration-200"
+                      placeholder="Juan"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Last Name</label>
+                    <input
+                      type="text"
+                      value={editForm.lastName}
+                      onChange={(e) => setEditForm(f => ({ ...f, lastName: e.target.value }))}
+                      required
+                      className="w-full bg-[#f5f5f0] border border-transparent rounded-xl px-4 py-3 text-sm text-gray-800 focus:outline-none focus:border-[#1a5c2a] focus:bg-white transition-all duration-200"
+                      placeholder="Dela Cruz"
+                    />
+                  </div>
                 </div>
                 <div style={{ animation: 'fadeSlideUp 0.32s ease 0.1s both' }}>
                   <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Contact Number</label>

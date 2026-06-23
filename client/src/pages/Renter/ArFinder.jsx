@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Compass, Info, HelpCircle, Navigation, RotateCw, Check, X, Camera, CameraOff, Map, ChevronDown, ChevronUp, Locate, ChevronLeft, ChevronRight, Search, Footprints } from "lucide-react";
+import { ArrowLeft, Compass, Info, HelpCircle, Navigation, RotateCw, Check, X, Camera, CameraOff, Map, ChevronDown, ChevronUp, Locate, ChevronLeft, ChevronRight, Search, Footprints, QrCode, MapPin, Clock, Tag, Store, Phone } from "lucide-react";
 import mapImage from "../../images/map.png";
 import logoImage from "../../images/logo.png";
 import { SVG_STALL_COORDS } from "../../utils/coords_dict";
+import QrScanner from "../../components/QrScanner";
 
 const getStallZone = (num, category) => {
   const stallId = String(num);
@@ -143,7 +144,107 @@ const HALLWAY_GROUPS = {
 const HALLWAYS = Object.values(HALLWAY_GROUPS).flat();
 const CATEGORY_EMOJI = { meat: "", fish: "", veggies: "", all: "" };
 
-export default function ArFinder({ onBack }) {
+// ── QR payload parsing ──────────────────────────────────────────────────────
+// Supported QR contents (all case-insensitive):
+//   MTP:STALL:meat-11        → identify a stall
+//   MTP:LOC:1050,1720        → set an exact "you are here" coordinate
+//   MTP:HERE:entrance        → set position to a named entrance/hallway
+//   https://…/tour?stall=…   → URL form (stall / loc / here query params)
+//   meat-11                  → bare stall id
+// Returns { kind: 'stall'|'loc'|'here', ref?, x?, y?, label? } or null.
+const parseQrPayload = (raw) => {
+  if (!raw) return null;
+  const text = String(raw).trim();
+  if (!text) return null;
+
+  // A stall ref may carry an optional "@<zone>" hint to disambiguate duplicate
+  // stall numbers across zones (e.g. "meat-1@F" → stall #1 in Zone F).
+  const splitZone = (val) => {
+    const zm = String(val).match(/^(.*?)@([A-Za-z])$/);
+    return zm ? { ref: zm[1].trim(), zone: zm[2].toUpperCase() } : { ref: String(val).trim() };
+  };
+
+  // URL form
+  if (/^https?:\/\//i.test(text)) {
+    try {
+      const u = new URL(text);
+      const s = u.searchParams.get("stall") || u.searchParams.get("s");
+      if (s) {
+        const z = u.searchParams.get("zone");
+        const parts = splitZone(s);
+        return { kind: "stall", ref: parts.ref, zone: parts.zone || (z ? z.toUpperCase() : undefined) };
+      }
+      const loc = u.searchParams.get("loc");
+      if (loc) {
+        const [x, y] = loc.split(/[,; ]+/).map(Number);
+        if (Number.isFinite(x) && Number.isFinite(y)) return { kind: "loc", x, y };
+      }
+      const here = u.searchParams.get("here");
+      if (here) return { kind: "here", ref: here };
+    } catch { /* not a parseable URL */ }
+  }
+
+  // MTP scheme — accepts ":" or "|" as separators
+  const m = text.match(/^MTP[:|]\s*([A-Za-z]+)[:|]\s*(.+)$/);
+  if (m) {
+    const type = m[1].toUpperCase();
+    const val = m[2].trim();
+    if (type === "STALL") { const p = splitZone(val); return { kind: "stall", ref: p.ref, zone: p.zone }; }
+    if (type === "HERE") return { kind: "here", ref: val };
+    if (type === "LOC") {
+      const [x, y] = val.split(/[,; ]+/).map(Number);
+      if (Number.isFinite(x) && Number.isFinite(y)) return { kind: "loc", x, y, label: "Scanned location" };
+    }
+  }
+
+  // Bare "<category>-<id>" form (may also carry an "@<zone>" hint)
+  if (/^(meat|fish|veggies)-/i.test(text)) {
+    const p = splitZone(text.toLowerCase());
+    return { kind: "stall", ref: p.ref, zone: p.zone };
+  }
+
+  // Fall back to treating the whole string as a loose stall reference
+  return { kind: "stall", ref: text };
+};
+
+// Resolve a stall reference (from a QR) to an actual stall in the active list.
+// `zoneHint` (e.g. "F") disambiguates duplicate stall numbers across zones.
+const resolveStallFromRef = (ref, stallsList, zoneHint) => {
+  if (!ref) return null;
+  const norm = String(ref).trim().toLowerCase();
+  const stripU = (s) => s.replace(/\(u\d*\)/g, "");
+  const wantZone = zoneHint ? String(zoneHint).replace(/zone\s*/i, "").toUpperCase() : null;
+  const zoneOf = (s) => String(s.zone || "").replace(/zone\s*/i, "").toUpperCase();
+  const zoneOk = (s) => !wantZone || zoneOf(s) === wantZone;
+
+  // 1) exact id match — must win globally so "meat-1(u2)" never collapses to "meat-1"
+  let found = stallsList.find((s) => s.id.toLowerCase() === norm && zoneOk(s));
+  if (found) return found;
+
+  // 2) match by raw stall id within any section
+  found = stallsList.find((s) => String(s.rawId).toLowerCase() === norm && zoneOk(s));
+  if (found) return found;
+
+  // 3) "<category>-<cleanNumber>" e.g. "fish-21" (prefer the zone-matched stall)
+  const dash = norm.match(/^(meat|fish|veggies)-(.+)$/);
+  if (dash) {
+    const cat = dash[1];
+    const cleanRef = getCleanDbStallNumber(dash[2]);
+    const candidates = stallsList.filter((s) => s.category === cat && getCleanDbStallNumber(s.rawId) === cleanRef);
+    found = candidates.find(zoneOk) || (wantZone ? null : candidates[0]);
+    if (found) return found;
+  }
+
+  // 4) loose match ignoring the "(u#)" duplicate suffix (suffixless QR → suffixed stall)
+  found = stallsList.find((s) => stripU(s.id.toLowerCase()) === stripU(norm) && zoneOk(s));
+  if (found) return found;
+
+  // 5) loose label contains
+  found = stallsList.find((s) => s.label.toLowerCase().includes(norm) && zoneOk(s));
+  return found || null;
+};
+
+export default function ArFinder({ onBack, initialStall }) {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedStallId, setSelectedStallId] = useState("meat-1");
   const [stallsList, setStallsList] = useState(STALLS_AR);
@@ -279,6 +380,13 @@ export default function ArFinder({ onBack }) {
   const [selectedStartId, setSelectedStartId] = useState("entrance");
   const [toastMsg, setToastMsg] = useState("");
   const [isMobile, setIsMobile] = useState(false);
+
+  // ── QR scanning ──
+  const [showScanner, setShowScanner] = useState(false);
+  const [recognizedStall, setRecognizedStall] = useState(null);
+  const [recognizedDetails, setRecognizedDetails] = useState(null); // full DB record for the ⓘ panel
+  const [detailsOpen, setDetailsOpen] = useState(false);            // ⓘ details sheet open?
+  const arrivedFromPanorama = useRef(false);
 
   const videoRef = useRef(null);
   const streamRef = useRef(null);
@@ -626,6 +734,108 @@ export default function ArFinder({ onBack }) {
     setToastMsg(`Location set to: ${point.label}`);
     setShowStartSelector(false);
   };
+
+  // ── QR scanning ──────────────────────────────────────────────────────────
+  // Pause the AR background camera before opening the scanner — many phones
+  // cannot hand the rear camera to two getUserMedia streams at once.
+  const openScanner = () => { stopCamera(); setShowScanner(true); };
+  const closeScanner = () => { setShowScanner(false); if (cameraEnabled) startCamera(); };
+
+  const handleQrDetected = (text) => {
+    setShowScanner(false);
+    if (cameraEnabled) startCamera();
+
+    const parsed = parseQrPayload(text);
+    if (!parsed) { setToastMsg("Unrecognized QR code."); return; }
+
+    if (parsed.kind === "loc") {
+      gpsAnchorRef.current = null;
+      setUserX(Math.max(30, Math.min(2270, parsed.x)));
+      setUserY(Math.max(30, Math.min(1790, parsed.y)));
+      setSelectedStartId("custom");
+      setToastMsg(parsed.label ? `You are at: ${parsed.label}` : "Location set from QR.");
+      return;
+    }
+
+    if (parsed.kind === "here") {
+      const h = HALLWAYS.find((x) => x.id === parsed.ref);
+      if (h) {
+        gpsAnchorRef.current = null;
+        setUserX(h.x); setUserY(h.y); setSelectedStartId(h.id);
+        setToastMsg(`You are at: ${h.label}`);
+        return;
+      }
+      // not a known location id — fall through and try to resolve it as a stall
+    }
+
+    const stall = resolveStallFromRef(parsed.ref, stallsList, parsed.zone);
+    if (!stall) { setToastMsg(`QR not recognized: "${String(text).slice(0, 24)}"`); return; }
+    setRecognizedStall(stall);
+    setDetailsOpen(false);          // show the floating ⓘ marker first; tap it for full details
+    setRecognizedDetails(null);
+    fetchFullStallDetails(stall);
+  };
+
+  // Pull the full DB record so the ⓘ panel can show products, hours, vendor, etc.
+  const fetchFullStallDetails = async (stall) => {
+    try {
+      const cleanNum = getCleanDbStallNumber(stall.rawId);
+      const zone = String(stall.zone || "").replace(/zone\s*/i, "").trim();
+      const res = await fetch(`/api/stalls/search?zone=${encodeURIComponent(zone)}&stallNumber=${encodeURIComponent(cleanNum)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.stall) setRecognizedDetails(data.stall);
+      }
+    } catch (err) {
+      console.error("Failed to fetch full stall details:", err);
+    }
+  };
+
+  const dismissRecognized = () => {
+    setRecognizedStall(null);
+    setRecognizedDetails(null);
+    setDetailsOpen(false);
+  };
+
+  // "I'm here" — calibrate the user's position to the scanned stall.
+  const setRecognizedAsLocation = () => {
+    if (!recognizedStall) return;
+    gpsAnchorRef.current = null;
+    setUserX(recognizedStall.x);
+    setUserY(recognizedStall.y);
+    setSelectedStartId("custom");
+    setToastMsg(`Location set — you're at ${recognizedStall.label}`);
+    dismissRecognized();
+  };
+
+  // "Navigate here" — make the scanned stall the destination.
+  const navigateToRecognized = () => {
+    if (!recognizedStall) return;
+    setSelectedCategory(recognizedStall.category);
+    setSelectedStallId(recognizedStall.id);
+    setToastMsg(`Navigating to ${recognizedStall.label}`);
+    dismissRecognized();
+  };
+
+  // Arriving from the panorama's "Open AR View": target the stall and bring up
+  // the QR scanner so the camera is ready to recognize it.
+  useEffect(() => {
+    if (!initialStall || arrivedFromPanorama.current) return;
+    if (!stallsList || stallsList.length === 0) return;
+    arrivedFromPanorama.current = true;
+
+    const ref = `${initialStall.category}-${initialStall.rawId}`;
+    const stall = resolveStallFromRef(ref, stallsList, initialStall.zone);
+    if (stall) {
+      setSelectedCategory(stall.category);
+      setSelectedStallId(stall.id);
+      setToastMsg(`Targeting ${stall.label} — scan its QR to confirm`);
+    }
+    // Let the AR background camera finish acquiring before the scanner grabs the
+    // rear camera, so stopCamera() releases it cleanly (avoids a getUserMedia race).
+    const t = setTimeout(() => openScanner(), 400);
+    return () => clearTimeout(t);
+  }, [initialStall, stallsList]);
 
   const requestCompassPermission = async () => {
     if (typeof DeviceOrientationEvent?.requestPermission === "function") {
@@ -1062,6 +1272,9 @@ export default function ArFinder({ onBack }) {
         {isMobile && <div style={{ flex: 1 }} />}
 
         <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+          <button onClick={openScanner} className="hud-btn" style={{ background: "#e8621a", borderColor: "#e8621a" }} title="Scan a stall's QR code">
+            <QrCode size={15} />
+          </button>
           <button onClick={() => setCameraEnabled(c => !c)} className={`hud-btn${cameraEnabled ? " active" : ""}`}>
             {cameraEnabled ? <Camera size={15} /> : <CameraOff size={15} />}
           </button>
@@ -1513,6 +1726,97 @@ export default function ArFinder({ onBack }) {
                 ))
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── QR SCANNER OVERLAY ── */}
+      {showScanner && (
+        <QrScanner onDetected={handleQrDetected} onClose={closeScanner} />
+      )}
+
+      {/* ── RECOGNIZED: floating ⓘ marker (tap for details) ── */}
+      {recognizedStall && !detailsOpen && (
+        <div style={{ position: "absolute", left: 0, right: 0, bottom: 78, zIndex: 60, display: "flex", justifyContent: "center", padding: "0 14px", pointerEvents: "none" }}>
+          <div style={{ pointerEvents: "auto", display: "flex", alignItems: "center", gap: 10, maxWidth: 440, width: "100%", background: "rgba(15,23,16,0.96)", border: "1px solid rgba(34,197,94,0.4)", borderRadius: 14, padding: "10px 12px", boxShadow: "0 6px 24px rgba(0,0,0,0.45)", animation: "slideUp 0.2s ease" }}>
+            <div style={{ display: "flex", flexDirection: "column", minWidth: 0, flex: 1 }}>
+              <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.07em", textTransform: "uppercase", color: "#22c55e" }}>Stall Recognized</span>
+              <span style={{ fontSize: 14, fontWeight: 800, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{recognizedStall.label}</span>
+            </div>
+            <button onClick={() => setDetailsOpen(true)} title="View stall details" style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0, padding: "9px 12px", borderRadius: 999, border: "none", background: "#e8621a", color: "#fff", fontWeight: 800, fontSize: 12, cursor: "pointer" }}>
+              <Info size={16} /> Info
+            </button>
+            <button onClick={dismissRecognized} style={{ flexShrink: 0, width: 30, height: 30, borderRadius: "50%", background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.7)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+              <X size={14} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── RECOGNIZED: full ⓘ details sheet ── */}
+      {recognizedStall && detailsOpen && (
+        <div
+          onClick={() => setDetailsOpen(false)}
+          style={{ position: "fixed", inset: 0, zIndex: 320, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(2px)", display: "flex", alignItems: "flex-end", justifyContent: "center", padding: 14, animation: "fadeIn 0.15s ease" }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ width: "100%", maxWidth: 460, maxHeight: "82vh", overflowY: "auto", background: "#0f1710", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 18, padding: 16, boxShadow: "0 -8px 40px rgba(0,0,0,0.5)", animation: "sheetUp 0.22s cubic-bezier(0.22,1,0.36,1)" }}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                <div style={{ width: 30, height: 30, borderRadius: 9, background: "rgba(232,98,26,0.18)", border: "1px solid rgba(232,98,26,0.4)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <Info size={16} color="#e8621a" />
+                </div>
+                <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase", color: "#22c55e" }}>Stall Details</span>
+              </div>
+              <button onClick={dismissRecognized} style={{ width: 28, height: 28, borderRadius: "50%", background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.7)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+                <X size={14} />
+              </button>
+            </div>
+
+            <div style={{ fontSize: 18, fontWeight: 800, color: "#fff", marginBottom: 6 }}>{recognizedStall.label}</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
+              <span style={{ fontSize: 10, fontWeight: 800, color: "#e8621a", background: "rgba(232,98,26,0.12)", border: "1px solid rgba(232,98,26,0.25)", borderRadius: 999, padding: "3px 9px" }}>{recognizedStall.zone}</span>
+              <span style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.75)", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 999, padding: "3px 9px" }}>{recognizedStall.section}</span>
+              {recognizedStall.status && (
+                <span style={{ fontSize: 10, fontWeight: 800, color: String(recognizedStall.status).toLowerCase() === "occupied" ? "#fca5a5" : "#86efac", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 999, padding: "3px 9px", textTransform: "capitalize" }}>{recognizedStall.status}</span>
+              )}
+              {(recognizedDetails?.monthlyRate || recognizedStall.price) && (
+                <span style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.75)", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 999, padding: "3px 9px" }}>
+                  {recognizedDetails?.monthlyRate ? `₱${recognizedDetails.monthlyRate.toLocaleString()}/mo` : (typeof recognizedStall.price === "number" ? `₱${recognizedStall.price.toLocaleString()}/mo` : recognizedStall.price)}
+                </span>
+              )}
+            </div>
+
+            {/* Detail rows */}
+            <div style={{ display: "flex", flexDirection: "column", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, overflow: "hidden", marginBottom: 12 }}>
+              {[
+                { icon: <Tag size={14} />, label: "Category", value: recognizedStall.section },
+                { icon: <Store size={14} />, label: "What's sold", value: recognizedDetails?.productType || ({ meat: "Fresh meats", fish: "Fresh seafood", veggies: "Fresh vegetables" }[recognizedStall.category] || "—") },
+                { icon: <Clock size={14} />, label: "Operating hours", value: recognizedDetails?.operatingHours || "4:00 AM – 6:00 PM" },
+                { icon: <Store size={14} />, label: "Vendor", value: recognizedDetails?.vendorName || recognizedDetails?.tenant?.name || "—" },
+                { icon: <Navigation size={14} />, label: "Directions", value: recognizedDetails?.directions || "—" },
+              ].map((row, i) => (
+                <div key={row.label} style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "9px 12px", borderTop: i ? "1px solid rgba(255,255,255,0.06)" : "none" }}>
+                  <span style={{ color: "#e8621a", flexShrink: 0, marginTop: 1 }}>{row.icon}</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.5)", width: 104, flexShrink: 0 }}>{row.label}</span>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: "#fff", flex: 1, minWidth: 0 }}>{row.value}</span>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={setRecognizedAsLocation} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "11px 12px", borderRadius: 12, border: "1px solid #1a5c2a", background: "#1a5c2a", color: "#fff", fontSize: 13, fontWeight: 800, cursor: "pointer" }}>
+                <MapPin size={15} /> I'm here
+              </button>
+              <button onClick={navigateToRecognized} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "11px 12px", borderRadius: 12, border: "1px solid rgba(232,98,26,0.5)", background: "rgba(232,98,26,0.16)", color: "#fff", fontSize: 13, fontWeight: 800, cursor: "pointer" }}>
+                <Navigation size={15} /> Navigate here
+              </button>
+            </div>
+            <p style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", textAlign: "center", margin: "10px 0 0" }}>
+              "I'm here" calibrates your position · "Navigate here" sets it as your destination
+            </p>
           </div>
         </div>
       )}

@@ -1,0 +1,96 @@
+
+> client@0.0.0 dev
+> vite
+
+
+  [32m[1mVITE[22m v8.0.14[39m  [2mready in [0m[1m1368[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5173[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.254.105:[1m5173[22m/[39m
+[2m9:00:45 PM[22m [33m[1m[vite][22m[39m [33m[2m(client)[22m[39m [2m[console.warn] [22mWARNING: Multiple instances of Three.js being imported.
+[2m9:09:47 PM[22m [33m[1m[vite][22m[39m [33m[2m(client)[22m[39m [2m[console.warn] [22mWARNING: Multiple instances of Three.js being imported.
+[2m9:11:52 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/Renter/ArFinder.jsx[22m
+[2m9:11:53 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32m✨ new dependencies optimized: [33mjsqr[32m[39m
+[2m9:11:53 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32m✨ optimized dependencies changed. reloading[39m
+[2m9:11:54 PM[22m [33m[1m[vite][22m[39m [33m[2m(client)[22m[39m [2m[console.warn] [22mWARNING: Multiple instances of Three.js being imported.
+[2m9:12:14 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/Renter/ArFinder.jsx[22m
+[2m9:12:20 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/Renter/ArFinder.jsx[22m
+[2m9:12:36 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/Renter/ArFinder.jsx[22m
+[2m9:12:46 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/Renter/ArFinder.jsx[22m
+[2m9:13:12 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/Renter/ArFinder.jsx[22m
+[2m9:15:20 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/Renter/ArFinder.jsx[22m
+[2m9:23:12 PM[22m [33m[1m[vite][22m[39m [33m[2m(client)[22m[39m [2m[console.warn] [22mWARNING: Multiple instances of Three.js being imported.
+[2m9:23:30 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/Renter/ArFinder.jsx[22m
+[2m9:23:46 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/Renter/ArFinder.jsx[22m
+[2m9:23:52 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/Renter/ArFinder.jsx[22m
+[2m9:24:52 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Admin/AdminStalls.jsx, /src/index.css[22m
+[2m9:24:53 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32m✨ new dependencies optimized: [33mqrcode.react[32m[39m
+[2m9:24:53 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32m✨ optimized dependencies changed. reloading[39m
+[2m9:24:54 PM[22m [33m[1m[vite][22m[39m [33m[2m(client)[22m[39m [2m[console.warn] [22mWARNING: Multiple instances of Three.js being imported.
+[2m9:24:59 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Admin/AdminStalls.jsx, /src/index.css[22m
+[2m9:25:06 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Admin/AdminStalls.jsx, /src/index.css[22m
+[2m9:25:40 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Admin/AdminStalls.jsx, /src/index.css[22m
+[2m9:25:40 PM[22m [31m[1m[vite][22m[39m [31mInternal server error: Transform failed with 1 error:
+
+[31m[PARSE_ERROR] [0mUnexpected token. Did you mean `{'}'}` or `&rbrace;`?
+     [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m src/pages/Admin/AdminStalls.jsx:433:12 [38;5;246m][0m
+     [38;5;246m│[0m
+ [38;5;246m433 │[0m [38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m)[0m[38;5;249m}[0m
+ [38;5;240m    │[0m            │ 
+ [38;5;240m    │[0m            ╰─ 
+[38;5;246m─────╯[0m
+[39m
+  Plugin: [35mvite:oxc[39m
+  File: [36mC:/Users/Val/Desktop/MyTalipapa/client/src/pages/Admin/AdminStalls.jsx[39m
+      at transformWithOxc (file:///C:/Users/Val/Desktop/MyTalipapa/client/node_modules/vite/dist/node/chunks/node.js:3338:19)
+      at TransformPluginContext.transform (file:///C:/Users/Val/Desktop/MyTalipapa/client/node_modules/vite/dist/node/chunks/node.js:3409:26)
+      at EnvironmentPluginContainer.transform (file:///C:/Users/Val/Desktop/MyTalipapa/client/node_modules/vite/dist/node/chunks/node.js:30273:51)
+      at async loadAndTransform (file:///C:/Users/Val/Desktop/MyTalipapa/client/node_modules/vite/dist/node/chunks/node.js:24532:26)
+      at async viteTransformMiddleware (file:///C:/Users/Val/Desktop/MyTalipapa/client/node_modules/vite/dist/node/chunks/node.js:24326:20)
+[2m9:25:40 PM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22m[vite] Failed to reload /src/pages/Admin/AdminStalls.jsx. This could be due to syntax errors or importing non-existent modules. (see errors above)
+[2m9:25:44 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Admin/AdminStalls.jsx, /src/index.css[22m
+[2m9:26:11 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Admin/AdminStalls.jsx, /src/index.css[22m
+[2m9:26:27 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Admin/AdminStalls.jsx, /src/index.css[22m
+[2m9:27:08 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/Renter/ArFinder.jsx[22m
+[2m9:49:05 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/MarketTour360.jsx, /src/index.css[22m
+[2m9:49:11 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/MarketTour360.jsx, /src/index.css[22m
+[2m9:49:21 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/MarketTour360.jsx, /src/index.css[22m
+[2m9:49:26 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Renter/Renterlayout.jsx, /src/index.css[22m
+[2m9:49:36 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/Renter/ArFinder.jsx[22m
+[2m9:49:40 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/Renter/ArFinder.jsx[22m
+[2m9:49:47 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/Renter/ArFinder.jsx[22m
+[2m9:50:09 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/Renter/ArFinder.jsx[22m
+[2m9:50:36 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/Renter/ArFinder.jsx[22m
+[2m9:52:27 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/Renter/ArFinder.jsx[22m
+[2m9:53:18 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/Renter/ArFinder.jsx[22m
+[2m9:57:37 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/MarketTour360.jsx, /src/index.css[22m
+[2m9:57:49 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/MarketTour360.jsx, /src/index.css[22m
+[2m10:08:49 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Contractor/ContractorApplications.jsx, /src/index.css[22m
+[2m10:08:56 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Contractor/ContractorApplications.jsx, /src/index.css[22m
+[2m10:09:00 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Contractor/ContractorApplications.jsx, /src/index.css[22m
+[2m10:09:06 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Contractor/ContractorApplications.jsx, /src/index.css[22m
+[2m10:09:33 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Contractor/ContractorApplications.jsx, /src/index.css[22m
+[2m10:10:06 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/Renter/RenterApplications.jsx[22m
+[2m10:10:16 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/Renter/RenterApplications.jsx[22m
+[2m10:10:30 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/Renter/RenterApplications.jsx[22m
+[2m10:10:43 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/Renter/RenterApplications.jsx[22m
+[2m10:17:44 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/auth/Register.jsx, /src/index.css[22m
+[2m10:17:50 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/auth/Register.jsx, /src/index.css[22m
+[2m10:17:55 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/auth/Register.jsx, /src/index.css[22m
+[2m10:18:04 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/auth/Register.jsx, /src/index.css[22m
+[2m10:18:13 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/auth/Register.jsx, /src/index.css[22m
+[2m10:20:34 PM[22m [33m[1m[vite][22m[39m [33m[2m(client)[22m[39m [2m[console.warn] [22mWARNING: Multiple instances of Three.js being imported.
+[2m10:29:34 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/auth/Register.jsx, /src/index.css[22m
+[2m10:29:58 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/Renter/Renterprofile.jsx[22m
+[2m10:30:02 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/Renter/Renterprofile.jsx[22m
+[2m10:30:16 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/Renter/Renterprofile.jsx[22m
+[2m10:30:25 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Contractor/ContractorProfile.jsx, /src/index.css[22m
+[2m10:30:37 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Admin/AdminProfile.jsx, /src/index.css[22m
+[2m10:31:02 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Admin/AdminRecord.jsx, /src/index.css[22m
+[2m10:47:10 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Admin/AdminRecord.jsx, /src/index.css[22m
+[2m10:47:16 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Admin/AdminRecord.jsx, /src/index.css[22m
+[2m10:47:25 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Admin/AdminRecord.jsx, /src/index.css[22m
+[2m10:47:39 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Contractor/ContractorRecords.jsx, /src/index.css[22m
+[2m10:47:44 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Contractor/ContractorRecords.jsx, /src/index.css[22m
+[2m10:47:57 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Contractor/ContractorRecords.jsx, /src/index.css[22m
+[2m10:52:38 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Admin/AdminStalls.jsx, /src/index.css[22m

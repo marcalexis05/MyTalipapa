@@ -34,9 +34,143 @@ export default function AdminRecord() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [stallsList, setStallsList] = useState([]);
+  const [loadingStalls, setLoadingStalls] = useState(false);
+  const [addForm, setAddForm] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    contactNumber: '',
+    stallId: ''
+  });
+  const [registering, setRegistering] = useState(false);
+  const [regError, setRegError] = useState(null);
+  const [regSuccess, setRegSuccess] = useState(null);
+
+  useEffect(() => {
+    if (!showAddModal) return;
+    setLoadingStalls(true);
+    fetch('/api/admin/stalls')
+      .then(res => res.json())
+      .then(data => {
+        const available = data.filter(s => s.status === 'available');
+        setStallsList(available);
+      })
+      .catch(err => console.error('Error fetching stalls:', err))
+      .finally(() => setLoadingStalls(false));
+  }, [showAddModal]);
+
+  const handleRegisterWalkIn = async (e) => {
+    e.preventDefault();
+    setRegError(null);
+    setRegistering(true);
+    try {
+      const res = await fetch('/api/admin/walk-in-renter', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          first_name: addForm.firstName,
+          last_name: addForm.lastName,
+          email: addForm.email,
+          contact_number: `+63${addForm.contactNumber}`,
+          stallId: addForm.stallId
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to register walk-in renter');
+      }
+
+      setRegSuccess(data);
+      setAddForm({
+        firstName: '',
+        lastName: '',
+        email: '',
+        contactNumber: '',
+        stallId: ''
+      });
+
+      // Reload records
+      fetch('/api/admin/records')
+        .then(res => {
+          if (res.ok) return res.json();
+          throw new Error('Reload records failed');
+        })
+        .then(data => setRecords(data))
+        .catch(err => console.error('Error reloading records:', err));
+
+    } catch (err) {
+      console.error(err);
+      setRegError(err.message);
+    } finally {
+      setRegistering(false);
+    }
+  };
+
   const [archiveRequests, setArchiveRequests] = useState([]);
   const [isShowingArchives, setIsShowingArchives] = useState(false);
   const [archivedRecords, setArchivedRecords] = useState([]);
+
+  const [editingLease, setEditingLease] = useState(false);
+  const [leaseForm, setLeaseForm] = useState({
+    leaseStart: '',
+    leaseEnd: '',
+    noExpiry: true
+  });
+  const [savingLease, setSavingLease] = useState(false);
+
+  const handleSelectRenterForModal = (renter) => {
+    setSelectedRenter(renter);
+    setLeaseForm({
+      leaseStart: renter.leaseStart || '',
+      leaseEnd: renter.leaseEnd || '',
+      noExpiry: !renter.leaseEnd
+    });
+    setEditingLease(false);
+  };
+
+  const handleSaveLeaseDates = async () => {
+    setSavingLease(true);
+    try {
+      const res = await fetch(`/api/stalls/${selectedRenter.stallId}/lease`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          leaseStart: leaseForm.leaseStart || null,
+          leaseEnd: leaseForm.noExpiry ? null : (leaseForm.leaseEnd || null)
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to update lease dates');
+
+      setSelectedRenter(prev => ({
+        ...prev,
+        leaseStart: leaseForm.leaseStart,
+        leaseEnd: leaseForm.noExpiry ? '' : leaseForm.leaseEnd
+      }));
+
+      setEditingLease(false);
+      alert('Lease terms updated successfully.');
+
+      fetch('/api/admin/records')
+        .then(res => res.json())
+        .then(data => setRecords(data))
+        .catch(err => console.error('Error reloading records:', err));
+
+    } catch (err) {
+      console.error(err);
+      alert(err.message);
+    } finally {
+      setSavingLease(false);
+    }
+  };
 
   useEffect(() => {
     if (isShowingArchives) return;
@@ -202,9 +336,21 @@ export default function AdminRecord() {
         </header>
 
         <main className="dashboard-main rec-main">
-          <div className="rec-title-block">
-            <h1 className="rec-page-title">Renter Records</h1>
-            <p className="rec-page-sub">Manage and monitor market vendor occupancy.</p>
+          <div className="flex justify-between items-center mb-6 flex-wrap gap-3">
+            <div className="rec-title-block">
+              <h1 className="rec-page-title">Renter Records</h1>
+              <p className="rec-page-sub">Manage and monitor market vendor occupancy.</p>
+            </div>
+            <button
+              onClick={() => {
+                setRegSuccess(null);
+                setRegError(null);
+                setShowAddModal(true);
+              }}
+              className="px-4 py-2.5 bg-[#1a5c2a] hover:bg-[#154d23] text-white text-xs font-bold rounded-xl transition-all shadow-sm flex items-center gap-1.5 cursor-pointer border-none"
+            >
+              + Add Walk-in Renter
+            </button>
           </div>
 
           {/* Search */}
@@ -382,7 +528,7 @@ export default function AdminRecord() {
                       <span className="rec-stall-label">Stall Location</span>
                       <span className="rec-stall-value">{renter.stall}</span>
                     </div>
-                    <button className="rec-history-btn" onClick={() => setSelectedRenter(renter)}>
+                    <button className="rec-history-btn" onClick={() => handleSelectRenterForModal(renter)}>
                       View History
                     </button>
                   </div>
@@ -425,10 +571,6 @@ export default function AdminRecord() {
                 <span className="app-detail-value">{selectedRenter.phone}</span>
               </div>
               <div className="rec-modal-info-item">
-                <span className="app-detail-label">Renter Since</span>
-                <span className="app-detail-value">{selectedRenter.since}</span>
-              </div>
-              <div className="rec-modal-info-item">
                 <span className="app-detail-label">Last Payment</span>
                 <span className="app-detail-value">{selectedRenter.lastPayment}</span>
               </div>
@@ -438,12 +580,88 @@ export default function AdminRecord() {
                   {selectedRenter.amountDue}
                 </span>
               </div>
+              <div className="rec-modal-info-item">
+                <span className="app-detail-label">Next Payment Due</span>
+                <span className="app-detail-value text-orange-600 font-extrabold">{selectedRenter.nextDueDate || '—'}</span>
+              </div>
+
               {selectedRenter.status === 'archived' && (
                 <div className="rec-modal-info-item" style={{ gridColumn: '1 / -1' }}>
                   <span className="app-detail-label">Moved Out / Archived Date</span>
                   <span className="app-detail-value">{selectedRenter.archivedAt}</span>
                 </div>
               )}
+
+              <div className="rec-modal-info-item" style={{ gridColumn: '1 / -1' }}>
+                <div className="flex justify-between items-center w-full">
+                  <span className="app-detail-label">Lease Period</span>
+                  {selectedRenter.status !== 'archived' && !editingLease && (
+                    <button
+                      onClick={() => setEditingLease(true)}
+                      className="text-xs font-bold text-[#1a5c2a] hover:underline cursor-pointer border-none bg-transparent"
+                    >
+                      ✏ Edit Lease
+                    </button>
+                  )}
+                </div>
+                {editingLease ? (
+                  <div className="space-y-3 mt-2 w-full">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[9px] font-bold text-gray-400 uppercase tracking-wide mb-1 text-left">Lease Start</label>
+                        <input
+                          type="date"
+                          value={leaseForm.leaseStart}
+                          onChange={e => setLeaseForm(f => ({ ...f, leaseStart: e.target.value }))}
+                          className="w-full bg-white border border-gray-200 rounded-lg p-2 text-xs text-gray-800"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[9px] font-bold text-gray-400 uppercase tracking-wide mb-1 text-left">Lease End (Expiry)</label>
+                        <input
+                          type="date"
+                          disabled={leaseForm.noExpiry}
+                          value={leaseForm.leaseEnd}
+                          onChange={e => setLeaseForm(f => ({ ...f, leaseEnd: e.target.value }))}
+                          className="w-full bg-white border border-gray-200 rounded-lg p-2 text-xs text-gray-800 disabled:bg-gray-50 disabled:text-gray-400"
+                        />
+                      </div>
+                    </div>
+                    <label className="flex items-center gap-2 text-xs font-semibold text-gray-600 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={leaseForm.noExpiry}
+                        onChange={e => setLeaseForm(f => ({ ...f, noExpiry: e.target.checked, leaseEnd: e.target.checked ? '' : f.leaseEnd }))}
+                        className="rounded border-gray-300 text-[#1a5c2a] focus:ring-[#1a5c2a]"
+                      />
+                      No Expiry Date (Continuous Lease)
+                    </label>
+                    <div className="flex gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => setEditingLease(false)}
+                        className="px-3 py-1.5 border border-gray-200 rounded-lg text-[10px] font-bold text-gray-500 hover:bg-gray-50 cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        disabled={savingLease}
+                        onClick={handleSaveLeaseDates}
+                        className="px-3 py-1.5 bg-[#1a5c2a] hover:bg-[#154d23] text-white rounded-lg text-[10px] font-bold cursor-pointer border-none"
+                      >
+                        {savingLease ? 'Saving...' : 'Save Lease'}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <span className="app-detail-value">
+                    {selectedRenter.leaseStart ? new Date(selectedRenter.leaseStart).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+                    {' '}to{' '}
+                    {selectedRenter.leaseEnd ? new Date(selectedRenter.leaseEnd).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'No Expiry'}
+                  </span>
+                )}
+              </div>
             </div>
             <div className="rec-modal-history">
               <h3 className="rec-modal-history-title">Payment History</h3>
@@ -464,6 +682,157 @@ export default function AdminRecord() {
               )}
             </div>
             <button className="stall-modal-close" onClick={() => setSelectedRenter(null)}>Close</button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Add Walk-in Renter Modal ── */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowAddModal(false)}>
+          <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl border border-gray-100 flex flex-col animate-in fade-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="text-base font-extrabold text-gray-900">Add Walk-in Renter</h3>
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 hover:bg-gray-100 transition-colors cursor-pointer border-none"
+              >
+                ✕
+              </button>
+            </div>
+
+            {regSuccess ? (
+              <div className="p-6 text-center space-y-4">
+                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto text-green-600 text-xl font-bold">
+                  ✓
+                </div>
+                <h4 className="text-lg font-bold text-gray-800">Registration Successful!</h4>
+                <p className="text-sm text-gray-500">
+                  Walk-in renter <strong>{regSuccess.user.full_name}</strong> has been registered and assigned to Stall <strong>#{regSuccess.stall.stallNumber}</strong>.
+                </p>
+                <div className="p-4 bg-gray-50 rounded-xl border border-gray-100 text-left space-y-2">
+                  <div className="text-xs text-gray-500">
+                    <span className="font-semibold text-gray-700">Email:</span> {regSuccess.user.email}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    <span className="font-semibold text-gray-700">Temporary Password:</span>{' '}
+                    <code className="bg-gray-200 px-2 py-1 rounded text-green-700 font-bold select-all">
+                      {regSuccess.tempPassword}
+                    </code>
+                  </div>
+                  <div className="text-[10px] text-orange-500 font-medium">
+                    * The renter will be forced to change this password upon their first login.
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowAddModal(false)}
+                  className="w-full py-3 bg-[#1a5c2a] hover:bg-[#154d23] text-white text-xs font-bold rounded-xl transition-all shadow-sm cursor-pointer border-none"
+                >
+                  Done
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleRegisterWalkIn} className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+                {regError && (
+                  <div className="p-3 bg-red-50 text-red-600 text-xs font-semibold rounded-xl border border-red-100">
+                    {regError}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 text-left">First Name</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Juan"
+                      value={addForm.firstName}
+                      onChange={e => setAddForm(f => ({ ...f, firstName: e.target.value }))}
+                      className="w-full bg-[#f5f5f0] border border-transparent rounded-xl px-4 py-3 text-sm text-gray-800 focus:outline-none focus:border-[#1a5c2a] focus:bg-white transition-all duration-200 text-left"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 text-left">Last Name</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Dela Cruz"
+                      value={addForm.lastName}
+                      onChange={e => setAddForm(f => ({ ...f, lastName: e.target.value }))}
+                      className="w-full bg-[#f5f5f0] border border-transparent rounded-xl px-4 py-3 text-sm text-gray-800 focus:outline-none focus:border-[#1a5c2a] focus:bg-white transition-all duration-200 text-left"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 text-left">Email Address</label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="juan.delacruz@example.com"
+                    value={addForm.email}
+                    onChange={e => setAddForm(f => ({ ...f, email: e.target.value }))}
+                    className="w-full bg-[#f5f5f0] border border-transparent rounded-xl px-4 py-3 text-sm text-gray-800 focus:outline-none focus:border-[#1a5c2a] focus:bg-white transition-all duration-200 text-left"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 text-left">Contact Number</label>
+                  <div className="flex items-center bg-[#f5f5f0] border border-transparent rounded-xl px-4 focus-within:border-[#1a5c2a] focus-within:bg-white transition-all duration-200">
+                    <span className="text-gray-400 text-sm font-semibold mr-1.5 select-none">+63</span>
+                    <input
+                      type="tel"
+                      required
+                      placeholder="9171234567"
+                      pattern="[0-9]{10}"
+                      value={addForm.contactNumber}
+                      onChange={e => setAddForm(f => ({ ...f, contactNumber: e.target.value.replace(/\D/g, '').substring(0, 10) }))}
+                      className="flex-1 bg-transparent py-3 text-sm text-gray-800 focus:outline-none text-left"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 text-left">Assign Stall</label>
+                  {loadingStalls ? (
+                    <div className="text-xs text-gray-400 py-3 text-left">Loading available stalls...</div>
+                  ) : stallsList.length === 0 ? (
+                    <div className="text-xs text-red-500 py-3 font-semibold text-left">No available stalls left to assign!</div>
+                  ) : (
+                    <select
+                      required
+                      value={addForm.stallId}
+                      onChange={e => setAddForm(f => ({ ...f, stallId: e.target.value }))}
+                      className="w-full bg-[#f5f5f0] border border-transparent rounded-xl px-4 py-3 text-sm text-gray-800 focus:outline-none focus:border-[#1a5c2a] focus:bg-white transition-all duration-200 cursor-pointer text-left"
+                    >
+                      <option value="">-- Select Stall --</option>
+                      {stallsList.map(s => (
+                        <option key={s._id} value={s._id}>
+                          Stall #{s.stallNumber} - {s.section || 'General'} (₱{s.monthlyRate?.toLocaleString() || '0'}/mo)
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+
+                <div className="pt-2 flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddModal(false)}
+                    className="flex-1 py-3 rounded-xl border border-gray-200 text-gray-500 text-xs font-bold hover:bg-gray-50 transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={registering || stallsList.length === 0}
+                    className="flex-1 py-3 rounded-xl bg-[#1a5c2a] hover:bg-[#154d23] text-white text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer border-none"
+                  >
+                    {registering ? 'Registering...' : 'Register & Assign'}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}
