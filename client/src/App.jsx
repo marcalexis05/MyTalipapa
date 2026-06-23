@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import LandingPage from './pages/Landingpage'
 import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
@@ -8,6 +8,7 @@ import ContractorDashboard from './pages/Contractor/ContractorDashboard'
 import ContractorRecords from './pages/Contractor/ContractorRecords'
 import ContractorApplications from './pages/Contractor/ContractorApplications'
 import ContractorStalls from './pages/Contractor/ContractorStalls'
+import ContractorContracts from './pages/Contractor/ContractorContracts'
 import ContractorProfile from './pages/Contractor/ContractorProfile'
 import AdminDashboard from './pages/Admin/AdminDashboard'
 import VerifyEmail from './pages/VerifyEmail';
@@ -16,6 +17,7 @@ import AdminLogin from './pages/Admin/AdminLogin'
 import AdminRecord from './pages/Admin/AdminRecord'
 import AdminApplication from './pages/Admin/AdminApplication'
 import AdminStalls from './pages/Admin/AdminStalls'
+import AdminContracts from './pages/Admin/AdminContracts'
 import AdminSecurity from './pages/Admin/AdminSecurity'
 import AdminMessages from './pages/Admin/AdminMessages'
 import ContractorSecurity from './pages/Contractor/ContractorSecurity'
@@ -46,6 +48,7 @@ export default function App() {
           <Route path="/contractor/records" element={<ContractorRecords />} />
           <Route path="/contractor/applications" element={<ContractorApplications />} />
           <Route path="/contractor/stalls" element={<ContractorStalls />} />
+          <Route path="/contractor/contracts" element={<ContractorContracts />} />
           <Route path="/contractor/requests" element={<ContractorRequests />} />
           <Route path="/contractor/*" element={<ContractorDashboard />} />
         </Route>
@@ -59,6 +62,7 @@ export default function App() {
           <Route path="/admin/records" element={<AdminRecord />} />
           <Route path="/admin/applications" element={<AdminApplication />} />
           <Route path="/admin/stalls" element={<AdminStalls />} />
+          <Route path="/admin/contracts" element={<AdminContracts />} />
           <Route path="/admin/requests" element={<AdminRequests />} />
           <Route path="/admin/*" element={<AdminDashboard />} />
         </Route>
@@ -66,6 +70,9 @@ export default function App() {
         <Route path="/renter/market-tour" element={<MarketTour360 />} />
         <Route path="/renter/*" element={<RenterLayout />} />
         <Route path="/tour" element={<MarketTour360 />} />
+
+        {/* Unknown URLs fall back to the landing page instead of a blank screen */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   )

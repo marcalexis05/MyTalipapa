@@ -23,7 +23,7 @@ const LogoutIcon = () => (
   </svg>
 )
 
-const SHOW_AR_FINDER = false;
+const SHOW_AR_FINDER = true;
 
 const NAV_ITEMS = [
   { id: 'home', label: 'Home', Icon: Home },
@@ -94,14 +94,14 @@ function Sidebar({ active, setActive, collapsed, setCollapsed, onLogout }) {
 function BottomBar({ active, setActive }) {
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
-      <div className="grid grid-cols-6 h-16">
+      <div className="flex justify-around items-center h-16 px-1">
         {NAV_ITEMS.map(({ id, label, Icon }) => {
           const isActive = active === id
           return (
             <button
               key={id}
               onClick={() => setActive(id)}
-              className="flex flex-col items-center justify-center gap-0.5 transition-all px-0.5"
+              className="flex flex-col items-center justify-center gap-0.5 transition-all px-0.5 flex-1"
             >
               <div className={`p-1.5 rounded-xl transition-all ${isActive ? 'bg-[#1a5c2a]' : ''}`}>
                 <Icon size={16} className={isActive ? 'text-white' : 'text-gray-400'} />
@@ -207,7 +207,7 @@ export default function RenterLayout() {
       return <MarketTour360 />
     }
     if (location.pathname.includes('ar-finder')) {
-      return <ArFinder onBack={() => routerNavigate('/renter/dashboard')} initialStall={location.state?.stall} />
+      return <ArFinder onBack={() => routerNavigate('/')} initialStall={location.state?.stall} />
     }
 
     switch (activeTab) {
@@ -239,7 +239,7 @@ export default function RenterLayout() {
         return <RenterApplications onNavigate={navigate} prefill={prefillStall} />
 
       case 'ar-finder':
-        return <ArFinder onBack={() => routerNavigate('/renter/dashboard')} initialStall={location.state?.stall} />
+        return <ArFinder onBack={() => routerNavigate('/')} initialStall={location.state?.stall} />
 
       case 'navigate':
         return <MarketTour360 />

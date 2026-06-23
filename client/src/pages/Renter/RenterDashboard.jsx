@@ -17,7 +17,7 @@ import {
 } from 'lucide-react'
 import NotificationBell from '../../components/NotificationBell'
 
-const SHOW_AR_FINDER = false;
+const SHOW_AR_FINDER = true;
 
 const dashStyles = `
   @keyframes fadeSlideUp {

@@ -294,7 +294,14 @@ router.post('/login', async (req, res) => {
         if (app.status === 'pending') {
           return res.status(403).json({ error: 'Your registration is still pending admin review.' });
         } else if (app.status === 'rejected') {
-          return res.status(403).json({ error: 'Your registration application was rejected by the admin.' });
+          const reason = (app.rejectionReason || '').trim();
+          return res.status(403).json({
+            error: reason
+              ? `Your registration application was rejected. Reason: ${reason}`
+              : 'Your registration application was rejected by the admin.',
+            rejectionReason: reason || null,
+            status: 'rejected',
+          });
         }
       }
       return res.status(401).json({ error: 'Invalid email or password.' });
@@ -347,6 +354,20 @@ router.post('/login', async (req, res) => {
 
     if (!isMatch) {
       return res.status(401).json({ error: 'Invalid email or password.' });
+    }
+
+    // Block rejected contractor accounts and surface the specific rejection reason.
+    if (user.role === 'contractor' && user.status === 'rejected') {
+      const ContractorApplication = require('../models/ContractorApplication');
+      const app = await ContractorApplication.findOne({ email: email.toLowerCase() }).sort({ createdAt: -1 });
+      const reason = (app?.rejectionReason || '').trim();
+      return res.status(403).json({
+        error: reason
+          ? `Your registration application was rejected. Reason: ${reason}`
+          : 'Your registration application was rejected by the admin.',
+        rejectionReason: reason || null,
+        status: 'rejected',
+      });
     }
 
     // Auto-verify past users (who registered before email verification was introduced)

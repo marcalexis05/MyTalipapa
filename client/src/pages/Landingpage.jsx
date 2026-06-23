@@ -58,7 +58,7 @@ function CountUpTo({ target, trigger = true, duration = 1200 }) {
 
 export default function Landingpage() {
   const navigate = useNavigate();
-  const SHOW_AR_FINDER = false;
+  const SHOW_AR_FINDER = true;
   const [stats, setStats] = useState({ totalStalls: 120, availableStalls: 15, occupiedStalls: 105 });
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(null);

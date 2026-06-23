@@ -1,9 +1,32 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Compass, Info, HelpCircle, Navigation, RotateCw, Check, X, Camera, CameraOff, Map, ChevronDown, ChevronUp, Locate, ChevronLeft, ChevronRight, Search, Footprints, QrCode, MapPin, Clock, Tag, Store, Phone } from "lucide-react";
+import { ArrowLeft, Compass, Info, HelpCircle, Navigation, RotateCw, Check, X, Camera, CameraOff, Map, ChevronDown, ChevronUp, Locate, ChevronLeft, ChevronRight, Search, QrCode, MapPin, Clock, Tag, Store, Phone } from "lucide-react";
 import mapImage from "../../images/map.png";
 import logoImage from "../../images/logo.png";
 import { SVG_STALL_COORDS } from "../../utils/coords_dict";
 import QrScanner from "../../components/QrScanner";
+
+// Custom inline SVG replacement for lucide Footprints icon to ensure reliable rendering in all browser contexts
+const Footprints = ({ size = 18, color = "currentColor", ...props }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke={color}
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className="lucide lucide-footprints"
+    {...props}
+  >
+    <path d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0Z" />
+    <path d="M20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 0 4 0Z" />
+    <path d="M16 17h4" />
+    <path d="M4 13h4" />
+  </svg>
+);
+
 
 const getStallZone = (num, category) => {
   const stallId = String(num);
@@ -371,7 +394,9 @@ export default function ArFinder({ onBack, initialStall }) {
   const [heading, setHeading] = useState(0);
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState(null);
-  const [cameraEnabled, setCameraEnabled] = useState(true);
+  // Start in simulated AR view; the user taps "Enable Camera" (a real user
+  // gesture is what mobile browsers require to grant camera access anyway).
+  const [cameraEnabled, setCameraEnabled] = useState(false);
   const [mapCollapsed, setMapCollapsed] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [hasOrientation, setHasOrientation] = useState(false);
@@ -380,6 +405,7 @@ export default function ArFinder({ onBack, initialStall }) {
   const [selectedStartId, setSelectedStartId] = useState("entrance");
   const [toastMsg, setToastMsg] = useState("");
   const [isMobile, setIsMobile] = useState(false);
+  const [showMapSheet, setShowMapSheet] = useState(false); // mobile: floor map slide-up
 
   // ── QR scanning ──
   const [showScanner, setShowScanner] = useState(false);
@@ -559,6 +585,7 @@ export default function ArFinder({ onBack, initialStall }) {
 
   const stopCamera = () => {
     if (streamRef.current) { streamRef.current.getTracks().forEach(t => t.stop()); streamRef.current = null; }
+    if (videoRef.current) videoRef.current.srcObject = null;
     setCameraActive(false);
   };
 
@@ -860,6 +887,54 @@ export default function ArFinder({ onBack, initialStall }) {
     return `${emoji} ${num} · ${stall.zone}`;
   };
 
+  // Shared floor-map body — used by the desktop side panel and the mobile slide-up sheet.
+  const floorMapBody = (
+    <div className="ar-map-body">
+      <div style={{ position: "absolute", top: 10, left: "50%", transform: "translateX(-50%)", background: "rgba(255,255,255,0.92)", padding: "6px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700, color: "#1e293b", boxShadow: "0 2px 8px rgba(0,0,0,0.15)", pointerEvents: "none", zIndex: 10, border: "1px solid #e2e8f0", whiteSpace: "nowrap", maxWidth: "calc(100% - 24px)", overflow: "hidden", textOverflow: "ellipsis" }}>
+        Tap a stall to route · tap elsewhere to set your spot
+      </div>
+      <svg viewBox="0 0 2305 1824" preserveAspectRatio="xMidYMid meet"
+        onClick={handleMapClick} style={{ width: "100%", height: "100%", cursor: "crosshair", userSelect: "none" }}>
+        <image xlinkHref={mapImage} href={mapImage} x="-20" y="-15" width="2305" height="1824" preserveAspectRatio="none" />
+        <polyline points={pathPoints.map(p => `${p.x},${p.y}`).join(" ")}
+          fill="none" stroke="#e8621a" strokeWidth="10"
+          strokeDasharray="15 15" strokeLinecap="round" strokeLinejoin="round" />
+        {(selectedCategory === "all" ? stallsList : stallsList.filter(s => s.category === selectedCategory)).map(s => {
+          const isDest = s.id === selectedStallId;
+          return (
+            <g
+              key={s.id}
+              transform={`translate(${s.x},${s.y})`}
+              style={{ cursor: "pointer" }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedCategory(s.category);
+                setSelectedStallId(s.id);
+                setToastMsg(`Routing to ${s.label}`);
+              }}
+            >
+              <circle r="46" fill="transparent" />
+              {isDest && <circle r="40" fill="none" stroke="#e8621a" strokeWidth="5" opacity="0.55" />}
+              <circle r={isDest ? 26 : 15} fill={isDest ? "#e8621a" : "rgba(232,98,26,0.4)"} stroke="#fff" strokeWidth={isDest ? 5 : 3} />
+            </g>
+          );
+        })}
+        <g transform={`translate(${userX},${userY})`}>
+          <path d="M0 0 L-70 -120 A140 140 0 0 1 70 -120 Z" fill="rgba(26,92,42,0.22)" transform={`rotate(${heading})`} style={{ transformOrigin: "0px 0px" }} />
+          <g transform={`rotate(${heading})`}>
+            <circle r="25" fill="#1a5c2a" stroke="#fff" strokeWidth="4" />
+            <path d="M0 -15 L12 10 L0 4 L-12 10 Z" fill="#fff" />
+          </g>
+        </g>
+        <image href={logoImage} x="1960" y="1450" width="450" height="450" preserveAspectRatio="xMidYMid meet" style={{ pointerEvents: 'none' }} />
+      </svg>
+      <div className="sim-badge">
+        <Compass size={10} className="animate-spin-slow" />
+        <span>{userX}, {userY} | {heading}°{motionActive ? ` | ${stepCount}` : ''}</span>
+      </div>
+    </div>
+  );
+
   return (
     <div
       ref={containerRef}
@@ -1040,11 +1115,12 @@ export default function ArFinder({ onBack, initialStall }) {
         }
 
         .mobile-select-pill {
-          display: flex; align-items: center; gap: 4px;
+          display: flex; align-items: center; gap: 5px;
           background: rgba(255,255,255,0.10);
           border: 1px solid rgba(255,255,255,0.18);
           border-radius: 999px;
-          padding: 5px 9px;
+          padding: 8px 12px;
+          min-height: 38px;
           flex-shrink: 0;
         }
         .mobile-select-pill label {
@@ -1054,8 +1130,9 @@ export default function ArFinder({ onBack, initialStall }) {
           white-space: nowrap;
         }
         .mobile-select-pill select {
-          font-size: 11px; font-weight: 700; color: #fff;
+          font-size: 12px; font-weight: 700; color: #fff;
           background: transparent; border: none; outline: none; cursor: pointer;
+          appearance: none; -webkit-appearance: none;
         }
         .mobile-select-pill select option { color: #1e293b; background: #fff; }
 
@@ -1065,7 +1142,8 @@ export default function ArFinder({ onBack, initialStall }) {
           background: rgba(232,98,26,0.18);
           border: 1px solid rgba(232,98,26,0.45);
           border-radius: 999px;
-          padding: 5px 10px;
+          padding: 8px 12px;
+          min-height: 38px;
           cursor: pointer;
           transition: background 0.15s;
         }
@@ -1169,6 +1247,9 @@ export default function ArFinder({ onBack, initialStall }) {
           max-width: calc(100% - 24px);
           overflow: hidden; text-overflow: ellipsis;
         }
+        @media (max-width: 640px) {
+          .toast { top: calc(env(safe-area-inset-top, 0px) + 116px); }
+        }
 
         .ar-info-card {
           position: absolute; bottom: 10px; left: 10px; right: 56px;
@@ -1211,11 +1292,143 @@ export default function ArFinder({ onBack, initialStall }) {
           z-index: 25; backdrop-filter: blur(6px);
         }
         @media (max-width: 640px) {
-          .step-badge { right: 54px; }
+          .step-badge { right: 16px; top: calc(env(safe-area-inset-top, 0px) + 116px); }
+          .toast { top: calc(env(safe-area-inset-top, 0px) + 116px); }
         }
+
+        /* ============================================================
+           MOBILE-NATIVE AR CHROME (phones) — full-bleed camera with
+           floating glass controls + a bottom sheet. Desktop is unchanged.
+           ============================================================ */
+        .ar-m-topbar {
+          position: absolute; top: 0; left: 0; right: 0; z-index: 30;
+          display: flex; align-items: center; gap: 10px;
+          padding: calc(env(safe-area-inset-top, 0px) + 10px) 12px 10px;
+          background: linear-gradient(to bottom, rgba(8,12,8,0.55), rgba(8,12,8,0));
+          pointer-events: none;
+        }
+        .ar-m-topbar > * { pointer-events: auto; }
+        .ar-m-title {
+          flex: 1; min-width: 0; text-align: center;
+          font-size: 15px; font-weight: 800; color: #fff;
+          text-shadow: 0 1px 6px rgba(0,0,0,0.5);
+          white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .ar-m-fab {
+          width: 44px; height: 44px; border-radius: 50%;
+          border: 1px solid rgba(255,255,255,0.25);
+          background: rgba(20,28,20,0.5);
+          backdrop-filter: blur(10px);
+          display: flex; align-items: center; justify-content: center;
+          color: #fff; cursor: pointer; flex-shrink: 0;
+          transition: transform 0.12s, background 0.15s;
+        }
+        .ar-m-fab:active { transform: scale(0.9); }
+        .ar-m-fab.accent { background: #e8621a; border-color: #e8621a; }
+        .ar-m-fab.on { background: #1a5c2a; border-color: #1a5c2a; }
+
+        .ar-m-search {
+          position: absolute; left: 12px; right: 12px;
+          top: calc(env(safe-area-inset-top, 0px) + 62px); z-index: 28;
+          display: flex; align-items: center; gap: 8px;
+          background: rgba(255,255,255,0.96);
+          border-radius: 999px; padding: 8px 8px 8px 14px;
+          box-shadow: 0 4px 18px rgba(0,0,0,0.22);
+        }
+        .ar-m-search input {
+          flex: 1; min-width: 0; border: none; outline: none; background: transparent;
+          font-size: 14px; color: #0f172a;
+        }
+        .ar-m-search-btn {
+          flex-shrink: 0; height: 34px; padding: 0 16px; border: none;
+          background: #e8621a; color: #fff; font-size: 13px; font-weight: 800;
+          border-radius: 999px; cursor: pointer;
+        }
+
+        /* Right-side controls — larger, thumb-friendly on phones */
+        @media (max-width: 640px) {
+          .ctrl-btn { width: 46px; height: 46px; border-radius: 14px; }
+          .ctrl-btn svg { width: 18px; height: 18px; }
+        }
+
+        /* Bottom sheet — the primary control surface on mobile */
+        .ar-sheet {
+          position: absolute; left: 0; right: 0; bottom: 0; z-index: 25;
+          background: #ffffff;
+          border-radius: 22px 22px 0 0;
+          box-shadow: 0 -8px 30px rgba(0,0,0,0.22);
+          padding: 8px 16px calc(env(safe-area-inset-bottom, 0px) + 16px);
+          display: flex; flex-direction: column; gap: 12px;
+          animation: sheetUp 0.24s cubic-bezier(0.22,1,0.36,1);
+        }
+        .ar-sheet-handle {
+          width: 40px; height: 4px; border-radius: 2px;
+          background: #e2e8f0; margin: 2px auto 4px;
+        }
+        .ar-sheet-dest { display: flex; align-items: center; gap: 12px; }
+        .ar-sheet-dest-icon {
+          width: 44px; height: 44px; border-radius: 13px; flex-shrink: 0;
+          background: rgba(232,98,26,0.12); border: 1px solid rgba(232,98,26,0.25);
+          display: flex; align-items: center; justify-content: center;
+        }
+        .ar-sheet-dest-text { flex: 1; min-width: 0; }
+        .ar-sheet-cap { font-size: 9px; font-weight: 800; color: #1a5c2a; text-transform: uppercase; letter-spacing: 0.07em; }
+        .ar-sheet-name { font-size: 16px; font-weight: 800; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .ar-sheet-meta { font-size: 12px; color: #64748b; }
+        .ar-sheet-meta b { color: #e8621a; }
+        .ar-sheet-turn {
+          font-size: 12px; font-weight: 800; color: #b45309;
+          background: #fffbeb; border: 1px solid #fde68a;
+          border-radius: 10px; padding: 8px 12px; text-align: center;
+        }
+        .ar-sheet-directions {
+          font-size: 12px; color: #1e293b; line-height: 1.45;
+          background: rgba(232,98,26,0.06); border-left: 3px solid #e8621a;
+          padding: 8px 12px; border-radius: 0 8px 8px 0; max-height: 90px; overflow-y: auto;
+        }
+        .ar-sheet-actions { display: flex; gap: 8px; }
+        .ar-sheet-btn {
+          flex: 1; min-height: 48px; border-radius: 14px; cursor: pointer;
+          font-size: 13px; font-weight: 800; font-family: inherit;
+          display: flex; align-items: center; justify-content: center; gap: 7px;
+          border: 1.5px solid transparent; transition: transform 0.1s, background 0.15s;
+        }
+        .ar-sheet-btn:active { transform: scale(0.97); }
+        .ar-sheet-btn.primary { background: #e8621a; color: #fff; }
+        .ar-sheet-btn.secondary { background: #f1f5f9; color: #334155; border-color: #e2e8f0; }
+        .ar-sheet-iconbtn {
+          width: 48px; min-height: 48px; border-radius: 14px; flex: 0 0 48px;
+          background: #f1f5f9; color: #334155; border: 1.5px solid #e2e8f0;
+          display: flex; align-items: center; justify-content: center; cursor: pointer;
+        }
+        .ar-sheet-iconbtn:active { transform: scale(0.95); }
+
+        /* Floor map as a slide-up sheet on mobile */
+        .ar-map-sheet-backdrop {
+          position: absolute; inset: 0; z-index: 60;
+          background: rgba(0,0,0,0.5); animation: fadeIn 0.18s ease;
+          display: flex; flex-direction: column; justify-content: flex-end;
+        }
+        .ar-map-sheet {
+          background: #fff; border-radius: 22px 22px 0 0;
+          height: 70%; display: flex; flex-direction: column; overflow: hidden;
+          animation: sheetUp 0.24s cubic-bezier(0.22,1,0.36,1);
+          padding-bottom: env(safe-area-inset-bottom, 0px);
+        }
+
+        /* Category chips inside the destination picker */
+        .ar-pick-chips { display: flex; gap: 7px; overflow-x: auto; padding: 0 14px 10px; flex-shrink: 0; scrollbar-width: none; }
+        .ar-pick-chips::-webkit-scrollbar { display: none; }
+        .ar-pick-chip {
+          flex-shrink: 0; padding: 7px 14px; border-radius: 999px;
+          border: 1px solid rgba(255,255,255,0.18); background: rgba(255,255,255,0.06);
+          color: rgba(255,255,255,0.8); font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit;
+        }
+        .ar-pick-chip.active { background: #e8621a; border-color: #e8621a; color: #fff; }
       `}</style>
 
-      {/* ── TOP HEADER BAR ── */}
+      {/* ── TOP HEADER BAR (desktop) ── */}
+      {!isMobile && (
       <header style={{
         display: "flex", alignItems: "center", gap: 8,
         padding: "6px 10px",
@@ -1253,9 +1466,9 @@ export default function ArFinder({ onBack, initialStall }) {
                 if (filtered.length > 0) setSelectedStallId(filtered[0].id);
               }}>
                 <option value="all">All Sections</option>
-                <option value="meat"> Meat</option>
-                <option value="fish"> Fishes</option>
-                <option value="veggies"> Vegetables</option>
+                <option value="meat">Meat</option>
+                <option value="fish">Fishes</option>
+                <option value="veggies">Vegetables</option>
               </select>
             </div>
             <div className="stall-select">
@@ -1283,8 +1496,10 @@ export default function ArFinder({ onBack, initialStall }) {
           </button>
         </div>
       </header>
+      )}
 
-      {/* ── SEARCH BAR ── */}
+      {/* ── SEARCH BAR (desktop) ── */}
+      {!isMobile && (
       <div style={{
         padding: "8px 10px",
         background: "rgba(10,15,10,0.95)",
@@ -1324,50 +1539,6 @@ export default function ArFinder({ onBack, initialStall }) {
           Find
         </button>
       </div>
-
-      {/* ── MOBILE SELECTS BAR ── */}
-      {isMobile && (
-        <div className="header-selects-bar">
-          <div className="mobile-select-pill">
-            <label>START:</label>
-            <select value={selectedStartId} onChange={e => {
-              const val = e.target.value;
-              setSelectedStartId(val);
-              gpsAnchorRef.current = null;
-              if (val !== "custom") {
-                const found = HALLWAYS.find(h => h.id === val);
-                if (found) { setUserX(found.x); setUserY(found.y); setToastMsg(`Start: ${found.label}`); }
-              }
-            }} style={{ maxWidth: 90 }}>
-              <option value="custom" disabled={selectedStartId !== "custom"}>Custom</option>
-              {HALLWAYS.map(h => <option key={h.id} value={h.id}>{h.label.replace("Hallway ", "H").replace(" (", " (").split("(")[0].trim()}</option>)}
-            </select>
-          </div>
-
-          <div className="mobile-select-pill">
-            <label>SEC:</label>
-            <select value={selectedCategory} onChange={e => {
-              const cat = e.target.value;
-              setSelectedCategory(cat);
-              const filtered = cat === "all" ? stallsList : stallsList.filter(s => s.category === cat);
-              if (filtered.length > 0) setSelectedStallId(filtered[0].id);
-              setStallPickerSearch("");
-            }} style={{ maxWidth: 70 }}>
-              <option value="all">All</option>
-              <option value="meat"></option>
-              <option value="fish"></option>
-              <option value="veggies"></option>
-            </select>
-          </div>
-
-          <button className="stall-picker-btn" onClick={() => { setStallPickerSearch(""); setShowStallPicker(true); }}>
-            <div className="spb-label-wrap">
-              <span className="spb-caption">STALL:</span>
-              <span className="spb-value">{getShortStallLabel(currentStall)}</span>
-            </div>
-            <ChevronDown size={13} color="rgba(255,255,255,0.6)" style={{ flexShrink: 0 }} />
-          </button>
-        </div>
       )}
 
       {/* ── MAIN BODY ── */}
@@ -1376,34 +1547,76 @@ export default function ArFinder({ onBack, initialStall }) {
         {/* ── AR VIEWPORT ── */}
         <div className="ar-viewport">
 
+          {/* ── Floating mobile chrome (phones only) ── */}
+          {isMobile && (
+            <>
+              <div className="ar-m-topbar">
+                <button className="ar-m-fab" onClick={onBack} aria-label="Back"><ArrowLeft size={20} /></button>
+                <span className="ar-m-title">Find a Stall</span>
+                <button className="ar-m-fab accent" onClick={openScanner} aria-label="Scan QR code"><QrCode size={18} /></button>
+                <button className={`ar-m-fab${cameraEnabled ? " on" : ""}`} onClick={() => setCameraEnabled(c => !c)} aria-label="Toggle camera">
+                  {cameraEnabled ? <Camera size={18} /> : <CameraOff size={18} />}
+                </button>
+                <button className={`ar-m-fab${showHelp ? " on" : ""}`} onClick={() => setShowHelp(h => !h)} aria-label="Help"><HelpCircle size={18} /></button>
+              </div>
+              <div className="ar-m-search">
+                <Search size={16} color="#94a3b8" style={{ flexShrink: 0 }} />
+                <input
+                  type="text"
+                  placeholder="Search a stall or zone…"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') handleSearchSubmit(); }}
+                />
+                {searchQuery && (
+                  <button onClick={() => setSearchQuery("")} aria-label="Clear search" style={{ background: "none", border: "none", color: "#94a3b8", cursor: "pointer", padding: 4, flexShrink: 0, display: "flex" }}><X size={14} /></button>
+                )}
+                <button className="ar-m-search-btn" onClick={handleSearchSubmit}>Find</button>
+              </div>
+            </>
+          )}
+
           {/* Camera / Simulated BG */}
           <div style={{ position: "absolute", inset: 0, zIndex: 0 }}>
-            {cameraActive && !cameraError && cameraEnabled ? (
-              <video ref={videoRef} autoPlay playsInline muted style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-            ) : (
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                display: (cameraActive && !cameraError && cameraEnabled) ? "block" : "none"
+              }}
+            />
+            {!(cameraActive && !cameraError && cameraEnabled) && (
               <div style={{
                 width: "100%", height: "100%", display: "flex", flexDirection: "column",
-                alignItems: "center", justifyContent: "center", gap: 10,
-                background: "linear-gradient(135deg, #f0faf2 0%, #e8f5e9 100%)",
-                textAlign: "center", padding: 16,
+                alignItems: "center", justifyContent: "center", gap: 12,
+                textAlign: "center", padding: 24,
+                backgroundColor: "#0a0f0a",
+                backgroundImage: "radial-gradient(circle at 50% 34%, #14321d 0%, #0a0f0a 70%), repeating-linear-gradient(0deg, transparent, transparent 38px, rgba(255,255,255,0.035) 39px), repeating-linear-gradient(90deg, transparent, transparent 38px, rgba(255,255,255,0.035) 39px)",
               }}>
-                <div style={{ width: 50, height: 50, borderRadius: "50%", background: "rgba(26,92,42,0.1)", border: "1px solid rgba(26,92,42,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <CameraOff size={22} color="#1a5c2a" />
+                <div style={{ width: 64, height: 64, borderRadius: "50%", background: "rgba(232,98,26,0.15)", border: "1px solid rgba(232,98,26,0.4)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <CameraOff size={26} color="#e8621a" />
                 </div>
                 <div>
-                  <p style={{ fontSize: 13, fontWeight: 700, color: "#1e293b", margin: "0 0 4px" }}>
-                    {!cameraEnabled ? "Camera Feed Turned Off" : "AR Navigation Feed Active"}
+                  <p style={{ fontSize: 16, fontWeight: 800, color: "#fff", margin: "0 0 5px" }}>
+                    {!cameraEnabled ? "Simulated AR View" : "Starting Camera…"}
                   </p>
-                  <p style={{ fontSize: 10, color: "#64748b", maxWidth: 220, margin: 0 }}>
-                    {!cameraEnabled ? "Camera disabled. Use simulated perspective." : "Real-world camera stream mock. Rotate device or use HUD controls."}
+                  <p style={{ fontSize: 12, color: "rgba(255,255,255,0.62)", maxWidth: 250, margin: 0, lineHeight: 1.5 }}>
+                    {!cameraEnabled
+                       ? "Follow the on-screen arrows and floor map. Turn on your camera for real-world AR guidance."
+                       : "Allow camera access when prompted to see real-world AR guidance."}
                   </p>
                 </div>
                 {cameraError && cameraEnabled && (
-                  <p style={{ fontSize: 9, color: "#92400e", background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 999, padding: "4px 12px", margin: 0 }}>{cameraError}</p>
+                  <p style={{ fontSize: 10, color: "#fbbf24", background: "rgba(251,191,36,0.12)", border: "1px solid rgba(251,191,36,0.25)", borderRadius: 999, padding: "5px 14px", margin: 0 }}>{cameraError}</p>
                 )}
                 <button onClick={cameraEnabled ? startCamera : () => setCameraEnabled(true)}
-                  style={{ padding: "7px 16px", background: "#1a5c2a", color: "#fff", fontSize: 11, fontWeight: 700, border: "none", borderRadius: 10, cursor: "pointer" }}>
-                  {cameraEnabled ? "Retry Camera" : "Enable Camera"}
+                  style={{ marginTop: 4, padding: "12px 26px", background: "#e8621a", color: "#fff", fontSize: 13, fontWeight: 800, border: "none", borderRadius: 12, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 8, boxShadow: "0 6px 18px rgba(232,98,26,0.4)" }}>
+                  <Camera size={16} />{cameraEnabled ? "Retry Camera" : "Enable Camera"}
                 </button>
               </div>
             )}
@@ -1421,14 +1634,14 @@ export default function ArFinder({ onBack, initialStall }) {
             {/* Step counter badge — only shown when motion is active */}
             {motionActive && (
               <div className="step-badge">
-                <span></span>
+                <Footprints size={11} />
                 <span>{stepCount} steps</span>
               </div>
             )}
 
             {showHelp && (
               <div className="animate-fadeIn" style={{
-                position: "absolute", top: 10, left: 10, right: 54,
+                position: "absolute", top: isMobile ? 116 : 10, left: isMobile ? 12 : 10, right: isMobile ? 12 : 54,
                 background: "rgba(255,255,255,0.98)", border: "1px solid #e2e8f0",
                 borderRadius: 14, padding: "12px 14px",
                 boxShadow: "0 4px 20px rgba(0,0,0,0.12)", pointerEvents: "auto", zIndex: 20,
@@ -1523,7 +1736,7 @@ export default function ArFinder({ onBack, initialStall }) {
               style={{ marginBottom: 4 }}
               title="Toggle Step Detection"
             >
-              <span style={{ fontSize: motionActive ? 13 : 11 }}></span>
+              <Footprints size={18} />
             </button>
 
             {!hasOrientation && (
@@ -1540,8 +1753,39 @@ export default function ArFinder({ onBack, initialStall }) {
             </div>
           </div>
 
-          {/* Bottom info card */}
-          {showCard && (
+          {/* Bottom sheet — primary control surface (mobile) */}
+          {showCard && isMobile && (
+            <div className="ar-sheet">
+              <div className="ar-sheet-handle" />
+              <div className="ar-sheet-dest">
+                <div className="ar-sheet-dest-icon"><Navigation size={20} color="#e8621a" /></div>
+                <div className="ar-sheet-dest-text">
+                  <div className="ar-sheet-cap">Destination</div>
+                  <div className="ar-sheet-name">{currentStall.label}</div>
+                  <div className="ar-sheet-meta">{currentStall.zone} · <b>{totalDistance}m · {getETA(totalDistance)}</b></div>
+                </div>
+                <button className="ar-sheet-iconbtn" onClick={() => setShowCard(false)} aria-label="Hide panel"><ChevronDown size={18} /></button>
+              </div>
+              {!isArrived && Math.abs(relNextAngle) > 50 && (
+                <div className="ar-sheet-turn">{relNextAngle < 0 ? "◀ Turn left" : "Turn right ▶"} {Math.round(Math.abs(relNextAngle))}°</div>
+              )}
+              {searchDirections && (
+                <div className="ar-sheet-directions"><b style={{ color: "#e8621a" }}>Directions: </b>{searchDirections}</div>
+              )}
+              <div className="ar-sheet-actions">
+                <button className="ar-sheet-btn primary" onClick={() => { setStallPickerSearch(""); setShowStallPicker(true); }}>
+                  <Search size={16} /> Change Stall
+                </button>
+                <button className="ar-sheet-btn secondary" onClick={() => setShowStartSelector(true)}>
+                  <Navigation size={16} /> Start Point
+                </button>
+                <button className="ar-sheet-iconbtn" onClick={() => setShowMapSheet(true)} aria-label="Open floor map"><Map size={18} /></button>
+              </div>
+            </div>
+          )}
+
+          {/* Bottom info card (desktop) */}
+          {showCard && !isMobile && (
             <div className="ar-info-card" style={{ flexDirection: "column", alignItems: "stretch", gap: 6 }}>
               <div style={{ display: "flex", alignItems: "center", width: "100%" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
@@ -1575,17 +1819,26 @@ export default function ArFinder({ onBack, initialStall }) {
           )}
 
           {!showCard && (
-            <button onClick={() => setShowCard(true)} style={{ position: "absolute", bottom: 10, left: 10, display: "flex", alignItems: "center", gap: 5, background: "rgba(255,255,255,0.95)", border: "1px solid #e2e8f0", borderRadius: 999, padding: "6px 12px", fontSize: 10, fontWeight: 700, color: "#1e293b", cursor: "pointer", zIndex: 20, boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}>
-              <Info size={11} color="#e8621a" /><span>Show Info</span>
+            <button
+              onClick={() => setShowCard(true)}
+              style={{
+                position: "absolute",
+                bottom: isMobile ? "calc(env(safe-area-inset-bottom, 0px) + 14px)" : 10,
+                left: "50%", transform: "translateX(-50%)",
+                display: "flex", alignItems: "center", gap: 6,
+                background: "rgba(255,255,255,0.97)", border: "1px solid #e2e8f0",
+                borderRadius: 999, padding: "10px 18px", fontSize: 12, fontWeight: 800,
+                color: "#1e293b", cursor: "pointer", zIndex: 24, boxShadow: "0 4px 16px rgba(0,0,0,0.2)",
+              }}
+            >
+              <Navigation size={13} color="#e8621a" /><span>Navigation</span>
             </button>
           )}
         </div>
 
-        {/* ── MAP PANEL ── */}
-        <div
-          className={`ar-map-panel${!isMobile && mapCollapsed ? " collapsed-desktop" : ""}`}
-          style={isMobile ? { height: mapCollapsed ? MAP_HEADER_H : MAP_EXPANDED_H } : {}}
-        >
+        {/* ── MAP PANEL (desktop side panel) ── */}
+        {!isMobile && (
+        <div className={`ar-map-panel${mapCollapsed ? " collapsed-desktop" : ""}`}>
           <div className="ar-map-header" onClick={() => setMapCollapsed(c => !c)}>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <Map size={13} color="#e8621a" style={{ flexShrink: 0 }} />
@@ -1607,41 +1860,25 @@ export default function ArFinder({ onBack, initialStall }) {
             )}
           </div>
 
-          {!mapCollapsed && (
-            <div className="ar-map-body">
-              <div style={{ position: "absolute", top: 10, left: "50%", transform: "translateX(-50%)", background: "rgba(255,255,255,0.9)", padding: "6px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700, color: "#1e293b", boxShadow: "0 2px 8px rgba(0,0,0,0.15)", pointerEvents: "none", zIndex: 10, border: "1px solid #e2e8f0", whiteSpace: "nowrap" }}>
-                Tap the map to set your position
-              </div>
-              <svg viewBox="0 0 2305 1824" preserveAspectRatio="xMidYMid meet"
-                onClick={handleMapClick} style={{ width: "100%", height: "100%", cursor: "crosshair", userSelect: "none" }}>
-                <image xlinkHref={mapImage} href={mapImage} x="-20" y="-15" width="2305" height="1824" preserveAspectRatio="none" />
-                <polyline points={pathPoints.map(p => `${p.x},${p.y}`).join(" ")}
-                  fill="none" stroke="#e8621a" strokeWidth="10"
-                  strokeDasharray="15 15" strokeLinecap="round" strokeLinejoin="round" />
-                <g transform={`translate(${userX},${userY})`}>
-                  <path d="M0 0 L-70 -120 A140 140 0 0 1 70 -120 Z" fill="rgba(26,92,42,0.22)" transform={`rotate(${heading})`} style={{ transformOrigin: "0px 0px" }} />
-                  <g transform={`rotate(${heading})`}>
-                    <circle r="25" fill="#1a5c2a" stroke="#fff" strokeWidth="4" />
-                    <path d="M0 -15 L12 10 L0 4 L-12 10 Z" fill="#fff" />
-                  </g>
-                </g>
-
-                {/* MyTalipapa Logo — placed directly over diamond icon */}
-                <image
-                  href={logoImage}
-                  x="1960" y="1450"
-                  width="450" height="450"
-                  preserveAspectRatio="xMidYMid meet"
-                  style={{ pointerEvents: 'none' }}
-                />
-              </svg>
-              <div className="sim-badge">
-                <Compass size={10} className="animate-spin-slow" />
-                <span>{userX}, {userY} | {heading}°{motionActive ? ` | ${stepCount}` : ''}</span>
-              </div>
-            </div>
-          )}
+          {!mapCollapsed && floorMapBody}
         </div>
+        )}
+
+        {/* ── FLOOR MAP SLIDE-UP SHEET (mobile) ── */}
+        {isMobile && showMapSheet && (
+          <div className="ar-map-sheet-backdrop" onClick={() => setShowMapSheet(false)}>
+            <div className="ar-map-sheet" onClick={e => e.stopPropagation()}>
+              <div className="ar-map-header" style={{ cursor: "default" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <Map size={14} color="#e8621a" />
+                  <span className="ar-map-header-label">Floor Map</span>
+                </div>
+                <button className="stall-picker-close" onClick={() => setShowMapSheet(false)} aria-label="Close map"><X size={14} /></button>
+              </div>
+              {floorMapBody}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── START SELECTOR OVERLAY ── */}
@@ -1708,6 +1945,22 @@ export default function ArFinder({ onBack, initialStall }) {
                   autoFocus
                 />
               </div>
+            </div>
+            <div className="ar-pick-chips">
+              {[
+                { id: "all", label: "All" },
+                { id: "meat", label: "Meat" },
+                { id: "fish", label: "Fish" },
+                { id: "veggies", label: "Veg" },
+              ].map(c => (
+                <button
+                  key={c.id}
+                  className={`ar-pick-chip${selectedCategory === c.id ? " active" : ""}`}
+                  onClick={() => setSelectedCategory(c.id)}
+                >
+                  {c.label}
+                </button>
+              ))}
             </div>
             <div className="stall-picker-list">
               {filteredStallsForPicker.length === 0 ? (
