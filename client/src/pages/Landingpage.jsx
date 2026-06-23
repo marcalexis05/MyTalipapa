@@ -921,72 +921,21 @@ export default function Landingpage() {
             <div style={slideRight(footerInView, 0.25)} className="space-y-4">
               <h4 className="text-white font-bold text-xs uppercase tracking-wider">Get Mobile App</h4>
               <div className="bg-white p-2 rounded-xl inline-block shadow-md">
-                <svg width="84" height="84" viewBox="0 0 29 29" className="text-slate-950">
-                  <rect x="0" y="0" width="29" height="29" fill="white" />
-                  <rect x="1" y="1" width="7" height="7" fill="black" />
-                  <rect x="2" y="2" width="5" height="5" fill="white" />
-                  <rect x="3" y="3" width="3" height="3" fill="black" />
-                  <rect x="21" y="1" width="7" height="7" fill="black" />
-                  <rect x="22" y="2" width="5" height="5" fill="white" />
-                  <rect x="23" y="3" width="3" height="3" fill="black" />
-                  <rect x="1" y="21" width="7" height="7" fill="black" />
-                  <rect x="2" y="22" width="5" height="5" fill="white" />
-                  <rect x="3" y="23" width="3" height="3" fill="black" />
-                  <rect x="9" y="1" width="1" height="1" fill="black" />
-                  <rect x="11" y="1" width="2" height="1" fill="black" />
-                  <rect x="15" y="1" width="1" height="1" fill="black" />
-                  <rect x="17" y="1" width="1" height="1" fill="black" />
-                  <rect x="9" y="3" width="2" height="1" fill="black" />
-                  <rect x="13" y="3" width="1" height="1" fill="black" />
-                  <rect x="16" y="3" width="2" height="1" fill="black" />
-                  <rect x="19" y="3" width="1" height="1" fill="black" />
-                  <rect x="9" y="5" width="1" height="2" fill="black" />
-                  <rect x="12" y="6" width="3" height="1" fill="black" />
-                  <rect x="17" y="5" width="2" height="1" fill="black" />
-                  <rect x="11" y="9" width="1" height="1" fill="black" />
-                  <rect x="13" y="9" width="2" height="2" fill="black" />
-                  <rect x="17" y="9" width="1" height="1" fill="black" />
-                  <rect x="21" y="9" width="3" height="1" fill="black" />
-                  <rect x="26" y="9" width="2" height="1" fill="black" />
-                  <rect x="1" y="11" width="1" height="2" fill="black" />
-                  <rect x="4" y="11" width="2" height="1" fill="black" />
-                  <rect x="8" y="12" width="2" height="1" fill="black" />
-                  <rect x="11" y="12" width="1" height="2" fill="black" />
-                  <rect x="15" y="12" width="3" height="1" fill="black" />
-                  <rect x="20" y="11" width="1" height="3" fill="black" />
-                  <rect x="23" y="12" width="2" height="1" fill="black" />
-                  <rect x="27" y="11" width="1" height="2" fill="black" />
-                  <rect x="3" y="15" width="2" height="1" fill="black" />
-                  <rect x="6" y="14" width="1" height="2" fill="black" />
-                  <rect x="9" y="15" width="3" height="1" fill="black" />
-                  <rect x="14" y="15" width="1" height="1" fill="black" />
-                  <rect x="16" y="14" width="2" height="2" fill="black" />
-                  <rect x="22" y="15" width="1" height="1" fill="black" />
-                  <rect x="25" y="14" width="2" height="2" fill="black" />
-                  <rect x="1" y="18" width="3" height="1" fill="black" />
-                  <rect x="6" y="18" width="1" height="1" fill="black" />
-                  <rect x="9" y="18" width="2" height="1" fill="black" />
-                  <rect x="13" y="17" width="1" height="2" fill="black" />
-                  <rect x="16" y="18" width="3" height="1" fill="black" />
-                  <rect x="21" y="18" width="1" height="1" fill="black" />
-                  <rect x="24" y="18" width="2" height="1" fill="black" />
-                  <rect x="27" y="18" width="1" height="1" fill="black" />
-                  <rect x="9" y="21" width="2" height="2" fill="black" />
-                  <rect x="13" y="21" width="1" height="1" fill="black" />
-                  <rect x="16" y="22" width="2" height="1" fill="black" />
-                  <rect x="19" y="21" width="1" height="2" fill="black" />
-                  <rect x="12" y="24" width="3" height="1" fill="black" />
-                  <rect x="17" y="25" width="2" height="2" fill="black" />
-                  <rect x="22" y="24" width="1" height="1" fill="black" />
-                  <rect x="25" y="24" width="3" height="1" fill="black" />
-                </svg>
+                <img
+                  src="/qr-code.png"
+                  alt="Scan to download MyTalipapa App"
+                  width="84"
+                  height="84"
+                  className="block rounded"
+                />
               </div>
               <p className="text-[10px] text-slate-500 leading-snug">
                 Scan QR code to visit the mobile app, or click the download button below.
               </p>
               <a
-                href="/mytalipapa-app.apk"
-                download
+                href="https://my-talipapa-market.vercel.app/mytalipapa-app.apk"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="flex items-center justify-center gap-2 bg-green-700 hover:bg-green-800 active:bg-green-900 text-white font-bold text-[11px] px-4 py-2.5 rounded-xl transition shadow-sm w-max"
               >
                 <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
