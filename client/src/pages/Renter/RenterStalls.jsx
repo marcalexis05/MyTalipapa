@@ -162,7 +162,7 @@ const stallImages = {
 const StatusBadge = ({ status }) => (
   <span className={`absolute top-2 right-2 text-[10px] font-bold px-2 py-0.5 rounded-full transition-transform hover:scale-105 ${status === "available" ? "bg-[#2d6a2d] text-white" : "bg-red-600 text-white"
     }`}>
-    {status}
+    {status.charAt(0).toUpperCase() + status.slice(1)}
   </span>
 );
 
@@ -175,7 +175,28 @@ const getStallImage = (section) => {
   return stallImages.dryGoods;
 };
 
-const StallCard = ({ stall, onClick, animDelay = "0s", isBlocked = false }) => {
+const TourIcon = ({ size = 12, className = "" }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    <circle cx="12" cy="12" r="10" />
+    <circle cx="12" cy="12" r="3" />
+    <line x1="12" y1="2" x2="12" y2="5" />
+    <line x1="12" y1="19" x2="12" y2="22" />
+    <line x1="2" y1="12" x2="5" y2="12" />
+    <line x1="19" y1="12" x2="22" y2="12" />
+  </svg>
+);
+
+const StallCard = ({ stall, onClick, onNavigate, animDelay = "0s", isBlocked = false }) => {
   const displayId = stall.stallNumber || stall.id || stall._id?.toString() || "";
   const displayCategory = stall.section || stall.category || "";
   const displayZone = stall.zone ? `Zone ${stall.zone}` : (stall.floorArea ? (stall.floorArea === 'upper' ? 'Upper Floor' : 'Lower Floor') : "");
@@ -207,8 +228,18 @@ const StallCard = ({ stall, onClick, animDelay = "0s", isBlocked = false }) => {
         <p className="font-bold text-gray-900">Stall #{displayId}</p>
         <p className="text-xs text-gray-500">{displayZone} · {displayCategory}</p>
 
-        <div className="text-xs font-semibold text-gray-700 mt-2">
-          {displaySize} sqm · ₱{displayPrice.toLocaleString()}/mo
+        <div className="text-xs font-semibold text-gray-700 mt-2.5 flex justify-between items-center">
+          <span>{displaySize} sqm · ₱{displayPrice.toLocaleString()}/mo</span>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onNavigate && onNavigate('navigate', { stall });
+            }}
+            className="flex items-center gap-1 bg-[#1a5c2a] hover:bg-[#12421d] text-white text-[10px] font-bold px-2 py-1 rounded-lg transition-colors cursor-pointer shrink-0 ml-1 active:scale-95"
+          >
+            <TourIcon size={11} />
+            <span>Tour</span>
+          </button>
         </div>
       </div>
     </div>
@@ -216,11 +247,16 @@ const StallCard = ({ stall, onClick, animDelay = "0s", isBlocked = false }) => {
 };
 
 // --- MAIN ---
-export default function RenterStalls({ onNavigate, onOpenStall }) {
+export default function RenterStalls({ onNavigate, onOpenStall, initialFilter = 'All', initialShowAll = true, onFilterChange, onShowAllChange }) {
   const [stalls, setStalls] = useState([]);
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState("All");
-  const [showAll, setShowAll] = useState(false);
+  const [filter, setFilter] = useState(initialFilter);
+  const [showAll, setShowAll] = useState(initialShowAll);
+
+  // Sync filter/showAll changes back to parent so state survives stall detail open/close
+  const handleFilterChange = (f) => { setFilter(f); onFilterChange && onFilterChange(f); };
+  const handleShowAllChange = (v) => { setShowAll(v); onShowAllChange && onShowAllChange(v); };
+  const [statusFilter, setStatusFilter] = useState('All');
 
   const currentUser = getUser();
   const userEmail = currentUser?.email?.toLowerCase();
@@ -241,7 +277,7 @@ export default function RenterStalls({ onNavigate, onOpenStall }) {
       });
   }, []);
 
-  const filters = ["All", "Available", "Occupied", "Zone A", "Zone B", "Zone C", "Zone D", "Zone E", "Zone F", "Zone G", "Zone H"];
+  const filters = ["All", "Meat", "Vegetables", "Fishes"];
 
   const ownedStalls = stalls.filter((s) =>
     s.status === "occupied" &&
@@ -264,11 +300,16 @@ export default function RenterStalls({ onNavigate, onOpenStall }) {
 
     const matchFilter =
       filter === "All" ||
-      (filter === "Available" && s.status === "available") ||
-      (filter === "Occupied" && s.status === "occupied") ||
-      filter === `Zone ${stallZone}`;
+      (filter === "Meat" && stallCategory.toLowerCase().includes("meat")) ||
+      (filter === "Vegetables" && (stallCategory.toLowerCase().includes("veg") || stallCategory.toLowerCase().includes("produce") || stallCategory.toLowerCase().includes("fruit"))) ||
+      (filter === "Fishes" && (stallCategory.toLowerCase().includes("fish") || stallCategory.toLowerCase().includes("sea")));
 
-    return matchSearch && matchFilter;
+    const matchStatus =
+      statusFilter === "All" ||
+      (statusFilter === "Available" && s.status === "available") ||
+      (statusFilter === "Occupied" && s.status === "occupied");
+
+    return matchSearch && matchFilter && matchStatus;
   });
 
   const isBlocked = (stall) =>
@@ -293,7 +334,7 @@ export default function RenterStalls({ onNavigate, onOpenStall }) {
 
             {hasOwnedStalls && (
               <button
-                onClick={() => setShowAll(!showAll)}
+                onClick={() => handleShowAllChange(!showAll)}
                 className={`toggle-btn px-4 py-2 rounded-xl text-xs font-bold active:scale-95 ${showAll
                     ? "bg-gray-200 text-gray-700 hover:bg-gray-300"
                     : "bg-[#1a5c2a] text-white hover:bg-[#154d23]"
@@ -316,7 +357,7 @@ export default function RenterStalls({ onNavigate, onOpenStall }) {
                 </p>
               </div>
               <button
-                onClick={() => setShowAll(true)}
+                onClick={() => handleShowAllChange(true)}
                 className="avail-btn bg-[#1a5c2a] text-white text-xs font-bold px-6 py-2.5 rounded-xl hover:bg-[#154d23]"
                 style={{ animation: 'fadeSlideUp 0.4s ease 0.25s both' }}
               >
@@ -348,12 +389,12 @@ export default function RenterStalls({ onNavigate, onOpenStall }) {
                 )}
               </div>
 
-              {/* Filters */}
+              {/* Category Filters */}
               <div className="stalls-filters flex gap-2 overflow-x-auto pb-1">
                 {filters.map((f, idx) => (
                   <button
                     key={f}
-                    onClick={() => setFilter(f)}
+                    onClick={() => handleFilterChange(f)}
                     className={`filter-btn px-4 py-1.5 rounded-full text-xs font-bold border whitespace-nowrap ${filter === f
                         ? "bg-[#2d6a2d] text-white border-transparent"
                         : "bg-white text-gray-500 border-gray-200 hover:text-gray-700"
@@ -361,6 +402,27 @@ export default function RenterStalls({ onNavigate, onOpenStall }) {
                     style={{ animation: `filterSlideIn 0.3s ease ${0.18 + idx * 0.03}s both` }}
                   >
                     {f}
+                  </button>
+                ))}
+              </div>
+
+              {/* Status Sub-Filters */}
+              <div className="flex gap-2 pb-1" style={{ animation: 'filterSlideIn 0.3s ease 0.3s both' }}>
+                {[
+                  { key: 'All', label: 'All Statuses', activeClass: 'bg-gray-800 text-white border-transparent', dot: null },
+                  { key: 'Available', label: '● Available', activeClass: 'bg-emerald-600 text-white border-transparent', dot: 'text-emerald-400' },
+                  { key: 'Occupied', label: '● Occupied', activeClass: 'bg-red-500 text-white border-transparent', dot: 'text-red-400' },
+                ].map(({ key, label, activeClass }) => (
+                  <button
+                    key={key}
+                    onClick={() => setStatusFilter(key)}
+                    className={`filter-btn px-3.5 py-1 rounded-full text-[11px] font-bold border whitespace-nowrap transition-all ${
+                      statusFilter === key
+                        ? activeClass
+                        : 'bg-white text-gray-400 border-gray-200 hover:text-gray-600'
+                    }`}
+                  >
+                    {label}
                   </button>
                 ))}
               </div>
@@ -373,6 +435,7 @@ export default function RenterStalls({ onNavigate, onOpenStall }) {
                       key={stall.id || stall._id}
                       stall={stall}
                       isBlocked={isBlocked(stall)}
+                      onNavigate={onNavigate}
                       onClick={() => {
                         if (!isBlocked(stall)) {
                           onOpenStall && onOpenStall(stall);

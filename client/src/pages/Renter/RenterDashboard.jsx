@@ -194,7 +194,7 @@ export default function RenterDashboard({ onNavigate, onOpenStall }) {
 
   useEffect(() => {
     if (!currentUser) {
-      navigate('/login')
+      navigate('/')
       return
     }
 

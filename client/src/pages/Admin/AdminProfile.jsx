@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ChevronRight, Store } from 'lucide-react'
+import { ChevronRight, ChevronDown, Store, CheckCircle } from 'lucide-react'
 import { useCurrentUser, getUser, saveUser, getToken } from '../../utils/auth';
 
 import NotificationBell from '../../components/NotificationBell';
@@ -35,9 +35,13 @@ export default function AdminProfile() {
   const [updating, setUpdating] = useState(false)
   const [user, setUser] = useState(getUser() || {})
   const [showEditModal, setShowEditModal] = useState(false)
+  const [showSuffixDropdown, setShowSuffixDropdown] = useState(false)
+  const [showConfirmSaveModal, setShowConfirmSaveModal] = useState(false)
   const [editForm, setEditForm] = useState({
     firstName: '',
+    middleName: '',
     lastName: '',
+    suffix: '',
     contactNumber: ''
   })
 
@@ -106,19 +110,31 @@ export default function AdminProfile() {
   const openEditModal = () => {
     setEditForm({
       firstName: user.first_name || '',
+      middleName: user.middle_name || 'N/A',
       lastName: user.last_name || '',
+      suffix: user.suffix || 'N/A',
       contactNumber: user.contact_number || ''
     })
+    setShowSuffixDropdown(false)
+    setShowConfirmSaveModal(false)
     setShowEditModal(true)
   }
 
-  const handleSaveProfile = async (e) => {
+  const handleSaveProfile = (e) => {
     e.preventDefault()
+    setShowConfirmSaveModal(true)
+  }
+
+  const executeSaveProfile = async () => {
     await updateProfile({
       first_name: editForm.firstName,
+      middle_name: editForm.middleName === 'N/A' ? '' : editForm.middleName,
       last_name: editForm.lastName,
+      suffix: editForm.suffix === 'N/A' ? '' : editForm.suffix,
       contact_number: editForm.contactNumber
     })
+    setShowSuffixDropdown(false)
+    setShowConfirmSaveModal(false)
     setShowEditModal(false)
   }
 
@@ -287,6 +303,19 @@ export default function AdminProfile() {
                   />
                 </div>
                 <div>
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 text-left">Middle Name / Initial</label>
+                  <input
+                    type="text"
+                    value={editForm.middleName}
+                    onChange={(e) => setEditForm(f => ({ ...f, middleName: e.target.value }))}
+                    required
+                    className="w-full bg-[#f5f5f0] border border-transparent rounded-xl px-4 py-3 text-sm text-gray-800 focus:outline-none focus:border-[#1a5c2a] focus:bg-white transition-all duration-200"
+                    placeholder="e.g. A. or N/A"
+                  />
+                </div>
+              </div>
+              <div className={`grid grid-cols-2 gap-3 relative ${showSuffixDropdown ? 'z-20' : 'z-0'}`}>
+                <div>
                   <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 text-left">Last Name</label>
                   <input
                     type="text"
@@ -296,6 +325,50 @@ export default function AdminProfile() {
                     className="w-full bg-[#f5f5f0] border border-transparent rounded-xl px-4 py-3 text-sm text-gray-800 focus:outline-none focus:border-[#1a5c2a] focus:bg-white transition-all duration-200"
                     placeholder="Dela Cruz"
                   />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 text-left">Suffix</label>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setShowSuffixDropdown(!showSuffixDropdown)}
+                      className="w-full bg-[#f5f5f0] border border-transparent rounded-xl px-4 py-3 text-sm text-gray-800 focus:outline-none focus:border-[#1a5c2a] focus:bg-white transition-all duration-200 flex items-center justify-between text-left"
+                    >
+                      <span>{editForm.suffix || 'N/A'}</span>
+                      <ChevronDown size={16} className={`text-gray-400 transition-transform duration-200 ${showSuffixDropdown ? 'rotate-180' : ''}`} />
+                    </button>
+                    {showSuffixDropdown && (
+                      <>
+                        <div 
+                          className="fixed inset-0 z-40" 
+                          onClick={() => setShowSuffixDropdown(false)} 
+                        />
+                        <ul 
+                          className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-150 rounded-xl shadow-xl z-50 py-1 max-h-48 overflow-y-auto"
+                          style={{ transformOrigin: 'top' }}
+                        >
+                          {['N/A', 'Jr.', 'Sr.', 'II', 'III', 'IV', 'V'].map((opt) => (
+                            <li key={opt}>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditForm(f => ({ ...f, suffix: opt }));
+                                  setShowSuffixDropdown(false);
+                                }}
+                                className={`w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors ${
+                                  editForm.suffix === opt 
+                                    ? 'font-bold text-[#1a5c2a] bg-green-50/40' 
+                                    : 'text-gray-700'
+                                }`}
+                              >
+                                {opt}
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
               <div>
@@ -336,6 +409,48 @@ export default function AdminProfile() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Confirm Save Changes Modal ── */}
+      {showConfirmSaveModal && (
+        <div
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
+          onClick={() => setShowConfirmSaveModal(false)}
+        >
+          <div
+            className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl border border-gray-100 flex flex-col"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Icon */}
+            <div className="flex flex-col items-center pt-8 pb-2 px-6">
+              <div className="w-14 h-14 rounded-full bg-green-50 flex items-center justify-center mb-4">
+                <CheckCircle size={24} className="text-green-600" />
+              </div>
+              <h3 className="text-base font-extrabold text-gray-900 text-center">Save Changes?</h3>
+              <p className="text-xs text-gray-400 text-center mt-2 mb-6">
+                Are you sure you want to save these changes to your personal information?
+              </p>
+            </div>
+            {/* Actions */}
+            <div className="px-6 pb-6 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setShowConfirmSaveModal(false)}
+                className="flex-1 py-3 rounded-xl border border-gray-200 text-gray-500 text-xs font-bold hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={executeSaveProfile}
+                disabled={updating}
+                className="flex-1 py-3 rounded-xl bg-green-700 hover:bg-green-800 text-white text-xs font-bold shadow-sm flex items-center justify-center gap-1.5 disabled:opacity-60 transition-colors"
+              >
+                {updating ? 'Saving…' : 'Yes, Save'}
+              </button>
+            </div>
           </div>
         </div>
       )}

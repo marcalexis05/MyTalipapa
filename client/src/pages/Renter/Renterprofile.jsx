@@ -7,12 +7,12 @@
  *   onNavigate(tab) – from RenterLayout
  *   onLogout()      – from RenterLayout
  */
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import {
-  Bell, User, ChevronRight, ExternalLink,
+  Bell, User, ChevronRight, ChevronDown, ExternalLink,
   LogOut, Shield, Bell as BellIcon,
   ShoppingBag, Calendar, CheckCircle, Edit, MessageSquare, Send,
-  Eye, EyeOff,
+  Eye, EyeOff, HelpCircle,
 } from 'lucide-react'
 import { getUser, saveUser, getToken } from '../../utils/auth'
 import NotificationBell from '../../components/NotificationBell'
@@ -235,7 +235,9 @@ export default function RenterProfile({ onLogout }) {
   const [updating, setUpdating] = useState(false)
   const [user, setUser] = useState(getUser() || {})
   const [showEditModal, setShowEditModal] = useState(false)
-  const [editForm, setEditForm] = useState({ firstName: '', lastName: '', contactNumber: '' })
+  const [editForm, setEditForm] = useState({ firstName: '', middleName: '', lastName: '', suffix: '', contactNumber: '' })
+  const [showSuffixDropdown, setShowSuffixDropdown] = useState(false)
+  const [showConfirmSaveModal, setShowConfirmSaveModal] = useState(false)
   const [showPasswordModal, setShowPasswordModal] = useState(false)
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: '',
@@ -248,12 +250,33 @@ export default function RenterProfile({ onLogout }) {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false)
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [showStrengthTooltip, setShowStrengthTooltip] = useState(false)
+
+  const isMinLength = passwordForm.newPassword.length >= 8
+  const hasUppercase = /[A-Z]/.test(passwordForm.newPassword)
+  const hasDigit = /[0-9]/.test(passwordForm.newPassword)
+  const hasSpecial = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?~]/.test(passwordForm.newPassword)
+  const isPasswordValid = isMinLength && hasUppercase && hasDigit && hasSpecial
+  const passwordsMatch = passwordForm.confirmPassword.length > 0 && passwordForm.confirmPassword === passwordForm.newPassword
+
+  const passwordStrength = useMemo(() => {
+    if (!passwordForm.newPassword) return { score: 0, label: '', color: 'text-slate-400', barColor: 'bg-slate-200' }
+    if (passwordForm.newPassword.length < 8) return { score: 1, label: 'Weak (too short)', color: 'text-red-500', barColor: 'bg-red-500' }
+    let score = 1
+    if (/[A-Z]/.test(passwordForm.newPassword)) score++
+    if (/[0-9]/.test(passwordForm.newPassword)) score++
+    if (/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?~]/.test(passwordForm.newPassword)) score++
+    if (score === 4) return { score, label: 'Strong', color: 'text-green-600', barColor: 'bg-green-600' }
+    if (score === 3) return { score, label: 'Medium', color: 'text-amber-500', barColor: 'bg-amber-500' }
+    return { score, label: 'Weak', color: 'text-red-500', barColor: 'bg-red-500' }
+  }, [passwordForm.newPassword])
 
   const closePasswordModal = () => {
     setShowPasswordModal(false)
     setShowCurrentPassword(false)
     setShowNewPassword(false)
     setShowConfirmPassword(false)
+    setShowStrengthTooltip(false)
   }
 
   /* ── Contact Admin state ── */
@@ -318,19 +341,31 @@ export default function RenterProfile({ onLogout }) {
   const openEditModal = () => {
     setEditForm({
       firstName: user.first_name || '',
+      middleName: user.middle_name || 'N/A',
       lastName: user.last_name || '',
+      suffix: user.suffix || 'N/A',
       contactNumber: user.contact_number || ''
     })
+    setShowSuffixDropdown(false)
+    setShowConfirmSaveModal(false)
     setShowEditModal(true)
   }
 
-  const handleSaveProfile = async (e) => {
+  const handleSaveProfile = (e) => {
     e.preventDefault()
+    setShowConfirmSaveModal(true)
+  }
+
+  const executeSaveProfile = async () => {
     await updateProfile({
       first_name: editForm.firstName,
+      middle_name: editForm.middleName === 'N/A' ? '' : editForm.middleName,
       last_name: editForm.lastName,
+      suffix: editForm.suffix === 'N/A' ? '' : editForm.suffix,
       contact_number: editForm.contactNumber
     })
+    setShowSuffixDropdown(false)
+    setShowConfirmSaveModal(false)
     setShowEditModal(false)
   }
 
@@ -585,7 +620,7 @@ export default function RenterProfile({ onLogout }) {
           <div className="rp-menu-group bg-white border-y border-gray-100" style={{ animationDelay: '0.32s' }}>
             <MenuRow icon={User} label="Personal Information" onClick={openEditModal} />
             <RowDivider />
-            <MenuRow icon={Shield} label="Security" onClick={handleSecuritySettings} />
+            <MenuRow icon={Shield} label="Change Password" onClick={handleSecuritySettings} />
           </div>
 
           {/* ── Help & Support ── */}
@@ -704,6 +739,48 @@ export default function RenterProfile({ onLogout }) {
           </div>
         )}
 
+        {/* ── Confirm Save Changes Modal ── */}
+        {showConfirmSaveModal && (
+          <div
+            className="rp-overlay fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
+            onClick={() => setShowConfirmSaveModal(false)}
+          >
+            <div
+              className="rp-modal bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl border border-gray-100 flex flex-col"
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Icon */}
+              <div className="flex flex-col items-center pt-8 pb-2 px-6">
+                <div className="w-14 h-14 rounded-full bg-green-50 flex items-center justify-center mb-4">
+                  <CheckCircle size={24} className="text-green-600" />
+                </div>
+                <h3 className="text-base font-extrabold text-gray-900 text-center">Save Changes?</h3>
+                <p className="text-xs text-gray-400 text-center mt-2 mb-6">
+                  Are you sure you want to save these changes to your personal information?
+                </p>
+              </div>
+              {/* Actions */}
+              <div className="px-6 pb-6 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmSaveModal(false)}
+                  className="rp-modal-btn flex-1 py-3 rounded-xl border border-gray-200 text-gray-500 text-xs font-bold hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={executeSaveProfile}
+                  disabled={updating}
+                  className="rp-modal-btn flex-1 py-3 rounded-xl bg-green-700 hover:bg-green-800 text-white text-xs font-bold shadow-sm flex items-center justify-center gap-1.5 disabled:opacity-60 transition-colors"
+                >
+                  {updating ? 'Saving…' : 'Yes, Save'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ── Edit Profile Modal ── */}
         {showEditModal && (
           <div
@@ -737,6 +814,19 @@ export default function RenterProfile({ onLogout }) {
                     />
                   </div>
                   <div>
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Middle Name / Initial</label>
+                    <input
+                      type="text"
+                      value={editForm.middleName}
+                      onChange={(e) => setEditForm(f => ({ ...f, middleName: e.target.value }))}
+                      required
+                      className="w-full bg-[#f5f5f0] border border-transparent rounded-xl px-4 py-3 text-sm text-gray-800 focus:outline-none focus:border-[#1a5c2a] focus:bg-white transition-all duration-200"
+                      placeholder="e.g. A. or N/A"
+                    />
+                  </div>
+                </div>
+                <div className={`grid grid-cols-2 gap-3 relative ${showSuffixDropdown ? 'z-20' : 'z-0'}`} style={{ animation: 'fadeSlideUp 0.32s ease 0.08s both' }}>
+                  <div>
                     <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Last Name</label>
                     <input
                       type="text"
@@ -746,6 +836,49 @@ export default function RenterProfile({ onLogout }) {
                       className="w-full bg-[#f5f5f0] border border-transparent rounded-xl px-4 py-3 text-sm text-gray-800 focus:outline-none focus:border-[#1a5c2a] focus:bg-white transition-all duration-200"
                       placeholder="Dela Cruz"
                     />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Suffix</label>
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setShowSuffixDropdown(!showSuffixDropdown)}
+                        className="w-full bg-[#f5f5f0] border border-transparent rounded-xl px-4 py-3 text-sm text-gray-800 focus:outline-none focus:border-[#1a5c2a] focus:bg-white transition-all duration-200 flex items-center justify-between text-left"
+                      >
+                        <span>{editForm.suffix || 'N/A'}</span>
+                        <ChevronDown size={16} className={`text-gray-400 transition-transform duration-200 ${showSuffixDropdown ? 'rotate-180' : ''}`} />
+                      </button>
+                      {showSuffixDropdown && (
+                        <>
+                          <div
+                            className="fixed inset-0 z-40"
+                            onClick={() => setShowSuffixDropdown(false)}
+                          />
+                          <ul
+                            className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-150 rounded-xl shadow-xl z-50 py-1 max-h-48 overflow-y-auto"
+                            style={{ transformOrigin: 'top' }}
+                          >
+                            {['N/A', 'Jr.', 'Sr.', 'II', 'III', 'IV', 'V'].map((opt) => (
+                              <li key={opt}>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditForm(f => ({ ...f, suffix: opt }));
+                                    setShowSuffixDropdown(false);
+                                  }}
+                                  className={`w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors ${editForm.suffix === opt
+                                      ? 'font-bold text-[#1a5c2a] bg-green-50/40'
+                                      : 'text-gray-700'
+                                    }`}
+                                >
+                                  {opt}
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
                 <div style={{ animation: 'fadeSlideUp 0.32s ease 0.1s both' }}>
@@ -857,21 +990,57 @@ export default function RenterProfile({ onLogout }) {
                       {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   </div>
-                  {/* Strength Checklist */}
-                  <div className="mt-2 space-y-1 text-[11px] bg-gray-50 p-2.5 rounded-xl border border-gray-150 text-left">
-                    <p className="font-semibold text-gray-500 mb-1">Password Strength Checklist:</p>
-                    {[
-                      [passwordForm.newPassword.length >= 8, 'Minimum 8 characters'],
-                      [/[A-Z]/.test(passwordForm.newPassword), 'At least 1 uppercase letter'],
-                      [/[a-z]/.test(passwordForm.newPassword), 'At least 1 lowercase letter'],
-                      [/[0-9]/.test(passwordForm.newPassword), 'At least 1 number'],
-                      [/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?~]/.test(passwordForm.newPassword), 'At least 1 special character (e.g. !@#$%^&*)'],
-                    ].map(([valid, label], i) => (
-                      <div key={i} className="flex items-center gap-1.5">
-                        <span className={valid ? 'text-green-600 font-bold' : 'text-red-500 font-bold'}>{valid ? '✓' : '✗'}</span>
-                        <span className={valid ? 'text-green-700 font-medium' : 'text-gray-500'}>{label}</span>
+                  {/* Password Strength Meter */}
+                  <div className="mt-3 space-y-1.5 bg-slate-50 p-3 rounded-xl border border-slate-150 relative">
+                    <div className="flex justify-between items-center text-[9px] sm:text-[10px]">
+                      <div className="flex items-center gap-1">
+                        <span className="font-bold text-slate-500 uppercase tracking-wider">Password Strength</span>
+                        <div className="relative">
+                          <button
+                            type="button"
+                            onMouseEnter={() => setShowStrengthTooltip(true)}
+                            onMouseLeave={() => setShowStrengthTooltip(false)}
+                            onClick={() => setShowStrengthTooltip(!showStrengthTooltip)}
+                            className="text-slate-400 hover:text-slate-600 focus:outline-none transition-colors mt-0.5 flex items-center"
+                            aria-label="Password requirements info"
+                          >
+                            <HelpCircle size={11} />
+                          </button>
+                          {showStrengthTooltip && (
+                            <div
+                              className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[9px] p-3 rounded-lg shadow-xl w-48 z-20 space-y-2 border border-slate-700 pointer-events-none"
+                              style={{ animation: 'slideInDown 0.2s ease both' }}
+                            >
+                              <p className="font-bold text-slate-300 border-b border-slate-700 pb-1.5 mb-1.5 text-left">Requirements:</p>
+                              <div className="flex items-center gap-2.5 text-left">
+                                <span className={isMinLength ? 'text-green-400 font-bold' : 'text-slate-500 font-bold'}>{isMinLength ? '✓' : '✗'}</span>
+                                <span className={isMinLength ? 'text-slate-100 font-semibold' : 'text-slate-400'}>Min. 8 characters</span>
+                              </div>
+                              <div className="flex items-center gap-2.5 text-left">
+                                <span className={hasUppercase ? 'text-green-400 font-bold' : 'text-slate-500 font-bold'}>{hasUppercase ? '✓' : '✗'}</span>
+                                <span className={hasUppercase ? 'text-slate-100 font-semibold' : 'text-slate-400'}>One uppercase letter</span>
+                              </div>
+                              <div className="flex items-center gap-2.5 text-left">
+                                <span className={hasDigit ? 'text-green-400 font-bold' : 'text-slate-500 font-bold'}>{hasDigit ? '✓' : '✗'}</span>
+                                <span className={hasDigit ? 'text-slate-100 font-semibold' : 'text-slate-400'}>One number</span>
+                              </div>
+                              <div className="flex items-center gap-2.5 text-left">
+                                <span className={hasSpecial ? 'text-green-400 font-bold' : 'text-slate-500 font-bold'}>{hasSpecial ? '✓' : '✗'}</span>
+                                <span className={hasSpecial ? 'text-slate-100 font-semibold' : 'text-slate-400'}>One special character</span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    ))}
+                      <span className={`font-bold uppercase tracking-wider ${passwordStrength.color}`}>
+                        {passwordStrength.label}
+                      </span>
+                    </div>
+                    <div className="flex gap-1 h-1.5 w-full">
+                      <div className={`flex-1 h-full rounded-full transition-all duration-300 ${passwordStrength.score >= 1 ? passwordStrength.barColor : 'bg-slate-200'}`} />
+                      <div className={`flex-1 h-full rounded-full transition-all duration-300 ${passwordStrength.score >= 2 ? passwordStrength.barColor : 'bg-slate-200'}`} />
+                      <div className={`flex-1 h-full rounded-full transition-all duration-300 ${passwordStrength.score >= 3 ? passwordStrength.barColor : 'bg-slate-200'}`} />
+                    </div>
                   </div>
                 </div>
 
@@ -964,8 +1133,8 @@ export default function RenterProfile({ onLogout }) {
                   type="button"
                   onClick={() => setActiveContactTab('send')}
                   className={`flex-1 pb-2.5 text-center text-xs font-extrabold border-b-2 transition-all ${activeContactTab === 'send'
-                      ? 'border-[#1a5c2a] text-[#1a5c2a]'
-                      : 'border-transparent text-gray-400 hover:text-gray-600'
+                    ? 'border-[#1a5c2a] text-[#1a5c2a]'
+                    : 'border-transparent text-gray-400 hover:text-gray-600'
                     }`}
                 >
                   Send Message
@@ -977,8 +1146,8 @@ export default function RenterProfile({ onLogout }) {
                     fetchRenterMessages();
                   }}
                   className={`flex-1 pb-2.5 text-center text-xs font-extrabold border-b-2 transition-all relative ${activeContactTab === 'inbox'
-                      ? 'border-[#1a5c2a] text-[#1a5c2a]'
-                      : 'border-transparent text-gray-400 hover:text-gray-600'
+                    ? 'border-[#1a5c2a] text-[#1a5c2a]'
+                    : 'border-transparent text-gray-400 hover:text-gray-600'
                     }`}
                 >
                   Message History
