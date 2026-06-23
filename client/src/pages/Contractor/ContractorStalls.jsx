@@ -59,6 +59,7 @@ export default function ContractorStalls() {
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterOpen, setFilterOpen] = useState(false);
   const [selectedStall, setSelectedStall] = useState(null);
+  const [togglingStatus, setTogglingStatus] = useState(false);
 
   const user = getUser();
   const userEmail = user?.email || '';
@@ -343,6 +344,31 @@ export default function ContractorStalls() {
       setRequestStatus('Error sending request');
     }
   };
+  // Enable/disable a stall listing — mirrors the admin stalls dashboard toggle
+  const handleToggleListingStatus = (stall) => {
+    const nextActive = stall.listing?.isActive === false ? true : false;
+    setTogglingStatus(true);
+    fetch(`/api/contractor/stalls/${stall._id}/status`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+      body: JSON.stringify({ isActive: nextActive }),
+    })
+      .then(async res => {
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+        return data;
+      })
+      .then(data => {
+        setStalls(prev => prev.map(s => s._id === stall._id ? data.stall : s));
+        setSelectedStall(data.stall);
+        setToast({ show: true, message: `Listing ${nextActive ? 'enabled' : 'disabled'}.`, type: 'success' });
+      })
+      .catch(err => {
+        setToast({ show: true, message: `Failed to update listing: ${err.message}`, type: 'error' });
+      })
+      .finally(() => setTogglingStatus(false));
+  };
+
   const handleRequestRemoval = async (e) => {
     e.preventDefault();
     if (!removalReason.trim()) {
@@ -774,12 +800,6 @@ export default function ContractorStalls() {
                     </span>
                   </div>
                   <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => setShowAddModal(true)}
-                      className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition"
-                    >
-                      + Add Stall
-                    </button>
                     <div className="stalls-filter-wrap">
                       <button className="stalls-filter-btn" onClick={() => setFilterOpen(o => !o)}>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -821,14 +841,16 @@ export default function ContractorStalls() {
                             const key = stall._id || stall.stallNumber;
                             // Display full stallNumber as stored in DB
                             const label = stall.stallNumber || "?";
+                            const isInactive = stall.listing?.isActive === false;
                             return (
                               <button
                                 key={key}
-                                className={`stall-cell stall-${stall.status}`}
+                                className={`stall-cell stall-${stall.status} ${isInactive ? 'stall-cell-inactive' : ''}`}
                                 onClick={() => setSelectedStall(stall)}
-                                title={`Stall ${label} · ${stall.section} · Zone ${stall.zone} · ${STATUS_LABEL[stall.status]}`}
+                                title={`Stall ${label} · ${stall.section} · Zone ${stall.zone} · ${STATUS_LABEL[stall.status]}${isInactive ? ' (Disabled)' : ''}`}
                               >
                                 {label}
+                                {isInactive && <span className="inactive-dot-indicator" title="Listing is Disabled" />}
                               </button>
                             );
                           })}
@@ -848,7 +870,7 @@ export default function ContractorStalls() {
             )}
           </main>
         </div>
-
+
 
         {/* Stall Detail Modal */}
         {selectedStall && (
@@ -869,6 +891,9 @@ export default function ContractorStalls() {
                 {selectedStall.monthlyRate && (
                   <span className="stall-modal-meta-chip"> ₱{selectedStall.monthlyRate.toLocaleString()}/mo</span>
                 )}
+                <span className={`stall-modal-meta-chip listing-status-badge ${selectedStall.listing?.isActive !== false ? 'listing-enabled' : 'listing-disabled'}`}>
+                  Listing: {selectedStall.listing?.isActive !== false ? 'Enabled' : 'Disabled'}
+                </span>
               </div>
 
               {selectedStall.amenities?.length > 0 && (
@@ -1007,7 +1032,20 @@ export default function ContractorStalls() {
                       <div className="stall-modal-row"><span>Status</span><strong>Awaiting Approval</strong></div>
                     </div>
                   )}
-                  
+
+                  {/* Enable/Disable listing toggle — matches the admin stalls dashboard */}
+                  <button
+                    type="button"
+                    disabled={togglingStatus}
+                    onClick={() => handleToggleListingStatus(selectedStall)}
+                    className={`stall-listing-toggle-btn ${selectedStall.listing?.isActive !== false ? 'btn-disable' : 'btn-enable'}`}
+                  >
+                    {togglingStatus
+                      ? 'Updating…'
+                      : selectedStall.listing?.isActive !== false
+                        ? 'Disable Listing'
+                        : 'Enable Listing'}
+                  </button>
 
                   <button className="stall-modal-close" onClick={() => setSelectedStall(null)}>Close</button>
                 </>
@@ -1128,6 +1166,21 @@ export default function ContractorStalls() {
         .stall-modal-avail { font-size: 13px; color: var(--color-text-muted); text-align: center; margin: 0 0 8px; }
         .stall-modal-close { width: 100%; padding: 12px; background: var(--color-brand-green); color: #fff; border: none; border-radius: var(--r-md); font-size: 14px; font-weight: 700; font-family: 'Inter', sans-serif; cursor: pointer; margin-top: 4px; transition: background 0.2s; }
         .stall-modal-close:hover { background: var(--color-green-mid); }
+
+        /* Listing status badge + enable/disable toggle (mirrors admin dashboard) */
+        .listing-status-badge.listing-enabled { background: #dcfce7; color: #15803d; }
+        .listing-status-badge.listing-disabled { background: #fee2e2; color: #b91c1c; }
+        .stall-listing-toggle-btn { width: 100%; padding: 10px; border-radius: var(--r-md); font-size: 13px; font-weight: 700; font-family: 'Inter', sans-serif; cursor: pointer; border: 1.5px solid; transition: all 0.2s; margin-top: 4px; }
+        .stall-listing-toggle-btn.btn-disable { background: #fff; border-color: #ef4444; color: #ef4444; }
+        .stall-listing-toggle-btn.btn-disable:hover { background: #fef2f2; }
+        .stall-listing-toggle-btn.btn-enable { background: #fff; border-color: var(--color-brand-green); color: var(--color-brand-green); }
+        .stall-listing-toggle-btn.btn-enable:hover { background: #f0fdf4; }
+        .stall-listing-toggle-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        /* Disabled-listing indicator dot on stall cells */
+        .stall-cell { position: relative; }
+        .stall-cell-inactive { opacity: 0.55; }
+        .inactive-dot-indicator { position: absolute; top: 4px; right: 4px; width: 8px; height: 8px; border-radius: 50%; background: #ef4444; border: 1.5px solid #fff; }
 
         @media (min-width: 640px) {
           .stalls-page-title { font-size: 24px; }

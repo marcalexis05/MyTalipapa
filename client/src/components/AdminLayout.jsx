@@ -8,12 +8,14 @@ import {
   User,
   LogOut,
   MessageSquare,
-  ClipboardList
+  ClipboardList,
+  ScrollText
 } from 'lucide-react'
 
 const NAV_ITEMS = [
   { id: 'nav-dashboard', label: 'Dashboard', path: '/admin/dashboard', Icon: LayoutDashboard },
   { id: 'nav-stalls', label: 'Stalls', path: '/admin/stalls', Icon: Store },
+  { id: 'nav-contracts', label: 'Contracts', path: '/admin/contracts', Icon: ScrollText },
   { id: 'nav-apps', label: 'Applications', path: '/admin/applications', Icon: FileText },
   { id: 'nav-requests', label: 'Requests', path: '/admin/requests', Icon: ClipboardList },
   { id: 'nav-records', label: 'Records', path: '/admin/records', Icon: History },

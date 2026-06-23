@@ -53,6 +53,11 @@ app.post('/api/log-error', (req, res) => {
   res.sendStatus(200);
 });
 
+// Unknown API endpoints return JSON (not an HTML error page) so the client can handle them cleanly
+app.use('/api', (req, res) => {
+  res.status(404).json({ error: `Endpoint not found: ${req.method} ${req.originalUrl}` });
+});
+
 // Export for Vercel serverless
 module.exports = app;
 

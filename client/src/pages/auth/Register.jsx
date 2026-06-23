@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { User, Mail, Phone, Lock, Eye, EyeOff, Store, ShoppingBag, Edit, Search, Check, ArrowRight } from 'lucide-react'
+import { User, Mail, Phone, Lock, Eye, EyeOff, Store, Edit, Search, Check, ArrowRight } from 'lucide-react'
 
 const registerStyles = `
   @keyframes fadeSlideUp {
@@ -202,7 +202,7 @@ export default function Register() {
     contact_number: '',
     password: '',
     confirm_password: '',
-    role: '',
+    role: 'renter',
     agreed: false
   })
 
@@ -261,8 +261,6 @@ export default function Register() {
     form.last_name.trim().length > 0 &&
     (form.role !== 'contractor' || form.business_name.trim().length > 0) &&
     isEmailValid && isPasswordValid && passwordsMatch && isPhoneValid && form.agreed && form.role
-
-  function selectRole(role) { setForm({ ...form, role }); setError(null) }
 
   async function fetchStalls() {
     setLoadingStalls(true); setError(null)
@@ -445,38 +443,7 @@ export default function Register() {
                   {step === 1 && (
                     <form key={`step-${stepKey}`} onSubmit={handleRegister} className={`${stepClass} space-y-4`}>
                       <h2 className="text-lg font-bold text-gray-800 mb-1">Create your account</h2>
-                      <p className="text-xs text-gray-500 mb-2">Fill in your details to get started</p>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-600 mb-2">Register as:</label>
-                        <div className="grid grid-cols-2 gap-3">
-                          <button type="button" onClick={() => selectRole('renter')}
-                            data-selected={form.role === 'renter' ? 'true' : 'false'}
-                            className={`role-card flex flex-col items-center gap-2 p-4 rounded-2xl border-2 ${form.role === 'renter' ? 'border-green-700 bg-green-50' : 'border-gray-200 bg-gray-50'}`}>
-                            <div className={`role-icon w-10 h-10 rounded-xl flex items-center justify-center ${form.role === 'renter' ? 'bg-green-700' : 'bg-gray-200'}`}>
-                              <ShoppingBag size={20} className={form.role === 'renter' ? 'text-white' : 'text-gray-500'} />
-                            </div>
-                            <div className="text-center">
-                              <p className={`text-sm font-semibold ${form.role === 'renter' ? 'text-green-800' : 'text-gray-700'}`}>Renter</p>
-                              <p className="text-[10px] text-gray-400 leading-tight mt-0.5">I want to rent a stall</p>
-                            </div>
-                            {form.role === 'renter' && <span className="text-xs font-bold text-green-700">✓ Selected</span>}
-                          </button>
-
-                          <button type="button" onClick={() => selectRole('contractor')}
-                            data-selected={form.role === 'contractor' ? 'true' : 'false'}
-                            className={`role-card flex flex-col items-center gap-2 p-4 rounded-2xl border-2 ${form.role === 'contractor' ? 'border-green-700 bg-green-50' : 'border-gray-200 bg-gray-50'}`}>
-                            <div className={`role-icon w-10 h-10 rounded-xl flex items-center justify-center ${form.role === 'contractor' ? 'bg-green-700' : 'bg-gray-200'}`}>
-                              <Store size={20} className={form.role === 'contractor' ? 'text-white' : 'text-gray-500'} />
-                            </div>
-                            <div className="text-center">
-                              <p className={`text-sm font-semibold ${form.role === 'contractor' ? 'text-green-800' : 'text-gray-700'}`}>Contractor</p>
-                              <p className="text-[10px] text-gray-400 leading-tight mt-0.5">I manage stalls</p>
-                            </div>
-                            {form.role === 'contractor' && <span className="text-xs font-bold text-green-700">✓ Selected</span>}
-                          </button>
-                        </div>
-                      </div>
+                      <p className="text-xs text-gray-500 mb-2">Fill in your details to get started as a Renter</p>
 
                       <div className="grid grid-cols-2 gap-3">
                         <div>

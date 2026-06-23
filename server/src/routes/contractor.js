@@ -18,6 +18,9 @@ router.post('/contractor-applications/:id/status', controller.updateContractorAp
 // Get stalls list
 router.get('/stalls', controller.getStalls);
 
+// Enable/disable a stall listing (contractor-managed) — matches admin toggle
+router.put('/stalls/:id/status', controller.toggleStallStatus);
+
 // Get renter records
 router.get('/records', controller.getRecords);
 

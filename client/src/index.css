@@ -1,8 +1,82 @@
 @import "tailwindcss";
 
+/* =========================================================
+   index.css — Global base layer
+   Brand identity: a fresh Filipino palengke (wet market).
+   Produce-green is the through-line; palengke-orange is the
+   warm energy; a warm cream canvas keeps it human, not clinical.
+
+   NOTE: the full design-token set lives in App.css (its :root
+   loads after this file and is the source of truth). The tokens
+   below are aligned fallbacks so Tailwind-only pages (landing,
+   login, register) resolve the same values with no conflict.
+   ========================================================= */
+
 :root {
-  --color-brand-green: #1a5c2a;
-  --color-brand-green-light: #2d7a3e;
-  --color-brand-orange: #f97316;
-  --color-surface: #f5f2ec;
+  --color-brand-green:       #1a5c2a;
+  --color-brand-green-light: #f0fdf4;
+  --color-green-mid:         #15512a;
+  --color-brand-orange:      #f97316;
+  --color-bg:                #f5f2ec;
+  --color-surface:           #ffffff;
+  --color-text:              #111827;
+  --color-text-muted:        #6b7280;
+  --color-border:            #e8e4dc;
+
+  /* Focus ring used app-wide for keyboard navigation */
+  --focus-ring: 0 0 0 3px rgba(26, 92, 42, 0.35);
+}
+
+/* ---- Base typography & rendering polish (applies everywhere) ---- */
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Tighten headings a touch for a more deliberate, premium type voice */
+h1, h2, h3 {
+  letter-spacing: -0.02em;
+}
+
+/* ---- Accessibility: visible keyboard focus everywhere ---- */
+/* Ring follows each element's own border-radius, so shapes are preserved. */
+:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: var(--focus-ring);
+}
+
+/* Mouse users shouldn't see the ring on click */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ---- Brand-tinted text selection ---- */
+::selection {
+  background: rgba(26, 92, 42, 0.18);
+  color: var(--color-text);
+}
+
+/* ---- Respect users who prefer less motion ---- */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }

@@ -741,6 +741,55 @@ export default function MarketTour360() {
     setArStepIndex(0);
   };
 
+  // Teleport the panorama to whichever stall is nearest the point the user
+  // tapped on the expanded map. Translates the click position from screen
+  // pixels into the SVG/map coordinate space, then snaps to the closest stall.
+  const handleMapTeleport = (e) => {
+    if (!isMapExpanded || transitioning) return;
+    const svg = e.currentTarget;
+    if (!svg || typeof svg.createSVGPoint !== 'function') return;
+    const ctm = svg.getScreenCTM();
+    if (!ctm) return;
+
+    const pt = svg.createSVGPoint();
+    pt.x = e.clientX;
+    pt.y = e.clientY;
+    const { x, y } = pt.matrixTransform(ctm.inverse());
+
+    let closestStall = null;
+    let closestSec = null;
+    let closestIdx = -1;
+    let closestDist = Infinity;
+    Object.entries(sectionsData).forEach(([secKey, sec]) => {
+      sec.stalls.forEach((st, idx) => {
+        const c = getRawCoordinates(st, secKey);
+        // Skip stalls that have no real mapped coordinate (fallback position)
+        if (c.x === 1020 && (c.y === 635 || c.y === 885)) return;
+        const d = Math.hypot(c.x - x, c.y - y);
+        if (d < closestDist) {
+          closestDist = d;
+          closestStall = st;
+          closestSec = secKey;
+          closestIdx = idx;
+        }
+      });
+    });
+
+    // Ignore taps that land far from any stall (e.g. on the logo or margins)
+    if (!closestStall || closestDist > 300) return;
+
+    setActiveSectionKey(closestSec);
+    setStallIndex(closestIdx);
+    setSelectedStall(closestStall);
+    triggerSceneTransition(getStallImagePath(closestStall.id, closestSec));
+    setIsMapExpanded(false);
+    let count = 0;
+    const interval = setInterval(() => {
+      window.dispatchEvent(new Event('resize'));
+      if (count++ > 30) clearInterval(interval);
+    }, 16);
+  };
+
   // Hand off from the panorama to the AR view, targeting the given stall.
   // ArFinder reads this router state to focus the stall and open the QR scanner.
   const handleOpenArView = (targetStall) => {
@@ -2210,11 +2259,12 @@ export default function MarketTour360() {
                     filter: isMapExpanded ? 'drop-shadow(0 20px 40px rgba(0,0,0,0.75))' : 'none'
                   }}
                 >
-                  <svg 
-                    viewBox={viewBoxStr} 
-                    preserveAspectRatio="xMidYMid meet" 
+                  <svg
+                    viewBox={viewBoxStr}
+                    preserveAspectRatio="xMidYMid meet"
                     className="max-w-full max-h-full transition-all duration-700"
-                    style={{ pointerEvents: isMapExpanded ? 'auto' : 'none' }}
+                    style={{ pointerEvents: isMapExpanded ? 'auto' : 'none', cursor: isMapExpanded ? 'pointer' : 'default' }}
+                    onClick={isMapExpanded ? handleMapTeleport : undefined}
                   >
                     <defs>
                       <linearGradient id="pinStemGradient" x1="0" y1="0" x2="0" y2="1">
