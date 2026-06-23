@@ -99,6 +99,8 @@ export default function Landingpage() {
   const [portalRef, portalInView] = useInView(0.15);
   const [ctaRef, ctaInView] = useInView(0.2);
   const [footerRef, footerInView] = useInView(0.1);
+  const [installPrompt, setInstallPrompt] = useState(null);
+  const [isInstalled, setIsInstalled] = useState(false);
 
   // Auto-play slideshow
   useEffect(() => {
@@ -123,6 +125,31 @@ export default function Landingpage() {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // PWA install prompt capture
+  useEffect(() => {
+    const handler = (e) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+    window.addEventListener('appinstalled', () => {
+      setIsInstalled(true);
+      setInstallPrompt(null);
+    });
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (!installPrompt) {
+      window.open('https://my-talipapa-market.vercel.app', '_blank');
+      return;
+    }
+    installPrompt.prompt();
+    const { outcome } = await installPrompt.userChoice;
+    if (outcome === 'accepted') setIsInstalled(true);
+    setInstallPrompt(null);
+  };
 
 
 
@@ -922,25 +949,31 @@ export default function Landingpage() {
               <h4 className="text-white font-bold text-xs uppercase tracking-wider">Get Mobile App</h4>
               <div className="bg-white p-2 rounded-xl inline-block shadow-md">
                 <img
-                  src="/qr-code.png"
-                  alt="Scan to download MyTalipapa App"
+                  src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&ecc=M&data=https%3A%2F%2Fmy-talipapa-market.vercel.app"
+                  alt="Scan to visit MyTalipapa"
                   width="84"
                   height="84"
                   className="block rounded"
                 />
               </div>
               <p className="text-[10px] text-slate-500 leading-snug">
-                Scan QR code to visit the mobile app, or click the download button below.
+                Scan with your phone camera to install, or tap the button below.
               </p>
-              <a
-                href="https://my-talipapa-market.vercel.app/mytalipapa-app.apk"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 bg-green-700 hover:bg-green-800 active:bg-green-900 text-white font-bold text-[11px] px-4 py-2.5 rounded-xl transition shadow-sm w-max"
-              >
-                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
-                Download App
-              </a>
+              {isInstalled ? (
+                <div className="flex items-center gap-2 text-green-500 text-[11px] font-bold">
+                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><polyline points="20 6 9 17 4 12" /></svg>
+                  App Installed!
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleInstallClick}
+                  className="flex items-center justify-center gap-2 bg-green-700 hover:bg-green-800 active:bg-green-900 text-white font-bold text-[11px] px-4 py-2.5 rounded-xl transition shadow-sm w-max"
+                >
+                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
+                  {installPrompt ? 'Install App' : 'Open Web App'}
+                </button>
+              )}
             </div>
 
           </div>
