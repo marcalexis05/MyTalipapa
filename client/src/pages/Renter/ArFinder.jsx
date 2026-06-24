@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Compass, Info, HelpCircle, Navigation, RotateCw, Check, X, Camera, CameraOff, Map, ChevronDown, ChevronUp, Locate, ChevronLeft, ChevronRight, Search, QrCode, MapPin, Clock, Tag, Store, Phone, Activity } from "lucide-react";
-import mapImage from "../../images/map.png";
-import logoImage from "../../images/logo.png";
+import { ArrowLeft, Compass, Info, HelpCircle, Navigation, RotateCw, Check, X, Camera, CameraOff, Map, ChevronDown, ChevronUp, Locate, ChevronLeft, ChevronRight, Search, QrCode, MapPin, Clock, Tag, Store, Phone, Footprints } from "lucide-react";
+import mapImage from "../../images/map_aligned.jpg";
 import { SVG_STALL_COORDS } from "../../utils/coords_dict";
+import { findRoute, snapToWalkable, METERS_PER_PIXEL } from "../../utils/marketGraph";
 import QrScanner from "../../components/QrScanner";
 
 
@@ -451,19 +451,8 @@ export default function ArFinder({ onBack, initialStall }) {
     return 30;
   };
 
-  // Snaps map clicks to nearest vertical corridor or horizontal pathway to keep users on walkable pathways
-  const snapToPathways = (x, y) => {
-    const closestX = X_CORRIDORS.reduce((prev, curr) => Math.abs(curr - x) < Math.abs(prev - x) ? curr : prev);
-    const closestY = Y_PATHWAYS.reduce((prev, curr) => Math.abs(curr - y) < Math.abs(prev - y) ? curr : prev);
-    const dx = Math.abs(x - closestX);
-    const dy = Math.abs(y - closestY);
-    // Snap to the closest line (vertical corridor or horizontal pathway)
-    if (dx < dy) {
-      return { x: closestX, y: y };
-    } else {
-      return { x: x, y: closestY };
-    }
-  };
+  // Snap map clicks onto the nearest walkable aisle/pathway (shared geometry).
+  const snapToPathways = (x, y) => snapToWalkable(x, y);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth <= 640);
@@ -667,41 +656,9 @@ export default function ArFinder({ onBack, initialStall }) {
     }
   };
 
-  const X_CORRIDORS = [30, 265, 530, 790, 1050, 1300, 1570, 1845, 2120];
-  const Y_PATHWAYS = [100, 300, 500, 700, 910, 1100, 1300, 1500, 1720];
-
-  const getPathPoints = () => {
-    const pts = [{ x: userX, y: userY }];
-    const sx = currentStall.x, sy = currentStall.y;
-    const userCX = X_CORRIDORS.reduce((p, c) => Math.abs(c - userX) < Math.abs(p - userX) ? c : p);
-    const stallCX = X_CORRIDORS.reduce((p, c) => Math.abs(c - sx) < Math.abs(p - sx) ? c : p);
-    if (userCX === stallCX) {
-      if (userX !== userCX) pts.push({ x: userCX, y: userY });
-      if (userY !== sy) pts.push({ x: userCX, y: sy });
-    } else {
-      let bestPY = Y_PATHWAYS[0], minDist = Infinity;
-      for (const py of Y_PATHWAYS) {
-        const dist = Math.abs(userY - py) + Math.abs(userCX - stallCX) + Math.abs(sy - py);
-        if (dist < minDist) { minDist = dist; bestPY = py; }
-      }
-      if (userX !== userCX) pts.push({ x: userCX, y: userY });
-      if (userY !== bestPY) pts.push({ x: userCX, y: bestPY });
-      if (userCX !== stallCX) pts.push({ x: stallCX, y: bestPY });
-      if (bestPY !== sy) pts.push({ x: stallCX, y: sy });
-    }
-    const last = pts[pts.length - 1];
-    if (last.x !== sx || last.y !== sy) pts.push({ x: sx, y: sy });
-    const cleanPts = [];
-    for (const p of pts) {
-      if (cleanPts.length === 0) cleanPts.push(p);
-      else { const lastP = cleanPts[cleanPts.length - 1]; if (lastP.x !== p.x || lastP.y !== p.y) cleanPts.push(p); }
-    }
-    return cleanPts;
-  };
-
-  const pathPoints = getPathPoints();
-
-  const METERS_PER_PIXEL = 0.025;
+  // Orthogonal walking route from the user to the target stall, using the shared
+  // market graph — follows real aisles/pathways and never cuts through stalls.
+  const pathPoints = findRoute({ x: userX, y: userY }, { x: currentStall.x, y: currentStall.y });
 
   // Unified path distance calculation mapping pixels to physical meters
   const getPathDist = (pts) => {
@@ -761,21 +718,6 @@ export default function ArFinder({ onBack, initialStall }) {
   };
 
   const targetProj = getArProj(currentStall.x, currentStall.y);
-
-  const arPathDots = (() => {
-    const dots = [];
-    for (let i = 0; i < pathPoints.length - 1; i++) {
-      const p1 = pathPoints[i], p2 = pathPoints[i + 1];
-      const d = Math.sqrt((p2.x - p1.x) ** 2 + (p2.y - p1.y) ** 2);
-      const steps = Math.max(3, Math.round(d / 75));
-      for (let j = 0; j <= steps; j++) {
-        const t = j / steps;
-        dots.push({ x: p1.x + (p2.x - p1.x) * t, y: p1.y + (p2.y - p1.y) * t });
-      }
-    }
-    return dots.map(d => ({ ...d, proj: getArProj(d.x, d.y) }))
-      .filter(d => d.proj.isVisible && d.proj.dist > 1.5 && d.proj.dist < 40);
-  })();
 
   const handleStepForward = () => {
     const rad = (heading * Math.PI) / 180;
@@ -941,19 +883,15 @@ export default function ArFinder({ onBack, initialStall }) {
       </div>
       <svg viewBox="0 0 2305 1824" preserveAspectRatio="xMidYMid meet"
         onClick={handleMapClick} style={{ width: "100%", height: "100%", cursor: "crosshair", userSelect: "none" }}>
-        <image xlinkHref={mapImage} href={mapImage} x="101" y="-15" width="2147" height="1824" preserveAspectRatio="none" />
-        <polyline points={pathPoints.map(p => `${p.x},${p.y}`).join(" ")}
-          fill="none" stroke="#e8621a" strokeWidth="10"
-          strokeDasharray="15 15" strokeLinecap="round" strokeLinejoin="round" />
+        {/* Authentic market floor plan, rasterised from the client's draw.io source
+            at the exact coordinate viewBox — so it lines up 1:1 with the stall
+            markers, route and "you are here". */}
+        <image xlinkHref={mapImage} href={mapImage} x="0" y="0" width="2305" height="1824" preserveAspectRatio="none" />
+
+        {/* Per-stall tap targets + highlight for the selected destination */}
         {stallsList.map(s => {
+          if (s.x === 1020 && s.y === 635) return null; // unmapped fallback — skip
           const isDest = s.id === selectedStallId;
-          const getCircleColor = () => {
-            if (isDest) return "#e8621a";
-            if (s.category === "meat") return "rgba(220, 38, 38, 0.45)";
-            if (s.category === "fish") return "rgba(37, 99, 235, 0.45)";
-            if (s.category === "veggies") return "rgba(22, 163, 74, 0.45)";
-            return "rgba(232, 98, 26, 0.4)";
-          };
           return (
             <g
               key={s.id}
@@ -966,20 +904,39 @@ export default function ArFinder({ onBack, initialStall }) {
                 setToastMsg(`Routing to ${s.label}`);
               }}
             >
-              <circle r="46" fill="transparent" />
-              {isDest && <circle r="40" fill="none" stroke="#e8621a" strokeWidth="5" opacity="0.55" />}
-              <circle r={isDest ? 26 : 15} fill={getCircleColor()} stroke="#fff" strokeWidth={isDest ? 5 : 3} />
+              <rect x="-78" y="-32" width="156" height="64" fill="transparent" />
+              {isDest && (
+                <>
+                  <rect x="-78" y="-32" width="156" height="64" rx="12" fill="rgba(232,98,26,0.28)" stroke="#e8621a" strokeWidth="5">
+                    <animate attributeName="stroke-opacity" values="1;0.25;1" dur="1.4s" repeatCount="indefinite" />
+                  </rect>
+                  <circle cx="0" cy="-32" r="11" fill="#e8621a" stroke="#fff" strokeWidth="3" />
+                </>
+              )}
             </g>
           );
         })}
-        <g transform={`translate(${userX},${userY})`}>
+
+        {/* Walking route — white casing + animated orange dotted line (Google-Maps style) */}
+        {pathPoints.length > 1 && (
+          <g style={{ pointerEvents: "none" }}>
+            <polyline points={pathPoints.map(p => `${p.x},${p.y}`).join(" ")}
+              fill="none" stroke="#ffffff" strokeWidth="18" strokeLinecap="round" strokeLinejoin="round" opacity="0.95" />
+            <polyline points={pathPoints.map(p => `${p.x},${p.y}`).join(" ")}
+              fill="none" stroke="#e8621a" strokeWidth="9" strokeDasharray="1 26" strokeLinecap="round" strokeLinejoin="round">
+              <animate attributeName="stroke-dashoffset" from="27" to="0" dur="0.7s" repeatCount="indefinite" />
+            </polyline>
+          </g>
+        )}
+
+        {/* "You are here" marker — heading-aware cone + dot */}
+        <g transform={`translate(${userX},${userY})`} style={{ pointerEvents: "none" }}>
           <path d="M0 0 L-70 -120 A140 140 0 0 1 70 -120 Z" fill="rgba(26,92,42,0.22)" transform={`rotate(${heading})`} style={{ transformOrigin: "0px 0px" }} />
           <g transform={`rotate(${heading})`}>
             <circle r="25" fill="#1a5c2a" stroke="#fff" strokeWidth="4" />
             <path d="M0 -15 L12 10 L0 4 L-12 10 Z" fill="#fff" />
           </g>
         </g>
-        <image href={logoImage} x="1960" y="1450" width="450" height="450" preserveAspectRatio="xMidYMid meet" style={{ pointerEvents: 'none' }} />
       </svg>
       <div className="sim-badge">
         <Compass size={10} className="animate-spin-slow" />
@@ -1687,7 +1644,7 @@ export default function ArFinder({ onBack, initialStall }) {
             {/* Step counter badge — only shown when motion is active */}
             {motionActive && (
               <div className="step-badge">
-                <Activity size={11} />
+                <Footprints size={11} />
                 <span>{stepCount} steps</span>
               </div>
             )}
@@ -1707,7 +1664,7 @@ export default function ArFinder({ onBack, initialStall }) {
                 <ul style={{ fontSize: 11, color: "#475569", paddingLeft: 16, margin: 0, lineHeight: 1.7 }}>
                   <li>Select your starting hallway using the <strong>START</strong> selector.</li>
                   <li>Tap <strong>STALL</strong> to pick your destination from the sheet.</li>
-                  <li>Follow the floating orange dots in the camera view.</li>
+                  <li>Follow the route on the floor map; the camera marker points to your stall.</li>
                   <li>Use the right-side HUD to simulate walking or rotating.</li>
                   <li>Tap anywhere on the floor map to set your position manually.</li>
                   <li>Tap <strong>STEP</strong> to enable automatic step detection — walk and the map updates automatically!</li>
@@ -1725,18 +1682,6 @@ export default function ArFinder({ onBack, initialStall }) {
               </div>
             ) : (
               <>
-                {arPathDots.map((dot, i) => (
-                  <div key={i} style={{
-                    position: "absolute",
-                    left: `${dot.proj.xPct}%`, top: `${dot.proj.yPct}%`,
-                    transform: `translate(-50%,-50%) scale(${dot.proj.scale})`,
-                    width: 11, height: 11, borderRadius: "50%",
-                    background: "rgba(232,98,26,0.88)",
-                    border: "1.5px solid rgba(255,255,255,0.5)",
-                    boxShadow: "0 0 6px rgba(232,98,26,0.5)",
-                  }} />
-                ))}
-
                 {targetProj.isVisible ? (
                   <div style={{
                     position: "absolute",
@@ -1789,7 +1734,8 @@ export default function ArFinder({ onBack, initialStall }) {
               style={{ marginBottom: 4 }}
               title="Toggle Step Detection"
             >
-              <Activity size={18} style={{ marginRight: 6 }} />        </button>
+              <Footprints size={17} />
+            </button>
 
             {!hasOrientation && (
               <button onClick={requestCompassPermission} className="ctrl-btn" style={{ background: "#e8621a", color: "#fff", borderColor: "#e8621a", marginBottom: 4 }}>
