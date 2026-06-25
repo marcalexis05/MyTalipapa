@@ -1,0 +1,26 @@
+flowchart LR
+  from21(("from 2.1")):::ext
+  contractor["Contractor"]:::ent
+  admin["Admin"]:::ent
+  p1(("2.2.1<br/>Check<br/>Applicant")):::proc
+  p2(("2.2.2<br/>Verify Stall<br/>Availability")):::proc
+  p3(("2.2.3<br/>Present to<br/>Reviewer")):::proc
+  p4(("2.2.4<br/>Capture<br/>Decision")):::proc
+  to23(("to 2.3")):::ext
+  d1["D1 Accounts"]:::store
+  d2["D2 Stalls"]:::store
+  d3["D3 Applications"]:::store
+  from21 -->|"submitted application"| p1
+  p1 -->|"applicant OK"| p2
+  p2 -->|"+ stall status"| p3
+  contractor -->|"decision"| p3
+  admin -->|"decision"| p3
+  p3 -->|"raw decision"| p4
+  p4 -->|"decision + reason"| to23
+  p1 -->|"read applicant"| d1
+  p1 -->|"read application"| d3
+  p2 -->|"read stall status"| d2
+  classDef proc fill:#e7f0fe,stroke:#2563eb,stroke-width:2px,color:#16357a
+  classDef ent fill:#eceff3,stroke:#5b6b7f,stroke-width:2px,color:#2b3645
+  classDef store fill:#fbf6e9,stroke:#b08423,stroke-width:2px,color:#6b4e12
+  classDef ext fill:#e7f6f3,stroke:#0f766e,stroke-width:2px,color:#0f766e

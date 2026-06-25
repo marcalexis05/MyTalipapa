@@ -1130,147 +1130,11 @@ export default function MarketTour360() {
     return new THREE.CanvasTexture(canvas);
   };
 
-  // Google Street View-style ground navigation line: glowing line with directional chevrons
-  const createGroundArrowTexture = (THREE) => {
-    const S = 256;
-    const canvas = document.createElement('canvas');
-    canvas.width = S;
-    canvas.height = S;
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, S, S);
-    const cx = S / 2;
-
-    // Horizontal glowing green gradient for the line
-    const grad = ctx.createLinearGradient(0, 0, S, 0);
-    grad.addColorStop(0.0, 'rgba(16, 185, 129, 0.0)');
-    grad.addColorStop(0.35, 'rgba(16, 185, 129, 0.45)');
-    grad.addColorStop(0.46, 'rgba(16, 185, 129, 0.95)');
-    grad.addColorStop(0.5, 'rgba(255, 255, 255, 1.0)'); // White hot core
-    grad.addColorStop(0.54, 'rgba(16, 185, 129, 0.95)');
-    grad.addColorStop(0.65, 'rgba(16, 185, 129, 0.45)');
-    grad.addColorStop(1.0, 'rgba(16, 185, 129, 0.0)');
-
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, S, S);
-
-    // Draw small indicator arrows pointing forward down the line
-    ctx.fillStyle = '#ffffff';
-    for (let y of [60, 128, 196]) {
-      ctx.beginPath();
-      ctx.moveTo(cx - 15, y + 10);
-      ctx.lineTo(cx, y - 10);
-      ctx.lineTo(cx + 15, y + 10);
-      ctx.lineTo(cx, y + 2);
-      ctx.closePath();
-      ctx.fill();
-    }
-
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.needsUpdate = true;
-    return texture;
-  };
-
   // Re-populate the 3D scene with relevant Hotspots
   const recreateHotspots = (scene, stall, THREE) => {
     // Clear old sprites
     hotspotMeshes.current.forEach((mesh) => scene.remove(mesh))
     hotspotMeshes.current = []
-
-    // Ground arrow meshes — 2 chevrons (one pointing forward, one pointing backward)
-    const arrowTex = createGroundArrowTexture(THREE);
-    for (let i = 0; i < 2; i++) {
-      const arrowMat = new THREE.MeshBasicMaterial({ map: arrowTex, transparent: true, depthTest: false, opacity: 0.0 });
-      const arrowMesh = new THREE.Mesh(new THREE.PlaneGeometry(35, 110), arrowMat);
-      arrowMesh.visible = false;
-      arrowMesh.userData = { type: 'go_forward', label: 'Go Forward', targetStallInfo: null, arrowIndex: i };
-      scene.add(arrowMesh);
-      hotspotMeshes.current.push(arrowMesh);
-    }
-
-    // Dynamic nearby stall markers (Google Maps style)
-    const currentSectionsData = stateRef.current.sectionsData;
-    const currentActiveSectionKey = stateRef.current.activeSectionKey;
-    const currentCoords = getRawCoordinates(stall, currentActiveSectionKey);
-    const sectionKeys = ['meat', 'fish', 'veggies'];
-    
-    // Prevent displaying duplicate badge numbers in the current viewport (e.g. 8 and 8(u))
-    const renderedNumbers = new Set([extractCleanNumber(stall.name)]);
-
-    // Calibrate camera direction offset
-    let northOffset = 0;
-    const upsideDownStalls = ['13(u)', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24'];
-    const zoneAFishUpsideDown = ['11', '12', '13', '14', '15', '16', '17', '18', '19', '20'];
-    const zoneAMeatUpsideDown = ['12', '13'];
-
-    const isZoneEMeat = currentActiveSectionKey === 'meat' && upsideDownStalls.includes(stall.id);
-    const isZoneAFish = currentActiveSectionKey === 'fish' && zoneAFishUpsideDown.includes(stall.id);
-    const isZoneAMeat = currentActiveSectionKey === 'meat' && zoneAMeatUpsideDown.includes(stall.id);
-
-    if (stall && stall.id === '1(u)') {
-      northOffset = -90;
-    } else if (stall && (isZoneEMeat || isZoneAFish || isZoneAMeat)) {
-      northOffset = 180;
-    }
-
-    // Render dynamic nearby stall markers (Google Maps style pins)
-    if (stateRef.current.showBadges) {
-      sectionKeys.forEach((secKey) => {
-        const stalls = currentSectionsData[secKey].stalls;
-        stalls.forEach((s, idx) => {
-          if (secKey === currentActiveSectionKey && s.id === stall.id) return;
-          const targetCoords = getRawCoordinates(s, secKey);
-          
-          const dx = targetCoords.x - currentCoords.x;
-          const dy = targetCoords.y - currentCoords.y;
-          const distance = Math.hypot(dx, dy);
-          
-          // Only show stalls within a reasonable radius (e.g. 420px)
-          if (distance < 10 || distance > 420) return;
-          
-          // Prevent showing duplicate badge numbers in the current viewport
-          const cleanNum = extractCleanNumber(s.name);
-          if (renderedNumbers.has(cleanNum)) return;
-          renderedNumbers.add(cleanNum);
-          
-          // Calculate compass angle
-          const mapAngleRad = Math.atan2(dy, dx);
-          const mapAngleDeg = (mapAngleRad * 180) / Math.PI;
-          const targetCompassAngle = (mapAngleDeg + 450) % 360;
-          
-          // Convert to ThreeJS spherical coordinates angle (theta) relative to camera northOffset
-          const thetaRad = ((targetCompassAngle - northOffset) * Math.PI) / 180;
-          
-          // Place the pin in 3D space on a sphere around the camera
-          const pinDist = 180 + (distance * 0.35); // sphere radius between 180 and 320
-          const px = Math.cos(thetaRad) * pinDist;
-          const pz = Math.sin(thetaRad) * pinDist;
-          const py = -25; // slightly below eye level (eye level is y = 0)
-          
-          // Create texture and material
-          const pinTex = createStallPinTexture(THREE, s.name, secKey);
-          const pinMat = new THREE.SpriteMaterial({ map: pinTex, transparent: true, depthTest: false });
-          const pinSprite = new THREE.Sprite(pinMat);
-          
-          pinSprite.position.set(px, py, pz);
-          const scale = Math.max(18, 38 - (distance * 0.05));
-          pinSprite.scale.set(scale, scale, 1.0);
-          
-          pinSprite.userData = {
-            type: 'nearby_stall',
-            label: s.name,
-            sectionKey: secKey,
-            stall: s,
-            index: idx
-          };
-          
-          scene.add(pinSprite);
-          hotspotMeshes.current.push(pinSprite);
-        });
-      });
-    }
-
-    // Route chevrons removed (were unreliable). Routing guidance now lives in the
-    // floor map / mini-map polyline and the AR finder's step detection.
   };
 
   // Main Three.js Init
@@ -1448,6 +1312,70 @@ export default function MarketTour360() {
               };
               requestAnimationFrame(animateForward);
             }
+          }
+        } else {
+          // "Click to Navigate" Feature
+          const rx = raycaster.ray.direction.x;
+          const rz = raycaster.ray.direction.z;
+          const clickTheta = Math.atan2(rz, rx);
+
+          let northOffset = 0;
+          const currentStall = stateRef.current.currentStall;
+          const activeSectionKey = stateRef.current.activeSectionKey;
+          const upsideDownStalls = ['13(u)', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24'];
+          const zoneAFishUpsideDown = ['11', '12', '13', '14', '15', '16', '17', '18', '19', '20'];
+          const zoneAMeatUpsideDown = ['12', '13'];
+
+          const isZoneEMeat = activeSectionKey === 'meat' && upsideDownStalls.includes(currentStall.id);
+          const isZoneAFish = activeSectionKey === 'fish' && zoneAFishUpsideDown.includes(currentStall.id);
+          const isZoneAMeat = activeSectionKey === 'meat' && zoneAMeatUpsideDown.includes(currentStall.id);
+
+          if (currentStall && currentStall.id === '1(u)') {
+            northOffset = -90;
+          } else if (currentStall && (isZoneEMeat || isZoneAFish || isZoneAMeat)) {
+            northOffset = 180;
+          }
+
+          const deg = Math.round((clickTheta * 180) / Math.PI) + northOffset;
+          const clickCompassDeg = ((deg % 360) + 360) % 360;
+
+          const target = findNearestStallInDirection(currentStall, clickCompassDeg);
+          
+          if (target && !transitioning) {
+            const { sectionKey, stall } = target;
+            const targetStallId = stall.id;
+
+            setTransitioning(true);
+            const startFov = camera.fov;
+            const targetFov = Math.max(30, startFov - 25);
+            const duration = 400; // 400ms zoom animation
+            const startTime = performance.now();
+
+            const animateForward = (time) => {
+              const elapsed = time - startTime;
+              const progress = Math.min(elapsed / duration, 1);
+              const ease = progress < 0.5 ? 2 * progress * progress : -1 + (4 - 2 * progress) * progress;
+
+              camera.fov = startFov - ((startFov - targetFov) * ease);
+              camera.updateProjectionMatrix();
+
+              if (progress < 1) {
+                requestAnimationFrame(animateForward);
+              } else {
+                const freshSectionsData = stateRef.current.sectionsData;
+                const stalls = freshSectionsData[sectionKey].stalls;
+                const targetIdx = stalls.findIndex(s => s.id === targetStallId);
+                
+                if (targetIdx !== -1) {
+                  setActiveSectionKey(sectionKey);
+                  setStallIndex(targetIdx);
+                  triggerSceneTransition(getStallImagePath(stalls[targetIdx].id, sectionKey), true);
+                } else {
+                  setTransitioning(false);
+                }
+              }
+            };
+            requestAnimationFrame(animateForward);
           }
         }
       }

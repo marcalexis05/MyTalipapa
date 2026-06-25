@@ -1,0 +1,34 @@
+flowchart TB
+  renter["Renter /<br/>Applicant"]:::ent
+  contractor["Contractor"]:::ent
+  admin["Admin"]:::ent
+  p21(("2.1<br/>Submit /<br/>Resubmit")):::proc
+  p22(("2.2<br/>Review and<br/>Validate")):::proc
+  p23(("2.3<br/>Record<br/>Decision")):::proc
+  p24(("2.4<br/>Handle<br/>Appeal")):::proc
+  p25(("2.5<br/>Payment and<br/>Occupy Stall")):::proc
+  n6(("6.0<br/>Notifications")):::ext
+  n5(("5.0<br/>Payments")):::ext
+  d1["D1 Accounts"]:::store
+  d2["D2 Stalls"]:::store
+  d3["D3 Applications"]:::store
+  renter -->|"form + documents"| p21
+  p21 -->|"submitted"| p22
+  contractor -->|"review"| p22
+  admin -->|"review"| p22
+  p22 -->|"validated + decision"| p23
+  p23 -->|"approved"| p25
+  p23 -->|"outcome + reason"| renter
+  p23 -->|"notify"| n6
+  renter -->|"appeal / resubmit"| p24
+  p24 -->|"reopen to pending"| p21
+  p25 -->|"create payment"| n5
+  p21 -->|"save (pending)"| d3
+  p22 -->|"read applicant"| d1
+  p22 -->|"check availability"| d2
+  p23 -->|"update status + reason"| d3
+  p25 -->|"occupy / set tenant"| d2
+  classDef proc fill:#e7f0fe,stroke:#2563eb,stroke-width:2px,color:#16357a
+  classDef ent fill:#eceff3,stroke:#5b6b7f,stroke-width:2px,color:#2b3645
+  classDef store fill:#fbf6e9,stroke:#b08423,stroke-width:2px,color:#6b4e12
+  classDef ext fill:#e7f6f3,stroke:#0f766e,stroke-width:2px,color:#0f766e

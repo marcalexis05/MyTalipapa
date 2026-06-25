@@ -1,0 +1,19 @@
+flowchart TB
+  from42(("from 4.2")):::ext
+  p1(("4.3.1<br/>Snap to<br/>Aisles")):::proc
+  p2(("4.3.2<br/>Build<br/>Graph")):::proc
+  p3(("4.3.3<br/>Run<br/>Dijkstra")):::proc
+  p4(("4.3.4<br/>Simplify<br/>Waypoints")):::proc
+  to44(("to 4.4 / 4.5")):::ext
+  d7["D7 Map / Pathway Data"]:::store
+  from42 -->|"start + destination coords"| p1
+  p1 -->|"facing-aisle entry points"| p2
+  p2 -->|"nodes + weighted edges"| p3
+  p3 -->|"shortest node path"| p4
+  p4 -->|"orthogonal waypoint list"| to44
+  d7 -->|"columns · aisles · corridors"| p1
+  d7 -->|"aisle / corridor grid"| p2
+  classDef proc fill:#e7f0fe,stroke:#2563eb,stroke-width:2px,color:#16357a
+  classDef ent fill:#eceff3,stroke:#5b6b7f,stroke-width:2px,color:#2b3645
+  classDef store fill:#fbf6e9,stroke:#b08423,stroke-width:2px,color:#6b4e12
+  classDef ext fill:#e7f6f3,stroke:#0f766e,stroke-width:2px,color:#0f766e
