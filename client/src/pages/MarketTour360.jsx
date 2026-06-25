@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 
 import { useNavigate, useLocation } from 'react-router-dom'
-import mapImage from '../images/map.png'
+import mapImage from '../images/map_aligned.jpg'
 import logoImage from '../images/logo.png'
 import { SVG_STALL_COORDS } from '../utils/coords_dict'
+import { findRoute, ENTRANCE, METERS_PER_PIXEL } from '../utils/marketGraph'
 import {
   ArrowLeft,
   X,
@@ -38,207 +39,12 @@ import {
   LogOut
 } from 'lucide-react'
 
-// ─── Market Pathway Graph for Route Finding ─────────────────────────────────
-// Precise hallway intersection nodes mapped from the actual market floor plan.
-// These coordinates correspond to the real pathway centers visible on the SVG map.
-// Node naming: h = hallway number, t = top row, m = middle row, b = bottom row
-const HALLWAY_NODES = {
-  // ── TOP ROW (Y ≈ 395) — pathway between top and middle stall blocks ──
-  h1t:  { x: 120,  y: 395 },
-  h2t:  { x: 265,  y: 395 },
-  h3t:  { x: 435,  y: 395 },
-  h4t:  { x: 580,  y: 395 },
-  h5t:  { x: 720,  y: 395 },
-  h6t:  { x: 870,  y: 395 },
-  h7t:  { x: 1010, y: 395 },
-  h8t:  { x: 1160, y: 395 },
-  h9t:  { x: 1300, y: 395 },
-  h10t: { x: 1440, y: 395 },
-  h11t: { x: 1590, y: 395 },
-  h12t: { x: 1730, y: 395 },
-
-  // ── MIDDLE ROW (Y ≈ 870) — main central pathway separating top and bottom zones ──
-  h1m:  { x: 120,  y: 870 },
-  h2m:  { x: 265,  y: 870 },
-  h25m: { x: 370,  y: 870 },
-  h26m: { x: 435,  y: 870 },
-  h3m:  { x: 580,  y: 870 },
-  h27m: { x: 660,  y: 870 },
-  h5m:  { x: 720,  y: 870 },
-  h6m:  { x: 870,  y: 870 },
-  h7m:  { x: 1010, y: 870 },
-  h8m:  { x: 1160, y: 870 },
-  h9m:  { x: 1300, y: 870 },
-  h10m: { x: 1440, y: 870 },
-  h11m: { x: 1590, y: 870 },
-  h12m: { x: 1730, y: 870 },
-
-  // ── BOTTOM ROW (Y ≈ 1420) — pathway at bottom of lower stall blocks ──
-  h1b:  { x: 120,  y: 1420 },
-  h21b: { x: 185,  y: 1420 },
-  h22b: { x: 265,  y: 1420 },
-  h24b: { x: 370,  y: 1420 },
-  h3b:  { x: 580,  y: 1420 },
-  h30b: { x: 660,  y: 1420 },
-  h17b: { x: 780,  y: 1420 },
-  h18b: { x: 870,  y: 1420 },
-  h16b: { x: 1010, y: 1420 },
-  h15b: { x: 1160, y: 1420 },
-  h13b: { x: 1300, y: 1420 },
-  h14b: { x: 1440, y: 1420 },
-  h11b: { x: 1590, y: 1420 },
-  h12b: { x: 1730, y: 1420 },
-
-  // ── ENTRANCE (Y ≈ 1550) ──
-  entrance: { x: 1050, y: 1550 },
-};
-
-// Edges: pairs of node IDs that are directly connected by a pathway
-const HALLWAY_EDGES = [
-  // Top row horizontal connections
-  ['h1t','h2t'], ['h2t','h3t'], ['h3t','h4t'], ['h4t','h5t'],
-  ['h5t','h6t'], ['h6t','h7t'], ['h7t','h8t'], ['h8t','h9t'],
-  ['h9t','h10t'], ['h10t','h11t'], ['h11t','h12t'],
-
-  // Middle row horizontal connections
-  ['h1m','h2m'], ['h2m','h25m'], ['h25m','h26m'], ['h26m','h3m'],
-  ['h3m','h27m'], ['h27m','h5m'], ['h5m','h6m'], ['h6m','h7m'],
-  ['h7m','h8m'], ['h8m','h9m'], ['h9m','h10m'], ['h10m','h11m'], ['h11m','h12m'],
-
-  // Bottom row horizontal connections
-  ['h1b','h21b'], ['h21b','h22b'], ['h22b','h24b'], ['h24b','h3b'],
-  ['h3b','h30b'], ['h30b','h17b'], ['h17b','h18b'], ['h18b','h16b'],
-  ['h16b','h15b'], ['h15b','h13b'], ['h13b','h14b'], ['h14b','h11b'], ['h11b','h12b'],
-
-  // Vertical connections (top ↔ middle)
-  ['h1t','h1m'], ['h2t','h2m'], ['h3t','h26m'], ['h4t','h3m'],
-  ['h5t','h5m'], ['h6t','h6m'], ['h7t','h7m'], ['h8t','h8m'],
-  ['h9t','h9m'], ['h10t','h10m'], ['h11t','h11m'], ['h12t','h12m'],
-
-  // Vertical connections (middle ↔ bottom)
-  ['h1m','h1b'], ['h2m','h22b'], ['h25m','h24b'], ['h3m','h3b'],
-  ['h5m','h17b'], ['h6m','h18b'], ['h7m','h16b'], ['h8m','h15b'],
-  ['h9m','h13b'], ['h10m','h14b'], ['h11m','h11b'], ['h12m','h12b'],
-
-  // Entrance connections
-  ['entrance','h16b'], ['entrance','h17b'],
-];
-
-const ENTRANCE_COORDS = { x: 1050, y: 1550 };
-
-// Build the adjacency graph once
-const buildHallwayGraph = () => {
-  const adj = {};
-  Object.keys(HALLWAY_NODES).forEach(id => { adj[id] = []; });
-  HALLWAY_EDGES.forEach(([a, b]) => {
-    const na = HALLWAY_NODES[a], nb = HALLWAY_NODES[b];
-    const d = Math.hypot(na.x - nb.x, na.y - nb.y);
-    adj[a].push({ to: b, weight: d });
-    adj[b].push({ to: a, weight: d });
-  });
-  return adj;
-};
-const HALLWAY_ADJ = buildHallwayGraph();
-
-// Find the closest hallway node to a given coordinate
-const getNearestHallwayNode = (coords) => {
-  let bestId = null, bestDist = Infinity;
-  Object.entries(HALLWAY_NODES).forEach(([id, node]) => {
-    const d = Math.hypot(coords.x - node.x, coords.y - node.y);
-    if (d < bestDist) { bestDist = d; bestId = id; }
-  });
-  return bestId;
-};
-
-// Dijkstra through the named hallway graph
-const findMarketRoute = (fromCoords, toCoords) => {
-  const startNodeId = getNearestHallwayNode(fromCoords);
-  const endNodeId   = getNearestHallwayNode(toCoords);
-
-  // Dijkstra
-  const dist = {};
-  const prev = {};
-  const visited = new Set();
-  Object.keys(HALLWAY_NODES).forEach(id => { dist[id] = Infinity; });
-  dist[startNodeId] = 0;
-
-  const pq = [startNodeId];
-  while (pq.length > 0) {
-    pq.sort((a, b) => dist[a] - dist[b]);
-    const u = pq.shift();
-    if (visited.has(u)) continue;
-    visited.add(u);
-    if (u === endNodeId) break;
-    (HALLWAY_ADJ[u] || []).forEach(edge => {
-      if (visited.has(edge.to)) return;
-      const alt = dist[u] + edge.weight;
-      if (alt < dist[edge.to]) {
-        dist[edge.to] = alt;
-        prev[edge.to] = u;
-        pq.push(edge.to);
-      }
-    });
-  }
-
-  // Reconstruct path of hallway nodes
-  const pathIds = [];
-  let curr = endNodeId;
-  while (curr) { pathIds.unshift(curr); curr = prev[curr]; }
-
-  // Fallback if no path found
-  if (pathIds[0] !== startNodeId) {
-    const sn = HALLWAY_NODES[startNodeId];
-    const en = HALLWAY_NODES[endNodeId];
-    return [
-      fromCoords,
-      { x: fromCoords.x, y: sn.y },  // go vertical to corridor
-      sn,
-      { x: en.x, y: sn.y },           // go horizontal along corridor
-      en,
-      { x: toCoords.x, y: en.y },     // go horizontal to dest column
-      toCoords                          // go vertical into dest stall
-    ];
-  }
-
-  const graphWaypoints = pathIds.map(id => ({ ...HALLWAY_NODES[id] }));
-  const startNode = graphWaypoints[0];
-  const endNode   = graphWaypoints[graphWaypoints.length - 1];
-
-  // ─── ORTHOGONAL ENTRY/EXIT STUBS ────────────────────────────────────────
-  // Instead of drawing a diagonal from stall to hallway node, we:
-  //   1. Move VERTICALLY from stall to the corridor Y level (same X as stall)
-  //   2. Move HORIZONTALLY along the corridor to the hallway graph node
-  //   This ensures the line NEVER cuts through stall blocks diagonally.
-  const startStub = { x: fromCoords.x, y: startNode.y };
-  const endStub   = { x: toCoords.x,   y: endNode.y   };
-
-  // Full orthogonal path
-  const full = [
-    fromCoords,   // stall center
-    startStub,    // same X as stall, moved to corridor Y  (vertical segment)
-    ...graphWaypoints, // horizontal + vertical corridor segments
-    endStub,      // same Y as last corridor node, dest stall X (horizontal segment)
-    toCoords      // dest stall center (vertical segment)
-  ];
-
-  // Remove exact duplicates
-  const deduped = [full[0]];
-  for (let i = 1; i < full.length; i++) {
-    const last = deduped[deduped.length - 1];
-    if (full[i].x !== last.x || full[i].y !== last.y) deduped.push(full[i]);
-  }
-
-  // Remove collinear middle points (keeps corners, removes redundant midpoints)
-  const final = [deduped[0]];
-  for (let i = 1; i < deduped.length - 1; i++) {
-    const p = deduped[i - 1], c = deduped[i], n = deduped[i + 1];
-    const cross = (c.x - p.x) * (n.y - p.y) - (c.y - p.y) * (n.x - p.x);
-    if (Math.abs(cross) > 0.5) final.push(c);
-  }
-  if (deduped.length > 1) final.push(deduped[deduped.length - 1]);
-
-  return final;
-};
+// ─── Market route finding ───────────────────────────────────────────────────
+// The pathway geometry now lives in one shared, data-derived module
+// (utils/marketGraph) so the 360° tour and the AR finder always agree on where
+// the walkable aisles are and never draw routes through stall blocks.
+const ENTRANCE_COORDS = ENTRANCE;
+const findMarketRoute = (fromCoords, toCoords) => findRoute(fromCoords, toCoords);
 
 
 
@@ -577,7 +383,7 @@ export default function MarketTour360() {
   const [uiVisible, setUiVisible] = useState(true)
   const [detailsCollapsed, setDetailsCollapsed] = useState(true)
   const [sectionDropdownOpen, setSectionDropdownOpen] = useState(false)
-  const [privacyMode, setPrivacyMode] = useState(true)
+  const [privacyMode, setPrivacyMode] = useState(false)
   const [showBadges, setShowBadges] = useState(true)
   const [stallDropdownOpen, setStallDropdownOpen] = useState(false)
   const [isMapExpanded, setIsMapExpanded] = useState(false)
@@ -683,7 +489,7 @@ export default function MarketTour360() {
       const dx = p2.x - p1.x;
       const dy = p2.y - p1.y;
       const distPixels = Math.hypot(dx, dy);
-      const distMeters = Math.round(distPixels * 0.05); // scale pixels to meters
+      const distMeters = Math.round(distPixels * METERS_PER_PIXEL); // shared scale (utils/marketGraph)
       
       const angleRad = Math.atan2(dy, dx);
       const angleDeg = (angleRad * 180 / Math.PI + 450) % 360;
@@ -733,7 +539,7 @@ export default function MarketTour360() {
     
     const startStall = currentStall;
     const startSec = activeSectionKey;
-    const startCoords = startStall ? getRawCoordinates(startStall, startSec) : { x: 1050, y: 1550 };
+    const startCoords = startStall ? getRawCoordinates(startStall, startSec) : ENTRANCE_COORDS;
     
     // Find section of targetStall
     let targetSec = activeSectionKey;
@@ -1181,7 +987,7 @@ export default function MarketTour360() {
     const category = overrideCategory || stateRef.current.activeSectionKey;
     const zoneLetter = String(stall.zone || '').replace('Zone ', '').toUpperCase();
     const isBottomZone = ['E', 'F', 'G', 'H'].includes(zoneLetter);
-    const yOffset = isBottomZone ? 250 : 0;
+    const yOffset = 0;
 
     let x = 1020;
     let y = 635 + yOffset;
@@ -1324,11 +1130,62 @@ export default function MarketTour360() {
     return new THREE.CanvasTexture(canvas);
   };
 
+  // Google Street View-style ground navigation line: glowing line with directional chevrons
+  const createGroundArrowTexture = (THREE) => {
+    const S = 256;
+    const canvas = document.createElement('canvas');
+    canvas.width = S;
+    canvas.height = S;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, S, S);
+    const cx = S / 2;
+
+    // Horizontal glowing green gradient for the line
+    const grad = ctx.createLinearGradient(0, 0, S, 0);
+    grad.addColorStop(0.0, 'rgba(16, 185, 129, 0.0)');
+    grad.addColorStop(0.35, 'rgba(16, 185, 129, 0.45)');
+    grad.addColorStop(0.46, 'rgba(16, 185, 129, 0.95)');
+    grad.addColorStop(0.5, 'rgba(255, 255, 255, 1.0)'); // White hot core
+    grad.addColorStop(0.54, 'rgba(16, 185, 129, 0.95)');
+    grad.addColorStop(0.65, 'rgba(16, 185, 129, 0.45)');
+    grad.addColorStop(1.0, 'rgba(16, 185, 129, 0.0)');
+
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, S, S);
+
+    // Draw small indicator arrows pointing forward down the line
+    ctx.fillStyle = '#ffffff';
+    for (let y of [60, 128, 196]) {
+      ctx.beginPath();
+      ctx.moveTo(cx - 15, y + 10);
+      ctx.lineTo(cx, y - 10);
+      ctx.lineTo(cx + 15, y + 10);
+      ctx.lineTo(cx, y + 2);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.needsUpdate = true;
+    return texture;
+  };
+
   // Re-populate the 3D scene with relevant Hotspots
   const recreateHotspots = (scene, stall, THREE) => {
     // Clear old sprites
     hotspotMeshes.current.forEach((mesh) => scene.remove(mesh))
     hotspotMeshes.current = []
+
+    // Ground arrow meshes — 2 chevrons (one pointing forward, one pointing backward)
+    const arrowTex = createGroundArrowTexture(THREE);
+    for (let i = 0; i < 2; i++) {
+      const arrowMat = new THREE.MeshBasicMaterial({ map: arrowTex, transparent: true, depthTest: false, opacity: 0.0 });
+      const arrowMesh = new THREE.Mesh(new THREE.PlaneGeometry(35, 110), arrowMat);
+      arrowMesh.visible = false;
+      arrowMesh.userData = { type: 'go_forward', label: 'Go Forward', targetStallInfo: null, arrowIndex: i };
+      scene.add(arrowMesh);
+      hotspotMeshes.current.push(arrowMesh);
+    }
 
     // Dynamic nearby stall markers (Google Maps style)
     const currentSectionsData = stateRef.current.sectionsData;
@@ -1355,9 +1212,66 @@ export default function MarketTour360() {
       northOffset = 180;
     }
 
+    // Render dynamic nearby stall markers (Google Maps style pins)
+    if (stateRef.current.showBadges) {
+      sectionKeys.forEach((secKey) => {
+        const stalls = currentSectionsData[secKey].stalls;
+        stalls.forEach((s, idx) => {
+          if (secKey === currentActiveSectionKey && s.id === stall.id) return;
+          const targetCoords = getRawCoordinates(s, secKey);
+          
+          const dx = targetCoords.x - currentCoords.x;
+          const dy = targetCoords.y - currentCoords.y;
+          const distance = Math.hypot(dx, dy);
+          
+          // Only show stalls within a reasonable radius (e.g. 420px)
+          if (distance < 10 || distance > 420) return;
+          
+          // Prevent showing duplicate badge numbers in the current viewport
+          const cleanNum = extractCleanNumber(s.name);
+          if (renderedNumbers.has(cleanNum)) return;
+          renderedNumbers.add(cleanNum);
+          
+          // Calculate compass angle
+          const mapAngleRad = Math.atan2(dy, dx);
+          const mapAngleDeg = (mapAngleRad * 180) / Math.PI;
+          const targetCompassAngle = (mapAngleDeg + 450) % 360;
+          
+          // Convert to ThreeJS spherical coordinates angle (theta) relative to camera northOffset
+          const thetaRad = ((targetCompassAngle - northOffset) * Math.PI) / 180;
+          
+          // Place the pin in 3D space on a sphere around the camera
+          const pinDist = 180 + (distance * 0.35); // sphere radius between 180 and 320
+          const px = Math.cos(thetaRad) * pinDist;
+          const pz = Math.sin(thetaRad) * pinDist;
+          const py = -25; // slightly below eye level (eye level is y = 0)
+          
+          // Create texture and material
+          const pinTex = createStallPinTexture(THREE, s.name, secKey);
+          const pinMat = new THREE.SpriteMaterial({ map: pinTex, transparent: true, depthTest: false });
+          const pinSprite = new THREE.Sprite(pinMat);
+          
+          pinSprite.position.set(px, py, pz);
+          const scale = Math.max(18, 38 - (distance * 0.05));
+          pinSprite.scale.set(scale, scale, 1.0);
+          
+          pinSprite.userData = {
+            type: 'nearby_stall',
+            label: s.name,
+            sectionKey: secKey,
+            stall: s,
+            index: idx
+          };
+          
+          scene.add(pinSprite);
+          hotspotMeshes.current.push(pinSprite);
+        });
+      });
+    }
 
-
-  }
+    // Route chevrons removed (were unreliable). Routing guidance now lives in the
+    // floor map / mini-map polyline and the AR finder's step detection.
+  };
 
   // Main Three.js Init
   useEffect(() => {
@@ -2364,12 +2278,15 @@ export default function MarketTour360() {
                       </linearGradient>
                     </defs>
 
-                    <image href={mapImage} x="-20" y="-15" width="2305" height="1824" preserveAspectRatio="none" style={{ pointerEvents: 'none', opacity: 0.75 }} />
+                    <image href={mapImage} x="0" y="0" width="2305" height="1824" preserveAspectRatio="none" style={{ pointerEvents: 'none', opacity: 0.75 }} />
 
                     {/* Google Maps–style corridor route */}
                     {fromCoords && toCoords && (() => {
                       const waypoints = findMarketRoute(fromCoords, toCoords);
-                      const pathWaypoints = waypoints.slice(1, -1);
+                      // Draw the full path (including the short exit/entry segments)
+                      // so the line connects the start pin → aisles → end pin with
+                      // no gaps. Pins are layered on top of the endpoints.
+                      const pathWaypoints = waypoints;
                       const pts = pathWaypoints.map(p => `${p.x},${p.y}`).join(' ');
                       
                       // Animated directional arrows overlay
@@ -2489,10 +2406,10 @@ export default function MarketTour360() {
                     {/* MyTalipapa Logo — placed directly over diamond icon */}
                     <image
                       href={logoImage}
-                      x="1960" y="1450"
-                      width="450" height="450"
+                      x="20" y="1604"
+                      width="200" height="200"
                       preserveAspectRatio="xMidYMid meet"
-                      style={{ pointerEvents: 'none' }}
+                      style={{ pointerEvents: 'none', opacity: 0.6 }}
                     />
                   </svg>
                 </div>

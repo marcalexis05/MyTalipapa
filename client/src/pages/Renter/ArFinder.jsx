@@ -1,31 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Compass, Info, HelpCircle, Navigation, RotateCw, Check, X, Camera, CameraOff, Map, ChevronDown, ChevronUp, Locate, ChevronLeft, ChevronRight, Search, QrCode, MapPin, Clock, Tag, Store, Phone } from "lucide-react";
-import mapImage from "../../images/map.png";
-import logoImage from "../../images/logo.png";
+import { ArrowLeft, Compass, Info, HelpCircle, Navigation, RotateCw, Check, X, Camera, CameraOff, Map, ChevronDown, ChevronUp, Locate, ChevronLeft, ChevronRight, Search, QrCode, MapPin, Clock, Tag, Store, Phone, Footprints } from "lucide-react";
+import mapImage from "../../images/map_aligned.jpg";
 import { SVG_STALL_COORDS } from "../../utils/coords_dict";
+import { findRoute, snapToWalkable, METERS_PER_PIXEL } from "../../utils/marketGraph";
 import QrScanner from "../../components/QrScanner";
 
-// Custom inline SVG replacement for lucide Footprints icon to ensure reliable rendering in all browser contexts
-const Footprints = ({ size = 18, color = "currentColor", ...props }) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke={color}
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className="lucide lucide-footprints"
-    {...props}
-  >
-    <path d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0Z" />
-    <path d="M20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 0 4 0Z" />
-    <path d="M16 17h4" />
-    <path d="M4 13h4" />
-  </svg>
-);
+
 
 
 const getStallZone = (num, category) => {
@@ -54,7 +34,7 @@ const getStallCoords = (rawId, category, zone) => {
   const cleanNum = getCleanDbStallNumber(rawId);
   const zoneLetter = String(zone || '').replace('Zone ', '').toUpperCase();
   const isBottomZone = ['E', 'F', 'G', 'H'].includes(zoneLetter);
-  const yOffset = isBottomZone ? 250 : 0;
+  const yOffset = 0;
   const rawKey = `${category}-${rawId}`;
   if (SVG_STALL_COORDS[rawKey]) {
     return { x: SVG_STALL_COORDS[rawKey].x, y: SVG_STALL_COORDS[rawKey].y + yOffset };
@@ -98,7 +78,7 @@ const buildAllStalls = () => {
     'nostallnum1', 'nostallnum2', 'nostallnum3', 'nostallnum4', 'nostallnum5'
   ];
   const veggieIds = [
-    '5', '6', '7', '11', '12', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24',
+    '5', '6', '7', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24',
     '25', '26', '27', '28', '29', '30', '31', '32', '33', '34', '35', '36', '37', '38', '39', '40',
     '41', '42', '43', '44', '45', '46', '47', '48', '50', '51', '52', '53', '54', '55', '56', '57', '58', '59', '60',
     '61', '62', '63', '64', '65', '66', '67', '68', '69', '70', '71', '72'
@@ -355,15 +335,20 @@ export default function ArFinder({ onBack, initialStall }) {
             dbStallMap[`${category}-${zoneLetter}-${key}`] = dbStall;
           }
         });
+
+        // Track which database keys are matched to static stalls
+        const matchedDbKeys = new Set();
+
         const updatedList = STALLS_AR.map(s => {
           const cleanedId = getCleanDbStallNumber(s.rawId);
           const zoneLetter = String(s.zone || '').replace('Zone ', '').toUpperCase();
-          const dbStall = dbStallMap[`${s.category}-${zoneLetter}-${cleanedId}`];
+          const dbKey = `${s.category}-${zoneLetter}-${cleanedId}`;
+          const dbStall = dbStallMap[dbKey];
           if (dbStall) {
-            const isBottomZone = ['E', 'F', 'G', 'H'].includes(zoneLetter);
+            matchedDbKeys.add(dbKey);
             const dbX = dbStall.coordinates?.x;
             const dbY = dbStall.coordinates?.y;
-            const yOffset = isBottomZone ? 250 : 0;
+            const yOffset = 0;
             return {
               ...s,
               x: dbX !== undefined ? dbX : s.x,
@@ -377,10 +362,43 @@ export default function ArFinder({ onBack, initialStall }) {
           }
           return s;
         });
-        setStallsList(updatedList);
-        if (updatedList.length > 0) {
-          const exists = updatedList.some(s => s.id === selectedStallId);
-          if (!exists) setSelectedStallId(updatedList[0].id);
+
+        // Append any unmatched database stalls dynamically
+        const finalStallsList = [...updatedList];
+        dbStalls.forEach(dbStall => {
+          const key = getCleanDbStallNumber(dbStall.stallNumber || dbStall.id || '');
+          const sec = String(dbStall.section || '').toLowerCase();
+          let category = 'meat';
+          if (sec.includes('fish') || sec.includes('sea')) category = 'fish';
+          else if (sec.includes('veg') || sec.includes('produce')) category = 'veggies';
+          const zoneLetter = String(dbStall.zone || '').replace('Zone ', '').toUpperCase();
+          const dbKey = `${category}-${zoneLetter}-${key}`;
+
+          if (!matchedDbKeys.has(dbKey)) {
+            const coords = getStallCoords(dbStall.stallNumber, category, dbStall.zone);
+            const displayName = `Stall #${dbStall.stallNumber}`;
+            finalStallsList.push({
+              id: `${category}-${dbStall.stallNumber}`,
+              label: `${displayName} (${category.charAt(0).toUpperCase() + category.slice(1)})`,
+              section: category === 'meat' ? 'Meat Section' : category === 'fish' ? 'Fish Section' : 'Vegetables Section',
+              zone: dbStall.zone || `Zone ${zoneLetter}`,
+              x: dbStall.coordinates?.x !== undefined ? dbStall.coordinates.x : coords.x,
+              y: dbStall.coordinates?.y !== undefined ? dbStall.coordinates.y : coords.y,
+              rawId: dbStall.stallNumber,
+              category,
+              status: dbStall.status || 'available',
+              price: dbStall.monthlyRate || 0,
+              contractorName: dbStall.contractorName || 'None',
+              contractorContact: dbStall.contractorContact || 'N/A',
+              dbId: dbStall._id || dbStall.id
+            });
+          }
+        });
+
+        setStallsList(finalStallsList);
+        if (finalStallsList.length > 0) {
+          const exists = finalStallsList.some(s => s.id === selectedStallId);
+          if (!exists) setSelectedStallId(finalStallsList[0].id);
         }
       })
       .catch(err => console.error('Failed to fetch stalls in ArFinder:', err))
@@ -428,11 +446,13 @@ export default function ArFinder({ onBack, initialStall }) {
   const userYRef = useRef(1720);
   useEffect(() => { userYRef.current = userY; }, [userY]);
 
-  // NEW: Step size adjusts based on vertical zones
+  // Unified physical step size (0.75m / 0.025m/px = 30px)
   const getStepSize = (currentY) => {
-    if (currentY < 910) return Math.round(0.75 / (16.01 / 810)); // 38px
-    return Math.round(0.75 / (11.25 / 810));                      // 54px
+    return 30;
   };
+
+  // Snap map clicks onto the nearest walkable aisle/pathway (shared geometry).
+  const snapToPathways = (x, y) => snapToWalkable(x, y);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth <= 640);
@@ -568,13 +588,19 @@ export default function ArFinder({ onBack, initialStall }) {
       setCameraError(null);
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: "environment" } } });
       streamRef.current = stream;
-      if (videoRef.current) videoRef.current.srcObject = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.play().catch(e => console.error("Camera play failed", e));
+      }
       setCameraActive(true);
     } catch {
       try {
         const fallback = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
         streamRef.current = fallback;
-        if (videoRef.current) videoRef.current.srcObject = fallback;
+        if (videoRef.current) {
+          videoRef.current.srcObject = fallback;
+          videoRef.current.play().catch(e => console.error("Fallback camera play failed", e));
+        }
         setCameraActive(true);
       } catch {
         setCameraError("Camera unavailable. Running in simulated AR view.");
@@ -616,63 +642,31 @@ export default function ArFinder({ onBack, initialStall }) {
     const rr = rect.width / rect.height;
     const vr = vw / vh;
     let scale, ox = 0, oy = 0;
-    if (rr > vr) { scale = rect.width / vw; oy = (rect.height - vh * scale) / 2; }
-    else { scale = rect.height / vh; ox = (rect.width - vw * scale) / 2; }
+    if (rr > vr) { scale = rect.height / vh; ox = (rect.width - vw * scale) / 2; }
+    else { scale = rect.width / vw; oy = (rect.height - vh * scale) / 2; }
     const cx = (e.clientX - rect.left - ox) / scale;
     const cy = (e.clientY - rect.top - oy) / scale;
     if (cx >= 0 && cx <= vw && cy >= 0 && cy <= vh) {
       gpsAnchorRef.current = null;
-      setUserX(Math.round(cx));
-      setUserY(Math.round(cy));
+      const snapped = snapToPathways(cx, cy);
+      setUserX(Math.round(snapped.x));
+      setUserY(Math.round(snapped.y));
       setSelectedStartId("custom");
+      setToastMsg("Start position updated on pathway.");
     }
   };
 
-  const X_CORRIDORS = [30, 265, 530, 790, 1050, 1300, 1570, 1845, 2120];
-  const Y_PATHWAYS = [100, 300, 500, 700, 910, 1100, 1300, 1500, 1720];
+  // Orthogonal walking route from the user to the target stall, using the shared
+  // market graph — follows real aisles/pathways and never cuts through stalls.
+  const pathPoints = findRoute({ x: userX, y: userY }, { x: currentStall.x, y: currentStall.y });
 
-  const getPathPoints = () => {
-    const pts = [{ x: userX, y: userY }];
-    const sx = currentStall.x, sy = currentStall.y;
-    const userCX = X_CORRIDORS.reduce((p, c) => Math.abs(c - userX) < Math.abs(p - userX) ? c : p);
-    const stallCX = X_CORRIDORS.reduce((p, c) => Math.abs(c - sx) < Math.abs(p - sx) ? c : p);
-    if (userCX === stallCX) {
-      if (userX !== userCX) pts.push({ x: userCX, y: userY });
-      if (userY !== sy) pts.push({ x: userCX, y: sy });
-    } else {
-      let bestPY = Y_PATHWAYS[0], minDist = Infinity;
-      for (const py of Y_PATHWAYS) {
-        const dist = Math.abs(userY - py) + Math.abs(userCX - stallCX) + Math.abs(sy - py);
-        if (dist < minDist) { minDist = dist; bestPY = py; }
-      }
-      if (userX !== userCX) pts.push({ x: userCX, y: userY });
-      if (userY !== bestPY) pts.push({ x: userCX, y: bestPY });
-      if (userCX !== stallCX) pts.push({ x: stallCX, y: bestPY });
-      if (bestPY !== sy) pts.push({ x: stallCX, y: sy });
-    }
-    const last = pts[pts.length - 1];
-    if (last.x !== sx || last.y !== sy) pts.push({ x: sx, y: sy });
-    const cleanPts = [];
-    for (const p of pts) {
-      if (cleanPts.length === 0) cleanPts.push(p);
-      else { const lastP = cleanPts[cleanPts.length - 1]; if (lastP.x !== p.x || lastP.y !== p.y) cleanPts.push(p); }
-    }
-    return cleanPts;
-  };
-
-  const pathPoints = getPathPoints();
-
-  // Zone-aware distance calculation mapping physical measurements
+  // Unified path distance calculation mapping pixels to physical meters
   const getPathDist = (pts) => {
     let totalMeters = 0;
     for (let i = 0; i < pts.length - 1; i++) {
       const dx = pts[i + 1].x - pts[i].x;
       const dy = pts[i + 1].y - pts[i].y;
-      const midY = (pts[i].y + pts[i + 1].y) / 2;
-      const scaleV = midY < 910 ? 16.01 / 810 : 11.25 / 810;
-      const realDx = Math.abs(dx) * (16.57 / 2090);
-      const realDy = Math.abs(dy) * scaleV;
-      totalMeters += Math.sqrt(realDx ** 2 + realDy ** 2);
+      totalMeters += Math.sqrt(dx ** 2 + dy ** 2) * METERS_PER_PIXEL;
     }
     return Math.round(totalMeters * 10) / 10;
   };
@@ -686,7 +680,8 @@ export default function ArFinder({ onBack, initialStall }) {
     return secs > 0 ? `~${mins}m ${secs}s` : `~${mins}m`;
   };
 
-  const calcDist = (x1, y1, x2, y2) => Math.round(Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2) * 0.02);
+  // Straight-line physical distance calculation for AR projections, unified with METERS_PER_PIXEL
+  const calcDist = (x1, y1, x2, y2) => Math.round(Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2) * METERS_PER_PIXEL);
 
   const getBearing = (x1, y1, x2, y2) => {
     let a = Math.atan2(x2 - x1, y1 - y2) * (180 / Math.PI);
@@ -723,21 +718,6 @@ export default function ArFinder({ onBack, initialStall }) {
   };
 
   const targetProj = getArProj(currentStall.x, currentStall.y);
-
-  const arPathDots = (() => {
-    const dots = [];
-    for (let i = 0; i < pathPoints.length - 1; i++) {
-      const p1 = pathPoints[i], p2 = pathPoints[i + 1];
-      const d = Math.sqrt((p2.x - p1.x) ** 2 + (p2.y - p1.y) ** 2);
-      const steps = Math.max(3, Math.round(d / 75));
-      for (let j = 0; j <= steps; j++) {
-        const t = j / steps;
-        dots.push({ x: p1.x + (p2.x - p1.x) * t, y: p1.y + (p2.y - p1.y) * t });
-      }
-    }
-    return dots.map(d => ({ ...d, proj: getArProj(d.x, d.y) }))
-      .filter(d => d.proj.isVisible && d.proj.dist > 1.5 && d.proj.dist < 40);
-  })();
 
   const handleStepForward = () => {
     const rad = (heading * Math.PI) / 180;
@@ -797,6 +777,14 @@ export default function ArFinder({ onBack, initialStall }) {
 
     const stall = resolveStallFromRef(parsed.ref, stallsList, parsed.zone);
     if (!stall) { setToastMsg(`QR not recognized: "${String(text).slice(0, 24)}"`); return; }
+
+    // Connect QR scanning to start/current position: "you are here"
+    gpsAnchorRef.current = null;
+    setUserX(stall.x);
+    setUserY(stall.y);
+    setSelectedStartId("custom");
+    setToastMsg(`You are here: ${stall.label}`);
+
     setRecognizedStall(stall);
     setDetailsOpen(false);          // show the floating ⓘ marker first; tap it for full details
     setRecognizedDetails(null);
@@ -895,11 +883,14 @@ export default function ArFinder({ onBack, initialStall }) {
       </div>
       <svg viewBox="0 0 2305 1824" preserveAspectRatio="xMidYMid meet"
         onClick={handleMapClick} style={{ width: "100%", height: "100%", cursor: "crosshair", userSelect: "none" }}>
-        <image xlinkHref={mapImage} href={mapImage} x="-20" y="-15" width="2305" height="1824" preserveAspectRatio="none" />
-        <polyline points={pathPoints.map(p => `${p.x},${p.y}`).join(" ")}
-          fill="none" stroke="#e8621a" strokeWidth="10"
-          strokeDasharray="15 15" strokeLinecap="round" strokeLinejoin="round" />
-        {(selectedCategory === "all" ? stallsList : stallsList.filter(s => s.category === selectedCategory)).map(s => {
+        {/* Authentic market floor plan, rasterised from the client's draw.io source
+            at the exact coordinate viewBox — so it lines up 1:1 with the stall
+            markers, route and "you are here". */}
+        <image xlinkHref={mapImage} href={mapImage} x="0" y="0" width="2305" height="1824" preserveAspectRatio="none" />
+
+        {/* Per-stall tap targets + highlight for the selected destination */}
+        {stallsList.map(s => {
+          if (s.x === 1020 && s.y === 635) return null; // unmapped fallback — skip
           const isDest = s.id === selectedStallId;
           return (
             <g
@@ -913,20 +904,39 @@ export default function ArFinder({ onBack, initialStall }) {
                 setToastMsg(`Routing to ${s.label}`);
               }}
             >
-              <circle r="46" fill="transparent" />
-              {isDest && <circle r="40" fill="none" stroke="#e8621a" strokeWidth="5" opacity="0.55" />}
-              <circle r={isDest ? 26 : 15} fill={isDest ? "#e8621a" : "rgba(232,98,26,0.4)"} stroke="#fff" strokeWidth={isDest ? 5 : 3} />
+              <rect x="-78" y="-32" width="156" height="64" fill="transparent" />
+              {isDest && (
+                <>
+                  <rect x="-78" y="-32" width="156" height="64" rx="12" fill="rgba(232,98,26,0.28)" stroke="#e8621a" strokeWidth="5">
+                    <animate attributeName="stroke-opacity" values="1;0.25;1" dur="1.4s" repeatCount="indefinite" />
+                  </rect>
+                  <circle cx="0" cy="-32" r="11" fill="#e8621a" stroke="#fff" strokeWidth="3" />
+                </>
+              )}
             </g>
           );
         })}
-        <g transform={`translate(${userX},${userY})`}>
+
+        {/* Walking route — white casing + animated orange dotted line (Google-Maps style) */}
+        {pathPoints.length > 1 && (
+          <g style={{ pointerEvents: "none" }}>
+            <polyline points={pathPoints.map(p => `${p.x},${p.y}`).join(" ")}
+              fill="none" stroke="#ffffff" strokeWidth="18" strokeLinecap="round" strokeLinejoin="round" opacity="0.95" />
+            <polyline points={pathPoints.map(p => `${p.x},${p.y}`).join(" ")}
+              fill="none" stroke="#e8621a" strokeWidth="9" strokeDasharray="1 26" strokeLinecap="round" strokeLinejoin="round">
+              <animate attributeName="stroke-dashoffset" from="27" to="0" dur="0.7s" repeatCount="indefinite" />
+            </polyline>
+          </g>
+        )}
+
+        {/* "You are here" marker — heading-aware cone + dot */}
+        <g transform={`translate(${userX},${userY})`} style={{ pointerEvents: "none" }}>
           <path d="M0 0 L-70 -120 A140 140 0 0 1 70 -120 Z" fill="rgba(26,92,42,0.22)" transform={`rotate(${heading})`} style={{ transformOrigin: "0px 0px" }} />
           <g transform={`rotate(${heading})`}>
             <circle r="25" fill="#1a5c2a" stroke="#fff" strokeWidth="4" />
             <path d="M0 -15 L12 10 L0 4 L-12 10 Z" fill="#fff" />
           </g>
         </g>
-        <image href={logoImage} x="1960" y="1450" width="450" height="450" preserveAspectRatio="xMidYMid meet" style={{ pointerEvents: 'none' }} />
       </svg>
       <div className="sim-badge">
         <Compass size={10} className="animate-spin-slow" />
@@ -1654,7 +1664,7 @@ export default function ArFinder({ onBack, initialStall }) {
                 <ul style={{ fontSize: 11, color: "#475569", paddingLeft: 16, margin: 0, lineHeight: 1.7 }}>
                   <li>Select your starting hallway using the <strong>START</strong> selector.</li>
                   <li>Tap <strong>STALL</strong> to pick your destination from the sheet.</li>
-                  <li>Follow the floating orange dots in the camera view.</li>
+                  <li>Follow the route on the floor map; the camera marker points to your stall.</li>
                   <li>Use the right-side HUD to simulate walking or rotating.</li>
                   <li>Tap anywhere on the floor map to set your position manually.</li>
                   <li>Tap <strong>STEP</strong> to enable automatic step detection — walk and the map updates automatically!</li>
@@ -1672,18 +1682,6 @@ export default function ArFinder({ onBack, initialStall }) {
               </div>
             ) : (
               <>
-                {arPathDots.map((dot, i) => (
-                  <div key={i} style={{
-                    position: "absolute",
-                    left: `${dot.proj.xPct}%`, top: `${dot.proj.yPct}%`,
-                    transform: `translate(-50%,-50%) scale(${dot.proj.scale})`,
-                    width: 11, height: 11, borderRadius: "50%",
-                    background: "rgba(232,98,26,0.88)",
-                    border: "1.5px solid rgba(255,255,255,0.5)",
-                    boxShadow: "0 0 6px rgba(232,98,26,0.5)",
-                  }} />
-                ))}
-
                 {targetProj.isVisible ? (
                   <div style={{
                     position: "absolute",
@@ -1736,7 +1734,7 @@ export default function ArFinder({ onBack, initialStall }) {
               style={{ marginBottom: 4 }}
               title="Toggle Step Detection"
             >
-              <Footprints size={18} />
+              <Footprints size={17} />
             </button>
 
             {!hasOrientation && (
