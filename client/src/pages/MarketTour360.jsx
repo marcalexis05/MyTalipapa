@@ -1130,45 +1130,6 @@ export default function MarketTour360() {
     return new THREE.CanvasTexture(canvas);
   };
 
-  // Google Street View-style ground navigation line: glowing line with directional chevrons
-  const createGroundArrowTexture = (THREE) => {
-    const S = 256;
-    const canvas = document.createElement('canvas');
-    canvas.width = S;
-    canvas.height = S;
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, S, S);
-    const cx = S / 2;
-
-    // Horizontal glowing green gradient for the line
-    const grad = ctx.createLinearGradient(0, 0, S, 0);
-    grad.addColorStop(0.0, 'rgba(16, 185, 129, 0.0)');
-    grad.addColorStop(0.35, 'rgba(16, 185, 129, 0.45)');
-    grad.addColorStop(0.46, 'rgba(16, 185, 129, 0.95)');
-    grad.addColorStop(0.5, 'rgba(255, 255, 255, 1.0)'); // White hot core
-    grad.addColorStop(0.54, 'rgba(16, 185, 129, 0.95)');
-    grad.addColorStop(0.65, 'rgba(16, 185, 129, 0.45)');
-    grad.addColorStop(1.0, 'rgba(16, 185, 129, 0.0)');
-
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, S, S);
-
-    // Draw small indicator arrows pointing forward down the line
-    ctx.fillStyle = '#ffffff';
-    for (let y of [60, 128, 196]) {
-      ctx.beginPath();
-      ctx.moveTo(cx - 15, y + 10);
-      ctx.lineTo(cx, y - 10);
-      ctx.lineTo(cx + 15, y + 10);
-      ctx.lineTo(cx, y + 2);
-      ctx.closePath();
-      ctx.fill();
-    }
-
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.needsUpdate = true;
-    return texture;
-  };
 
   // Re-populate the 3D scene with relevant Hotspots
   const recreateHotspots = (scene, stall, THREE) => {
@@ -1176,98 +1137,6 @@ export default function MarketTour360() {
     hotspotMeshes.current.forEach((mesh) => scene.remove(mesh))
     hotspotMeshes.current = []
 
-    // Ground arrow meshes — 2 chevrons (one pointing forward, one pointing backward)
-    const arrowTex = createGroundArrowTexture(THREE);
-    for (let i = 0; i < 2; i++) {
-      const arrowMat = new THREE.MeshBasicMaterial({ map: arrowTex, transparent: true, depthTest: false, opacity: 0.0 });
-      const arrowMesh = new THREE.Mesh(new THREE.PlaneGeometry(35, 110), arrowMat);
-      arrowMesh.visible = false;
-      arrowMesh.userData = { type: 'go_forward', label: 'Go Forward', targetStallInfo: null, arrowIndex: i };
-      scene.add(arrowMesh);
-      hotspotMeshes.current.push(arrowMesh);
-    }
-
-    // Dynamic nearby stall markers (Google Maps style)
-    const currentSectionsData = stateRef.current.sectionsData;
-    const currentActiveSectionKey = stateRef.current.activeSectionKey;
-    const currentCoords = getRawCoordinates(stall, currentActiveSectionKey);
-    const sectionKeys = ['meat', 'fish', 'veggies'];
-    
-    // Prevent displaying duplicate badge numbers in the current viewport (e.g. 8 and 8(u))
-    const renderedNumbers = new Set([extractCleanNumber(stall.name)]);
-
-    // Calibrate camera direction offset
-    let northOffset = 0;
-    const upsideDownStalls = ['13(u)', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24'];
-    const zoneAFishUpsideDown = ['11', '12', '13', '14', '15', '16', '17', '18', '19', '20'];
-    const zoneAMeatUpsideDown = ['12', '13'];
-
-    const isZoneEMeat = currentActiveSectionKey === 'meat' && upsideDownStalls.includes(stall.id);
-    const isZoneAFish = currentActiveSectionKey === 'fish' && zoneAFishUpsideDown.includes(stall.id);
-    const isZoneAMeat = currentActiveSectionKey === 'meat' && zoneAMeatUpsideDown.includes(stall.id);
-
-    if (stall && stall.id === '1(u)') {
-      northOffset = -90;
-    } else if (stall && (isZoneEMeat || isZoneAFish || isZoneAMeat)) {
-      northOffset = 180;
-    }
-
-    // Render dynamic nearby stall markers (Google Maps style pins)
-    if (stateRef.current.showBadges) {
-      sectionKeys.forEach((secKey) => {
-        const stalls = currentSectionsData[secKey].stalls;
-        stalls.forEach((s, idx) => {
-          if (secKey === currentActiveSectionKey && s.id === stall.id) return;
-          const targetCoords = getRawCoordinates(s, secKey);
-          
-          const dx = targetCoords.x - currentCoords.x;
-          const dy = targetCoords.y - currentCoords.y;
-          const distance = Math.hypot(dx, dy);
-          
-          // Only show stalls within a reasonable radius (e.g. 420px)
-          if (distance < 10 || distance > 420) return;
-          
-          // Prevent showing duplicate badge numbers in the current viewport
-          const cleanNum = extractCleanNumber(s.name);
-          if (renderedNumbers.has(cleanNum)) return;
-          renderedNumbers.add(cleanNum);
-          
-          // Calculate compass angle
-          const mapAngleRad = Math.atan2(dy, dx);
-          const mapAngleDeg = (mapAngleRad * 180) / Math.PI;
-          const targetCompassAngle = (mapAngleDeg + 450) % 360;
-          
-          // Convert to ThreeJS spherical coordinates angle (theta) relative to camera northOffset
-          const thetaRad = ((targetCompassAngle - northOffset) * Math.PI) / 180;
-          
-          // Place the pin in 3D space on a sphere around the camera
-          const pinDist = 180 + (distance * 0.35); // sphere radius between 180 and 320
-          const px = Math.cos(thetaRad) * pinDist;
-          const pz = Math.sin(thetaRad) * pinDist;
-          const py = -25; // slightly below eye level (eye level is y = 0)
-          
-          // Create texture and material
-          const pinTex = createStallPinTexture(THREE, s.name, secKey);
-          const pinMat = new THREE.SpriteMaterial({ map: pinTex, transparent: true, depthTest: false });
-          const pinSprite = new THREE.Sprite(pinMat);
-          
-          pinSprite.position.set(px, py, pz);
-          const scale = Math.max(18, 38 - (distance * 0.05));
-          pinSprite.scale.set(scale, scale, 1.0);
-          
-          pinSprite.userData = {
-            type: 'nearby_stall',
-            label: s.name,
-            sectionKey: secKey,
-            stall: s,
-            index: idx
-          };
-          
-          scene.add(pinSprite);
-          hotspotMeshes.current.push(pinSprite);
-        });
-      });
-    }
 
     // Route chevrons removed (were unreliable). Routing guidance now lives in the
     // floor map / mini-map polyline and the AR finder's step detection.
@@ -1408,46 +1277,6 @@ export default function MarketTour360() {
                 });
               }
             }
-          } else if (uData.type === 'go_forward' || uData.type === 'nearby_stall') {
-            const targetInfo = uData.type === 'go_forward' ? uData.targetStallInfo : uData;
-            if (targetInfo) {
-              const { sectionKey, stall } = targetInfo;
-              const targetStallId = stall.id;
-              if (transitioning) return;
-
-              setTransitioning(true);
-              const startFov = camera.fov;
-              const targetFov = Math.max(30, startFov - 25);
-              const duration = 400; // 400ms zoom animation
-              const startTime = performance.now();
-
-              const animateForward = (time) => {
-                const elapsed = time - startTime;
-                const progress = Math.min(elapsed / duration, 1);
-                // Ease in out
-                const ease = progress < 0.5 ? 2 * progress * progress : -1 + (4 - 2 * progress) * progress;
-
-                camera.fov = startFov - ((startFov - targetFov) * ease);
-                camera.updateProjectionMatrix();
-
-                if (progress < 1) {
-                  requestAnimationFrame(animateForward);
-                } else {
-                  const freshSectionsData = stateRef.current.sectionsData;
-                  const stalls = freshSectionsData[sectionKey].stalls;
-                  const targetIdx = stalls.findIndex(s => s.id === targetStallId);
-                  
-                  if (targetIdx !== -1) {
-                    setActiveSectionKey(sectionKey);
-                    setStallIndex(targetIdx);
-                    triggerSceneTransition(getStallImagePath(stalls[targetIdx].id, sectionKey), true);
-                  } else {
-                    setTransitioning(false);
-                  }
-                }
-              };
-              requestAnimationFrame(animateForward);
-            }
           }
         }
       }
@@ -1473,13 +1302,6 @@ export default function MarketTour360() {
         if (hits.length > 0) {
           const hit = hits[0]
 
-          if (hit.object.userData.type === 'go_forward') {
-            arrowIsHovered = true;
-            setCursor('pointer')
-            setHoveredHotspot(null)
-            return
-          }
-
           let dynamicLabel = hit.object.userData.label;
           if (hit.object.userData.type === 'next' || hit.object.userData.type === 'prev') {
             const cameraDirection = new THREE.Vector3()
@@ -1487,25 +1309,6 @@ export default function MarketTour360() {
             const arrowDirection = new THREE.Vector3().copy(hit.object.position).normalize()
             const dot = cameraDirection.dot(arrowDirection)
             dynamicLabel = dot > 0 ? 'Forward' : 'Backward'
-          } else if (hit.object.userData.type === 'go_forward') {
-            const target = hit.object.userData.targetStallInfo;
-            if (target) {
-              if (stateRef.current.currentStall.id === '1(u)' && target.stall.id === '13(u)') {
-                dynamicLabel = `Go Left to ${target.stall.name || 'Stall ' + target.stall.id}`;
-              } else if (stateRef.current.currentStall.id === '24' && target.stall.id === '12(u)') {
-                dynamicLabel = `Go Left to ${target.stall.name || 'Stall ' + target.stall.id}`;
-              } else if (stateRef.current.currentStall.id === '24' && target.sectionKey === 'veggies' && target.stall.id === '12') {
-                dynamicLabel = `Go Right to ${target.stall.name || 'Stall ' + target.stall.id}`;
-              } else if (stateRef.current.currentStall.id === '12(u)' && target.stall.id === '24') {
-                dynamicLabel = `Go Right to ${target.stall.name || 'Stall ' + target.stall.id}`;
-              } else if (stateRef.current.currentStall.id === '13(u)' && target.stall.id === '1(u)') {
-                dynamicLabel = `Go Right to ${target.stall.name || 'Stall ' + target.stall.id}`;
-              } else {
-                dynamicLabel = `Forward to ${target.stall.name || 'Stall ' + target.stall.id}`;
-              }
-            }
-          } else if (hit.object.userData.type === 'nearby_stall') {
-            dynamicLabel = `Visit ${hit.object.userData.label}`;
           } else if (hit.object.userData.type === 'info_button') {
             dynamicLabel = `View Details for ${hit.object.userData.stall.name}`;
           }
@@ -1518,7 +1321,6 @@ export default function MarketTour360() {
         } else {
           setHoveredHotspot(null)
           setCursor('grab')
-          arrowIsHovered = false;
         }
       }
 
@@ -1551,110 +1353,15 @@ export default function MarketTour360() {
         const deg = Math.round((theta * 180) / Math.PI) + northOffset;
         const compassDeg = ((deg % 360) + 360) % 360; // ensure positive
 
-        // Optimize: Only recalculate heavy math and React state if the degree actually changed
+        // Optimize: Only update compass state if the degree actually changed
         if (stateRef.current.lastCompassDeg !== compassDeg) {
           stateRef.current.lastCompassDeg = compassDeg;
           setCompassAngle(compassDeg)
-
-          // Find nearest stall in this direction
-          const currentStall = stateRef.current.currentStall;
-          const nearestStallInfo = findNearestStallInDirection(currentStall, compassDeg);
-
-          // Update Google Street View-style ground arrow pool
-          const arrowMeshes = hotspotMeshes.current.filter(m => m.userData.type === 'go_forward');
-
-          // Collect all navigable nearby stalls in both forward and backward directions
-          const currentSectData = stateRef.current.sectionsData;
-          const curSectionKey = stateRef.current.activeSectionKey;
-          const curCoords = getRawCoordinates(currentStall, curSectionKey);
-          
-          const forwards = [];
-          const backwards = [];
-
-          ['meat', 'fish', 'veggies'].forEach((secKey) => {
-            const stalls = currentSectData[secKey].stalls;
-            stalls.forEach((s, idx) => {
-              if (secKey === curSectionKey && s.id === currentStall.id) return;
-              const tCoords = getRawCoordinates(s, secKey);
-              const ddx = tCoords.x - curCoords.x;
-              const ddy = tCoords.y - curCoords.y;
-              const dist = Math.sqrt(ddx * ddx + ddy * ddy);
-              
-              // Only within grid walking range
-              if (dist < 10 || dist > 420) return;
-
-              const mapAngleRad = Math.atan2(ddy, ddx);
-              const mapAngleDeg = (mapAngleRad * 180) / Math.PI;
-              const tCompassAngle = (mapAngleDeg + 450) % 360;
-
-              // Angle difference relative to forward look angle (compassDeg)
-              let diffF = Math.abs(tCompassAngle - compassDeg);
-              if (diffF > 180) diffF = 360 - diffF;
-
-              // Angle difference relative to backward look angle (compassDeg + 180)
-              let diffB = Math.abs(tCompassAngle - ((compassDeg + 180) % 360));
-              if (diffB > 180) diffB = 360 - diffB;
-
-              if (diffF <= 75) {
-                forwards.push({ secKey, stall: s, idx, dist, tCompassAngle, diff: diffF });
-              } else if (diffB <= 75) {
-                backwards.push({ secKey, stall: s, idx, dist, tCompassAngle, diff: diffB });
-              }
-            });
-          });
-
-          // Sort by deviation from center of look/back cones
-          forwards.sort((a, b) => a.diff - b.diff);
-          backwards.sort((a, b) => a.diff - b.diff);
-
-          stateRef.current.bestForward = forwards[0] || null;
-          stateRef.current.bestBackward = backwards[0] || null;
-
-          arrowMeshes.forEach((arrowMesh, i) => {
-            const targetStall = i === 0 ? stateRef.current.bestForward : stateRef.current.bestBackward;
-
-            if (targetStall) {
-              const { secKey, stall: ns, idx, tCompassAngle } = targetStall;
-              arrowMesh.userData.targetStallInfo = { sectionKey: secKey, stall: ns, index: idx, tCompassAngle };
-
-              // Preload target image
-              const targetImagePath = getStallImagePath(ns.id, secKey);
-              if (!window.__preloadedPaths) window.__preloadedPaths = new Set();
-              if (!window.__preloadedPaths.has(targetImagePath)) {
-                window.__preloadedPaths.add(targetImagePath);
-                const img = new Image();
-                img.src = targetImagePath;
-              }
-            } else {
-              arrowMesh.userData.targetStallInfo = null;
-            }
-          });
         }
-
-        // DYNAMIC POSITION & LIFT: Update chevron tilt and height on every camera update
-        const arrowMeshes = hotspotMeshes.current.filter(m => m.userData.type === 'go_forward');
-        const cameraPitchFactor = Math.max(0, Math.PI / 2 - spherical.current.phi); // positive when looking up
-        const dynamicY = -90 + cameraPitchFactor * 25;
-        const tiltAngle = Math.max(0, (Math.PI - spherical.current.phi) * 0.3);
-
-        arrowMeshes.forEach((arrowMesh) => {
-          const target = arrowMesh.userData.targetStallInfo;
-          if (target && target.tCompassAngle !== undefined) {
-            const arrowThetaRad = ((target.tCompassAngle - northOffset) * Math.PI) / 180;
-            const placeDist = 125;
-            const ax = Math.cos(arrowThetaRad) * placeDist;
-            const az = Math.sin(arrowThetaRad) * placeDist;
-            
-            arrowMesh.position.set(ax, dynamicY, az);
-            arrowMesh.scale.set(1.0, 1.0, 1.0);
-            arrowMesh.rotation.set(-Math.PI / 2 + tiltAngle, 0, arrowThetaRad - Math.PI / 2);
-          }
-        });
       }
       updateCamera()
 
-      // Mutable hover state for arrow — shared by onPointerMove and animate
-      let arrowIsHovered = false;
+
 
       // Animation Loop
       function animate() {
@@ -1665,23 +1372,6 @@ export default function MarketTour360() {
           updateCamera()
         }
 
-        // Hover-driven opacity: fade in when hovered, stay at base 0.55 when visible, invisible when no target
-        const time = Date.now() * 0.004;
-        hotspotMeshes.current.forEach(m => {
-          if (m.userData.type === 'go_forward') {
-            const hasTarget = !!m.userData.targetStallInfo;
-            if (hasTarget) {
-              m.visible = true;
-              const targetOpacity = arrowIsHovered ? 0.95 : 0.55;
-              m.material.opacity += (targetOpacity - m.material.opacity) * 0.15;
-            } else {
-              m.material.opacity = Math.max(0, m.material.opacity - 0.08);
-              if (m.material.opacity <= 0) {
-                m.visible = false;
-              }
-            }
-          }
-        });
 
         renderer.render(scene, camera)
       }
