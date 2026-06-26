@@ -165,6 +165,7 @@ const generateStalls = (category, numbers) => {
 
     return {
       id: String(num),
+      category,
       name: displayName,
       price,
       status,
@@ -542,12 +543,7 @@ export default function MarketTour360() {
     const startCoords = startStall ? getRawCoordinates(startStall, startSec) : ENTRANCE_COORDS;
     
     // Find section of targetStall
-    let targetSec = activeSectionKey;
-    Object.entries(sectionsData).forEach(([secKey, sec]) => {
-      if (sec.stalls.some(s => s.id === targetStall.id)) {
-        targetSec = secKey;
-      }
-    });
+    const targetSec = targetStall.category || activeSectionKey;
     
     const targetCoords = getRawCoordinates(targetStall, targetSec);
     const routeWaypoints = findMarketRoute(startCoords, targetCoords);
@@ -611,10 +607,7 @@ export default function MarketTour360() {
   // ArFinder reads this router state to focus the stall and open the QR scanner.
   const handleOpenArView = (targetStall) => {
     if (!targetStall) return;
-    let secKey = activeSectionKey;
-    Object.entries(sectionsData).forEach(([key, sec]) => {
-      if (sec.stalls.some(s => s.id === targetStall.id)) secKey = key;
-    });
+    const secKey = targetStall.category || activeSectionKey;
     navigate('/renter/ar-finder', {
       state: {
         stall: {
@@ -875,7 +868,6 @@ export default function MarketTour360() {
   // Pre-load texture helper with percentage progress simulation
   const triggerSceneTransition = (texturePath, preserveTheta = false) => {
     setTransitioning(true)
-    setLoaded(false)
     setLoadingProgress(10)
 
     // Simulate progress while loading
@@ -891,12 +883,16 @@ export default function MarketTour360() {
 
     if (!window.THREE || !materialRef.current || !sceneRef.current) {
       clearInterval(interval)
-      setLoaded(true)
       setTransitioning(false)
       return
     }
 
     const THREE = window.THREE
+
+    // Clear old hotspots immediately so they aren't clickable/visible during load
+    hotspotMeshes.current.forEach((mesh) => sceneRef.current.remove(mesh))
+    hotspotMeshes.current = []
+
     new THREE.TextureLoader().load(
       texturePath,
       (tex) => {
@@ -920,14 +916,12 @@ export default function MarketTour360() {
           cameraRef.current.updateProjectionMatrix();
         }
 
-        setLoaded(true)
         setTransitioning(false)
       },
       null,
       (err) => {
         console.error('Failed to load panorama', err)
         clearInterval(interval)
-        setLoaded(true)
         setTransitioning(false)
       }
     )
@@ -1130,6 +1124,38 @@ export default function MarketTour360() {
     return new THREE.CanvasTexture(canvas);
   };
 
+  // Helper to create beautiful glowing canvas textures for ground chevrons (single gray chevron)
+  const createChevronTexture = (THREE) => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 128;
+    canvas.height = 128;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, 128, 128);
+
+    // 1. Draw outer thick dark border for high contrast visibility
+    ctx.strokeStyle = '#333333';
+    ctx.lineWidth = 16;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(34, 75);
+    ctx.lineTo(64, 45);
+    ctx.lineTo(94, 75);
+    ctx.stroke();
+
+    // 2. Draw inner premium light gray chevron line
+    ctx.strokeStyle = '#e0e0e0';
+    ctx.lineWidth = 10;
+    ctx.beginPath();
+    ctx.moveTo(34, 75);
+    ctx.lineTo(64, 45);
+    ctx.lineTo(94, 75);
+    ctx.stroke();
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.needsUpdate = true;
+    return texture;
+  };
 
   // Re-populate the 3D scene with relevant Hotspots
   const recreateHotspots = (scene, stall, THREE) => {
@@ -1137,9 +1163,34 @@ export default function MarketTour360() {
     hotspotMeshes.current.forEach((mesh) => scene.remove(mesh))
     hotspotMeshes.current = []
 
+    // Create the 4 navigation chevrons (Up, Down, Left, Right) positioned like keyboard arrow keys
+    const chevronTex = createChevronTexture(THREE);
 
-    // Route chevrons removed (were unreliable). Routing guidance now lives in the
-    // floor map / mini-map polyline and the AR finder's step detection.
+    ['Up', 'Down', 'Left', 'Right'].forEach((dir) => {
+      const chevMat = new THREE.MeshBasicMaterial({
+        map: chevronTex,
+        transparent: true,
+        depthWrite: false,
+        depthTest: false,
+        opacity: 0.7
+      });
+
+      const chevMesh = new THREE.Mesh(new THREE.PlaneGeometry(35, 35), chevMat);
+      // Position is updated dynamically in updateCamera, initialize off-screen
+      chevMesh.position.set(0, -999, 0);
+      chevMesh.visible = false;
+
+      chevMesh.userData = {
+        type: 'nav_chevron',
+        direction: dir,
+        label: '',
+        targetStallInfo: null,
+        isHovered: false
+      };
+
+      scene.add(chevMesh);
+      hotspotMeshes.current.push(chevMesh);
+    });
   };
 
   // Main Three.js Init
@@ -1244,6 +1295,13 @@ export default function MarketTour360() {
             handleNextStall()
           } else if (uData.type === 'prev') {
             handlePrevStall()
+          } else if (uData.type === 'nav_chevron') {
+            if (uData.targetStallInfo) {
+              const { sectionKey, index, stall: targetStall } = uData.targetStallInfo;
+              setActiveSectionKey(sectionKey);
+              setStallIndex(index);
+              triggerSceneTransition(getStallImagePath(targetStall.id, sectionKey));
+            }
           } else if (uData.type === 'info_button') {
             const { sectionKey, stall } = uData;
             if (stall) {
@@ -1311,7 +1369,37 @@ export default function MarketTour360() {
             dynamicLabel = dot > 0 ? 'Forward' : 'Backward'
           } else if (hit.object.userData.type === 'info_button') {
             dynamicLabel = `View Details for ${hit.object.userData.stall.name}`;
+          } else if (hit.object.userData.type === 'nav_chevron') {
+            if (!hit.object.userData.targetStallInfo) {
+              dynamicLabel = '';
+            } else {
+              const compassDeg = stateRef.current.lastCompassDeg;
+              const targetAngle = hit.object.userData.targetStallInfo.compassAngle;
+              let diff = (targetAngle - compassDeg + 360) % 360;
+              if (diff > 180) diff -= 360;
+
+              const targetName = hit.object.userData.targetStallInfo.stall.name;
+
+              if (Math.abs(diff) <= 45) {
+                dynamicLabel = `Forward to ${targetName}`;
+              } else if (diff > 45 && diff < 135) {
+                dynamicLabel = `Go Right to ${targetName}`;
+              } else if (diff < -45 && diff > -135) {
+                dynamicLabel = `Go Left to ${targetName}`;
+              } else {
+                dynamicLabel = `Backward to ${targetName}`;
+              }
+
+              hit.object.userData.isHovered = true;
+            }
           }
+
+          // Clear hovered status on other chevrons
+          hotspotMeshes.current.forEach((m) => {
+            if (m !== hit.object && m.userData.type === 'nav_chevron') {
+              m.userData.isHovered = false;
+            }
+          });
 
           setHoveredHotspot({
             ...hit.object.userData,
@@ -1319,6 +1407,12 @@ export default function MarketTour360() {
           })
           setCursor('pointer')
         } else {
+          // Clear hovered status on all chevrons
+          hotspotMeshes.current.forEach((m) => {
+            if (m.userData.type === 'nav_chevron') {
+              m.userData.isHovered = false;
+            }
+          });
           setHoveredHotspot(null)
           setCursor('grab')
         }
@@ -1350,7 +1444,7 @@ export default function MarketTour360() {
         }
 
         // Sync compass rotation (0 deg = North)
-        const deg = Math.round((theta * 180) / Math.PI) + northOffset;
+        const deg = -Math.round((theta * 180) / Math.PI) + northOffset;
         const compassDeg = ((deg % 360) + 360) % 360; // ensure positive
 
         // Optimize: Only update compass state if the degree actually changed
@@ -1358,10 +1452,147 @@ export default function MarketTour360() {
           stateRef.current.lastCompassDeg = compassDeg;
           setCompassAngle(compassDeg)
         }
+
+        // Update ground navigation chevrons dynamically in arrow keys layout
+        const arrowMeshes = hotspotMeshes.current.filter(m => m.userData.type === 'nav_chevron');
+        
+        // Hide all chevrons by default
+        arrowMeshes.forEach(m => {
+          m.visible = false;
+          m.userData.targetStallInfo = null;
+          m.position.set(0, -999, 0);
+        });
+
+        if (arrowMeshes.length > 0 && stateRef.current.currentStall) {
+          const currentStall = stateRef.current.currentStall;
+          const currentCoords = getRawCoordinates(currentStall, stateRef.current.activeSectionKey);
+          
+          const forwards = [];
+          const backwards = [];
+          const lefts = [];
+          const rights = [];
+
+          const sectionKeys = ['meat', 'fish', 'veggies'];
+          sectionKeys.forEach((secKey) => {
+            if (!stateRef.current.sectionsData[secKey]) return;
+            const stalls = stateRef.current.sectionsData[secKey].stalls;
+            stalls.forEach((s, idx) => {
+              if (secKey === stateRef.current.activeSectionKey && s.id === currentStall.id) return;
+
+              const targetCoords = getRawCoordinates(s, secKey);
+              const dx = targetCoords.x - currentCoords.x;
+              const dy = targetCoords.y - currentCoords.y;
+              const distance = Math.hypot(dx, dy);
+
+              if (distance < 10 || distance > 380) return;
+
+              const mapAngleRad = Math.atan2(dy, dx);
+              const mapAngleDeg = (mapAngleRad * 180) / Math.PI;
+              const targetCompassAngle = (mapAngleDeg + 450) % 360;
+
+              // Angle difference relative to camera looking angle (compassDeg)
+              let diff = (targetCompassAngle - compassDeg + 360) % 360;
+              if (diff > 180) diff -= 360; // -180 to 180
+
+              const item = {
+                sectionKey: secKey,
+                index: idx,
+                stall: s,
+                distance,
+                compassAngle: targetCompassAngle,
+                diff: Math.abs(diff)
+              };
+
+              if (Math.abs(diff) <= 45) {
+                forwards.push(item);
+              } else if (diff > 45 && diff < 135) {
+                rights.push(item);
+              } else if (diff < -45 && diff > -135) {
+                lefts.push(item);
+              } else {
+                backwards.push({ ...item, diff: 180 - Math.abs(diff) });
+              }
+            });
+          });
+
+          // Sort by deviation from center of view cones
+          forwards.sort((a, b) => a.diff - b.diff);
+          rights.sort((a, b) => a.diff - b.diff);
+          lefts.sort((a, b) => a.diff - b.diff);
+          backwards.sort((a, b) => a.diff - b.diff);
+
+          const bestForward = forwards[0] || null;
+          const bestRight = rights[0] || null;
+          const bestLeft = lefts[0] || null;
+          const bestBackward = backwards[0] || null;
+
+          // Responsive styling for smartphones (narrow portrait viewports)
+          const aspect = camera.aspect;
+          const responsiveScale = aspect < 1.0 ? Math.max(0.4, aspect * 0.85) : 1.0;
+
+          const placeDist = aspect < 1.0 ? 110 : 100;
+          const gap = 38 * responsiveScale;
+          const vGap = 38 * responsiveScale;
+
+          arrowMeshes.forEach((arrowMesh) => {
+            const dir = arrowMesh.userData.direction;
+            let target = null;
+            let cx = 0, cz = 0;
+            let angleOffset = 0;
+
+            if (dir === 'Up') {
+              target = bestForward;
+              cx = Math.cos(theta) * (placeDist + vGap);
+              cz = Math.sin(theta) * (placeDist + vGap);
+              angleOffset = Math.PI / 2;
+            } else if (dir === 'Down') {
+              target = bestBackward;
+              cx = Math.cos(theta) * placeDist;
+              cz = Math.sin(theta) * placeDist;
+              angleOffset = -Math.PI / 2;
+            } else if (dir === 'Left') {
+              target = bestLeft;
+              cx = Math.cos(theta) * placeDist + Math.cos(theta - Math.PI / 2) * gap;
+              cz = Math.sin(theta) * placeDist + Math.sin(theta - Math.PI / 2) * gap;
+              angleOffset = 0;
+            } else if (dir === 'Right') {
+              target = bestRight;
+              cx = Math.cos(theta) * placeDist + Math.cos(theta + Math.PI / 2) * gap;
+              cz = Math.sin(theta) * placeDist + Math.sin(theta + Math.PI / 2) * gap;
+              angleOffset = Math.PI;
+            }
+
+            if (target) {
+              arrowMesh.visible = true;
+              arrowMesh.position.set(cx, -65, cz);
+              arrowMesh.rotation.set(-Math.PI / 2, 0, theta + angleOffset);
+              arrowMesh.scale.set(responsiveScale, responsiveScale, 1);
+              arrowMesh.userData.targetStallInfo = target;
+
+              // Set the text label dynamically
+              const targetName = target.stall.name;
+              if (dir === 'Up') arrowMesh.userData.label = `Forward to ${targetName}`;
+              else if (dir === 'Down') arrowMesh.userData.label = `Backward to ${targetName}`;
+              else if (dir === 'Left') arrowMesh.userData.label = `Go Left to ${targetName}`;
+              else if (dir === 'Right') arrowMesh.userData.label = `Go Right to ${targetName}`;
+
+              // Preload target image
+              const targetImagePath = getStallImagePath(target.stall.id, target.sectionKey);
+              if (!window.__preloadedPaths) window.__preloadedPaths = new Set();
+              if (!window.__preloadedPaths.has(targetImagePath)) {
+                window.__preloadedPaths.add(targetImagePath);
+                const img = new Image();
+                img.src = targetImagePath;
+              }
+            } else {
+              arrowMesh.visible = false;
+              arrowMesh.position.set(0, -999, 0);
+              arrowMesh.userData.targetStallInfo = null;
+            }
+          });
+        }
       }
       updateCamera()
-
-
 
       // Animation Loop
       function animate() {
@@ -1372,6 +1603,15 @@ export default function MarketTour360() {
           updateCamera()
         }
 
+        // Pulse ground chevrons
+        const time = Date.now() * 0.004;
+        hotspotMeshes.current.forEach((m) => {
+          if (m.userData.type === 'nav_chevron') {
+            const baseOpacity = m.userData.isHovered ? 0.95 : 0.6;
+            const pulse = m.userData.isHovered ? 0 : Math.sin(time + m.position.x * 0.05) * 0.15;
+            m.material.opacity = baseOpacity + pulse;
+          }
+        });
 
         renderer.render(scene, camera)
       }
@@ -1596,7 +1836,7 @@ export default function MarketTour360() {
 
       {/* Screen Fade Transition Overlay with Loading Animation */}
       <div
-        className={`absolute inset-0 bg-black z-10 transition-all duration-300 pointer-events-none flex flex-col items-center justify-center ${transitioning ? 'opacity-100' : 'opacity-0'
+        className={`absolute inset-0 bg-black z-10 transition-all duration-300 pointer-events-none flex flex-col items-center justify-center ${!loaded ? 'opacity-100' : 'opacity-0'
           }`}
       >
         <div className="w-8 h-8 border-4 border-white/20 border-t-white rounded-full animate-spin mb-3" />
@@ -1611,7 +1851,7 @@ export default function MarketTour360() {
           className="absolute z-40 bg-white/95 text-slate-800 text-xs font-bold px-3 py-1.5 rounded-xl pointer-events-none shadow-xl border border-black/10 -translate-x-1/2 -translate-y-12 backdrop-blur-sm transition-all"
           style={{ left: mousePos.x, top: mousePos.y }}
         >
-          {hoveredHotspot.type === 'nearby_stall' ? '' : (hoveredHotspot.dynamicLabel && hoveredHotspot.dynamicLabel.startsWith('Go Left') ? '←' : hoveredHotspot.dynamicLabel && hoveredHotspot.dynamicLabel.startsWith('Go Right') ? '→' : (hoveredHotspot.type === 'go_forward' || (hoveredHotspot.dynamicLabel && hoveredHotspot.dynamicLabel.startsWith('Forward'))) ? '↑' : hoveredHotspot.dynamicLabel === 'Backward' ? '↓' : 'i')}{hoveredHotspot.type === 'nearby_stall' ? '' : ' '}{hoveredHotspot.dynamicLabel || hoveredHotspot.label}
+          {hoveredHotspot.type === 'nearby_stall' ? '' : (hoveredHotspot.dynamicLabel && hoveredHotspot.dynamicLabel.startsWith('Go Left') ? '←' : hoveredHotspot.dynamicLabel && hoveredHotspot.dynamicLabel.startsWith('Go Right') ? '→' : (hoveredHotspot.type === 'go_forward' || (hoveredHotspot.dynamicLabel && hoveredHotspot.dynamicLabel.startsWith('Forward'))) ? '↑' : (hoveredHotspot.dynamicLabel && (hoveredHotspot.dynamicLabel === 'Backward' || hoveredHotspot.dynamicLabel.startsWith('Backward') || hoveredHotspot.dynamicLabel.startsWith('Go Back'))) ? '↓' : 'i')}{hoveredHotspot.type === 'nearby_stall' ? '' : ' '}{hoveredHotspot.dynamicLabel || hoveredHotspot.label}
         </div>
       )}
 
@@ -1897,12 +2137,7 @@ export default function MarketTour360() {
               
               if (destinationStall) {
                 fromCoords = getRawCoordinates(currentStall, activeSectionKey);
-                let targetSec = activeSectionKey;
-                Object.entries(sectionsData).forEach(([secKey, sec]) => {
-                  if (sec.stalls.some(s => s.id === destinationStall.id)) {
-                    targetSec = secKey;
-                  }
-                });
+                const targetSec = destinationStall.category || activeSectionKey;
                 toCoords = getRawCoordinates(destinationStall, targetSec);
               } else {
                 const fromStall = routeFrom ? sectionsData[routeFrom.secKey]?.stalls.find(s => s.id === routeFrom.stallId) : null;
