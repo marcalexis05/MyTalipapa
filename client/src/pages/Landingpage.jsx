@@ -2,7 +2,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { 
   ArrowRight, ChevronLeft, ChevronRight, CheckCircle2, MapPin, Navigation, Compass,
   TrendingUp, Layers, Users, FileText, ArrowUpRight, Lock, Calendar, Star, ShieldCheck,
-  Menu, X
+  Menu, X, Search, Check
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import heroImage from '../images/1.png';
@@ -113,6 +113,30 @@ export default function Landingpage() {
   const prevContractorSlide = (e) => {
     if (e) e.preventDefault();
     setContractorSlide(prev => Math.max(0, prev - 1));
+  };
+
+  // Renter Slideshow State
+  const [renterSlide, setRenterSlide] = useState(0);
+  const renterSteps = [
+    { step: "01", title: "Explore the Market", desc: "Browse the live interactive directory and take a 3D Virtual Tour of the market floor to locate vacant spots and check pricing.", tip: "Use the Virtual Tour to inspect the surroundings before choosing." },
+    { step: "02", title: "Select Your Stall", desc: "Choose your preferred stall directly from the interactive map and review its category, monthly rate, and size details.", tip: "Click any green stall on the map to see its dimensions." },
+    { step: "03", title: "Fill Renter Application", desc: "Fill in your personal details, business info, and describe your intended usage (e.g. Vegetables, Meat, Fishes).", tip: "Double-check your contact number for OTP delivery." },
+    { step: "04", title: "OTP Verification", desc: "Enter the 4-digit verification code sent to your email to verify your registration request.", tip: "Check your spam folder if the code doesn't arrive in 60 seconds." },
+    { step: "05", title: "Access Vendor Dashboard", desc: "Once approved, log in to access your dashboard, track your bills, manage contracts, and view market announcements.", tip: "You can now log in using the main Login screen." }
+  ];
+
+  const nextRenterSlide = (e) => {
+    if (e) e.preventDefault();
+    if (renterSlide === 4) {
+      navigate('/register');
+    } else {
+      setRenterSlide(prev => prev + 1);
+    }
+  };
+
+  const prevRenterSlide = (e) => {
+    if (e) e.preventDefault();
+    setRenterSlide(prev => Math.max(0, prev - 1));
   };
 
   const [heroRef, heroInView] = useInView(0.1);
@@ -649,48 +673,132 @@ export default function Landingpage() {
               >
                 For Contractors
               </button>
-              <button
-                onClick={() => setHowItWorksTab('admin')}
-                className={`px-4 sm:px-6 py-2 rounded-full font-bold text-xs sm:text-sm transition-all ${howItWorksTab === 'admin' ? 'bg-green-700 text-white shadow' : 'text-gray-600 hover:text-gray-900'}`}
-              >
-                For Administrators
-              </button>
             </div>
           </div>
 
           {/* Tab Content */}
           <div className="mt-6">
             {howItWorksTab === 'renter' && (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {[
-                  { step: "01", title: "Virtual Exploration", desc: "Browse the live directory and take a 3D Virtual Tour of the market floor to locate vacant spots and pricing options." },
-                  { step: "02", title: "Submit Application", desc: "Select a stall, fill in your business description, and register details digitally inside our renter application forms." },
-                  { step: "03", title: "Rent & Get Started", desc: "Once approved by the market coordinator, access your vendor dashboard, view rental billing details, and activate your store space." }
-                ].map((s, idx) => (
-                  <div key={idx} className="bg-gray-50/50 rounded-2xl p-8 border border-gray-100 relative group overflow-hidden" style={scaleIn(howInView, idx * 0.15)}>
-                    <div className="absolute top-4 right-6 text-5xl font-black text-green-200/35 group-hover:text-green-700/10 transition-colors">{s.step}</div>
-                    <div className="h-10 w-10 rounded-full bg-green-700 text-white font-bold flex items-center justify-center mb-6 text-sm">{s.step}</div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">{s.title}</h3>
-                    <p className="text-gray-600 text-sm leading-relaxed">{s.desc}</p>
-                  </div>
-                ))}
-              </div>
-            )}
+              <div 
+                className="bg-gray-50/70 rounded-[2rem] p-6 sm:p-10 border border-gray-100 flex flex-col lg:flex-row gap-8 items-stretch shadow-sm"
+                style={fadeUp(howInView, 0.1)}
+              >
+                {/* Left Side: Interactive Graphic/Visual for the active step */}
+                <div className="w-full lg:w-1/2 flex justify-center items-center h-56 sm:h-72 bg-green-950/5 rounded-2xl border border-green-900/10 p-6 relative overflow-hidden shrink-0">
+                  <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#1a5c2a 1px, transparent 1px)', backgroundSize: '16px 16px' }} />
+                  
+                  {renterSlide === 0 && (
+                    <div className="text-center space-y-4">
+                      <div className="inline-flex p-3 bg-white text-green-800 rounded-2xl font-mono text-xs sm:text-sm border border-green-200 shadow-sm items-center gap-2">
+                        <Search size={16} /> Search Vacant Stalls
+                      </div>
+                      <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">Take a 3D Virtual Tour & Browse Directory</p>
+                    </div>
+                  )}
+                  
+                  {renterSlide === 1 && (
+                    <div className="w-full max-w-[260px] bg-white rounded-2xl shadow-xl border border-green-100 p-5 space-y-3">
+                      <div className="h-3.5 w-2/3 bg-gray-200 rounded" />
+                      <div className="h-10 w-full bg-green-50 border-2 border-green-600 rounded-xl flex items-center justify-between px-3 text-xs text-green-700 font-bold">
+                        <span>Stall #42 (Meat)</span>
+                        <Check size={16} className="text-green-600" />
+                      </div>
+                      <div className="h-4 w-1/3 bg-gray-100 rounded" />
+                    </div>
+                  )}
+                  
+                  {renterSlide === 2 && (
+                    <div className="w-full max-w-[260px] bg-white rounded-2xl shadow-xl border border-orange-100 p-5 space-y-3">
+                      <div className="h-3.5 w-1/2 bg-gray-200 rounded" />
+                      <div className="space-y-1.5">
+                        <div className="h-3 bg-gray-100 rounded w-full" />
+                        <div className="h-3 bg-gray-100 rounded w-5/6" />
+                        <div className="h-3 bg-gray-100 rounded w-2/3" />
+                      </div>
+                      <div className="h-8 w-full bg-green-700 rounded-lg flex items-center justify-center text-xs text-white font-bold">
+                        Submit Renter Application
+                      </div>
+                    </div>
+                  )}
+                  
+                  {renterSlide === 3 && (
+                    <div className="w-full max-w-[260px] bg-white rounded-2xl shadow-xl border border-slate-100 p-5 space-y-3 text-center">
+                      <div className="h-3.5 w-1/2 bg-gray-200 rounded mx-auto mb-2" />
+                      <div className="flex justify-center gap-2">
+                        <div className="h-10 w-9 border-2 border-green-600 rounded-xl flex items-center justify-center font-bold text-lg text-green-700 bg-green-50">5</div>
+                        <div className="h-10 w-9 border-2 border-green-600 rounded-xl flex items-center justify-center font-bold text-lg text-green-700 bg-green-50">0</div>
+                        <div className="h-10 w-9 border-2 border-green-600 rounded-xl flex items-center justify-center font-bold text-lg text-green-700 bg-green-50">7</div>
+                        <div className="h-10 w-9 border-2 border-green-600 rounded-xl flex items-center justify-center font-bold text-lg text-green-700 bg-green-50">2</div>
+                      </div>
+                      <div className="h-3.5 w-2/3 bg-orange-100 rounded mx-auto mt-2" />
+                    </div>
+                  )}
+                  
+                  {renterSlide === 4 && (
+                    <div className="w-full max-w-[260px] bg-white rounded-2xl shadow-xl border border-slate-100 p-5 space-y-3 text-center">
+                      <div className="h-12 w-12 rounded-full bg-green-100 text-green-700 flex items-center justify-center mx-auto mb-2">
+                        <CheckCircle2 size={24} />
+                      </div>
+                      <div className="h-3.5 w-1/2 bg-gray-200 rounded mx-auto" />
+                      <div className="h-3 w-1/3 bg-gray-100 rounded mx-auto" />
+                    </div>
+                  )}
+                </div>
 
-            {howItWorksTab === 'admin' && (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {[
-                  { step: "01", title: "Zoning & Setup", desc: "Define structural stalls and categories (e.g. Meat, Fishes, Vegetables) using geometric grid layouts and SVG coordinates." },
-                  { step: "02", title: "Approve Applications", desc: "Review submitted applications, verify documents, and instantly change applicant status to 'approved' to link them as tenants." },
-                  { step: "03", title: "Track Stalls", desc: "Monitor overall occupancy rates, collect insights, and verify coordinates to ensure full visibility for administrators." }
-                ].map((s, idx) => (
-                  <div key={idx} className="bg-gray-50/50 rounded-2xl p-8 border border-gray-100 relative group overflow-hidden" style={scaleIn(howInView, idx * 0.15)}>
-                    <div className="absolute top-4 right-6 text-5xl font-black text-green-200/35 group-hover:text-green-700/10 transition-colors">{s.step}</div>
-                    <div className="h-10 w-10 rounded-full bg-green-700 text-white font-bold flex items-center justify-center mb-6 text-sm">{s.step}</div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">{s.title}</h3>
-                    <p className="text-gray-600 text-sm leading-relaxed">{s.desc}</p>
+                {/* Right Side: Step Description & Controls */}
+                <div className="flex-1 flex flex-col justify-between py-2">
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-green-800 bg-green-100 px-3 py-1 rounded-full uppercase tracking-wider">
+                        Step {renterSteps[renterSlide].step} of 05
+                      </span>
+                    </div>
+                    <h3 className="text-2xl font-bold text-gray-900">{renterSteps[renterSlide].title}</h3>
+                    <p className="text-gray-600 text-sm sm:text-base leading-relaxed">{renterSteps[renterSlide].desc}</p>
+                    <div className="p-3.5 rounded-xl bg-orange-50/50 border border-orange-100/50 text-xs font-semibold text-gray-600 leading-normal">
+                      💡 {renterSteps[renterSlide].tip}
+                    </div>
                   </div>
-                ))}
+
+                  {/* Navigation controls */}
+                  <div className="flex flex-wrap items-center justify-between gap-4 pt-6 mt-6 border-t border-gray-200">
+                    <div className="flex gap-2">
+                      {renterSteps.map((_, idx) => (
+                        <button
+                          key={idx}
+                          onClick={(e) => { e.preventDefault(); setRenterSlide(idx); }}
+                          className={`h-2 rounded-full transition-all duration-300 ${idx === renterSlide ? 'w-6 bg-green-700' : 'w-2 bg-gray-300 hover:bg-gray-400'}`}
+                          aria-label={`Go to step ${idx + 1}`}
+                        />
+                      ))}
+                    </div>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={prevRenterSlide}
+                        className="p-2.5 rounded-full border border-gray-300 text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition active:scale-95 disabled:opacity-40"
+                        disabled={renterSlide === 0}
+                      >
+                        <ChevronLeft size={18} />
+                      </button>
+                      <button
+                        onClick={nextRenterSlide}
+                        className="px-5 py-2.5 rounded-full bg-green-700 text-white font-bold hover:bg-green-800 transition active:scale-95 flex items-center gap-1.5 text-sm"
+                      >
+                        {renterSlide === 4 ? (
+                          <>
+                            Go to Registration
+                            <ArrowRight size={16} />
+                          </>
+                        ) : (
+                          <>
+                            Next Step
+                            <ChevronRight size={16} />
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
 
