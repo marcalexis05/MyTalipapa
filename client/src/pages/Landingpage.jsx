@@ -2,7 +2,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { 
   ArrowRight, ChevronLeft, ChevronRight, CheckCircle2, MapPin, Navigation, Compass,
   TrendingUp, Layers, Users, FileText, ArrowUpRight, Lock, Calendar, Star, ShieldCheck,
-  Menu, X, Search, Check
+  Menu, X, Search, Check, ArrowUp, ArrowDown
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import heroImage from '../images/1.png';
@@ -65,6 +65,8 @@ export default function Landingpage() {
   const [navScrolled, setNavScrolled] = useState(false);
   const [howItWorksTab, setHowItWorksTab] = useState('renter');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showScrollUp, setShowScrollUp] = useState(false);
+  const [showScrollDown, setShowScrollDown] = useState(true);
 
   const scrollToSection = (ref) => {
     setMobileMenuOpen(false);
@@ -169,8 +171,15 @@ export default function Landingpage() {
   };
 
   useEffect(() => {
-    const handleScroll = () => setNavScrolled(window.scrollY > 20);
+    const handleScroll = () => {
+      const scrollY = window.scrollY;
+      const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+      setShowScrollUp(scrollY > 300);
+      setShowScrollDown(scrollY < maxScroll - 300);
+      setNavScrolled(scrollY > 20);
+    };
     window.addEventListener('scroll', handleScroll);
+    handleScroll();
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
@@ -360,14 +369,15 @@ export default function Landingpage() {
       `}</style>
 
       {/* Navigation */}
-      <nav
-        className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-100"
-        style={{
-          boxShadow: navScrolled ? '0 4px 20px rgba(0,0,0,0.05)' : 'none',
-          transition: 'all 0.3s ease',
-          animation: 'fadeSlideDown 0.5s ease forwards',
-        }}
-      >
+      <div className="h-16">
+        <nav
+          className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-100"
+          style={{
+            boxShadow: navScrolled ? '0 4px 20px rgba(0,0,0,0.05)' : 'none',
+            transition: 'all 0.3s ease',
+            animation: 'fadeSlideDown 0.5s ease forwards',
+          }}
+        >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div 
             className="flex items-center gap-2.5 cursor-pointer" 
@@ -446,7 +456,8 @@ export default function Landingpage() {
             ))}
           </div>
         )}
-      </nav>
+        </nav>
+      </div>
 
       {/* Hero Section */}
       <section ref={heroRef} className="px-4 sm:px-6 lg:px-8 py-12 sm:py-20 lg:py-28 max-w-7xl mx-auto">
@@ -1279,6 +1290,30 @@ export default function Landingpage() {
           </div>
         </div>
       </footer>
+
+      {/* Floating Scroll Controls */}
+      <div className="fixed bottom-6 right-6 z-40 flex flex-col gap-2.5">
+        <button
+          onClick={() => window.scrollTo({ top: 0, behavior: 'auto' })}
+          className={`w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-green-700 hover:bg-green-800 text-white flex items-center justify-center shadow-lg hover:shadow-green-700/20 active:scale-95 transition-all duration-300 ${
+            showScrollUp ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 translate-y-4 pointer-events-none'
+          }`}
+          aria-label="Scroll to top"
+          title="Scroll to Top"
+        >
+          <ArrowUp size={20} strokeWidth={2.5} />
+        </button>
+        <button
+          onClick={() => window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'auto' })}
+          className={`w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-green-700 hover:bg-green-800 text-white flex items-center justify-center shadow-lg hover:shadow-green-700/20 active:scale-95 transition-all duration-300 ${
+            showScrollDown ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 -translate-y-4 pointer-events-none'
+          }`}
+          aria-label="Scroll to bottom"
+          title="Scroll to Bottom"
+        >
+          <ArrowDown size={20} strokeWidth={2.5} />
+        </button>
+      </div>
 
       {/* Legal Modal */}
       {modal && (
