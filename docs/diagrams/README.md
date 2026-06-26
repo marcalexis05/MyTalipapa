@@ -1,10 +1,13 @@
 # MyTalipapa — DFDs, ERD & Process Flowchart
 
-System diagrams for the MyTalipapa paperless public-market navigation & stall-management
-system. DFDs use **Yourdon–DeMarco** notation; rendered with **Mermaid** (automatic layout).
+Hand-designed system diagrams for the MyTalipapa paperless public-market navigation &
+stall-management system. DFDs use **Yourdon–DeMarco** notation. These are drawn with a
+custom SVG layout engine (deliberate placement + orthogonal connector routing) — not an
+auto-layout tool.
 
 - **`*.png`** — high-resolution images, ready to drop into Word / PowerPoint / PDF.
-- **`src/*.mmd`** — editable Mermaid source. Tweak text/flows and re-render.
+- **`src/*.svg`** — the scalable vector source (open in a browser or any vector editor).
+- **`src/*.gen.js`** + **`src/_gen-engine.js`** — the generator scripts (edit + re-run with Node + headless Chrome).
 - Compiled document: **`../MyTalipapa-DFD-ERD-and-Flowchart.docx`**.
 
 | Image | Diagram |
@@ -28,9 +31,3 @@ system. DFDs use **Yourdon–DeMarco** notation; rendered with **Mermaid** (auto
 - Flowchart: stadium = start/end, rectangle = action, diamond = decision
 
 Data stores: D1 Accounts · D2 Stalls · D3 Applications · D4 Payments · D5 Contracts · D6 Notifications · D7 Map / Pathway Data
-
-## Regenerating / editing
-Edit `src/*.mmd` (Mermaid `flowchart` / `erDiagram` syntax), then re-render at
-<https://mermaid.live> or locally with `src/render-build.js` + headless Chrome.
-Note: DFD data stores are drawn as Mermaid rectangles and converted to Yourdon–DeMarco
-open parallel lines by a small post-process step in the render harness.

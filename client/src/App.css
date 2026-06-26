@@ -54,6 +54,33 @@
   --shadow-green:  0 2px 8px rgba(26,92,42,.25);
 }
 
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-brand-green:       #22c55e;
+    --color-brand-green-light: #064e3b;
+    --color-green-mid:         #15803d;
+    --color-red:               #ef4444;
+    --color-red-dark:          #dc2626;
+    --color-red-light:         #7f1d1d;
+    --color-red-border:        #991b1b;
+    --color-orange:            #fb923c;
+    --color-orange-dark:       #f97316;
+    --color-bg:                #111827;
+    --color-surface:           #1f2937;
+    --color-border:            #374151;
+    --color-border-soft:       #4b5563;
+    --color-text:              #f9fafb;
+    --color-text-mid:          #d1d5db;
+    --color-text-muted:        #9ca3af;
+    --color-text-faint:        #6b7280;
+
+    --shadow-xs: 0 1px 2px rgba(0,0,0,.3), 0 1px 3px rgba(0,0,0,.2);
+    --shadow-sm: 0 1px 2px rgba(0,0,0,.4), 0 2px 8px rgba(0,0,0,.3);
+    --shadow-md: 0 2px 6px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.5);
+    --shadow-lg: 0 8px 24px rgba(0,0,0,.5), 0 24px 48px rgba(0,0,0,.6);
+  }
+}
+
 /* ---- Scoped Reset & Base to prevent leaking into Landing/Login/Register ---- */
 .dashboard-root,
 .profile-root,
@@ -80,6 +107,7 @@
   width: 100%;
   position: relative;
   overflow-x: hidden;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .dashboard-root button,

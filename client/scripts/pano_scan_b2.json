@@ -1,0 +1,8 @@
+{
+  "stall15 - meat.jpg":   { "left": [["meat",13],["meat",14],["meat",15],["meat",16],["meat",17]], "right": [["veg",5],["veg",4]], "note": "meat col left (#15@-85); produce right" },
+  "stall15 - fishes.jpg": { "left": [["fish",14],["fish",15],["fish",16]], "right": [["fish",25],["fish",24],["fish",23]], "note": "fish cols both sides (#15@-90)" },
+  "stall16 - meat.jpg":   { "left": [["meat",14],["meat",15],["meat",16],["meat",17],["meat",18]], "right": [["veg",6],["veg",5],["veg",4]], "note": "meat col left (#16@-80); produce right" },
+  "stall16 - fishes.jpg": { "left": [["fish",15],["fish",16],["fish",17]], "right": [["fish",26],["fish",25],["fish",24]], "note": "fish cols both sides (#16@-90)" },
+  "stall17 - meat.jpg":   { "left": [["meat",15],["meat",16],["meat",17],["meat",18],["meat",19]], "right": [["veg",7],["veg",6],["veg",5]], "note": "meat col left (#17@-85); produce right" },
+  "stall17 - fishes.jpg": { "left": [["fish",16],["fish",17],["fish",18]], "right": [["fish",27],["fish",26]], "note": "fish cols both sides (#17@-90)" }
+}

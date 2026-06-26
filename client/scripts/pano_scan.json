@@ -1,0 +1,24 @@
+{
+  "_schema": "photoFile -> {left:[[section,num]], right:[[section,num]], note}. left=negative angles(view's left), right=positive(view's right), center(0deg)=down the aisle. Sections: meat/fish/veg/none. Used to compute each photo's forward heading for the minimap cone.",
+
+  "stall1 - meat.jpg":     { "left": [["meat",3],["meat",2],["meat",1]], "right": [], "note": "entrance end; grocery+shutter ahead/right" },
+  "stall1(u) - meat.jpg":  { "left": [["meat",5],["meat",4],["meat",3],["meat",2],["meat",1]], "right": [], "note": "shutters/door on right" },
+  "stall2 - meat.jpg":     { "left": [["meat",4],["meat",3],["meat",2]], "right": [], "note": "grocery + shutter right; #2 centered-left" },
+  "stall3  - meat.jpg":    { "left": [["meat",5],["meat",4],["meat",3],["meat",2]], "right": [], "note": "grocery center; ukay right" },
+  "stall4 -  meat.jpg":    { "left": [["meat",6],["meat",5],["meat",4],["meat",3],["meat",2]], "right": [], "note": "ukay clothes right" },
+  "stall5 - meat.jpg":     { "left": [["meat",7],["meat",6],["meat",5],["meat",4]], "right": [], "note": "ukay right; yellow door" },
+  "stall6 - meat.jpg":     { "left": [["meat",8],["meat",7],["meat",6],["meat",5],["meat",4]], "right": [], "note": "ukay + yellow stalls right" },
+  "stall7 - meat.jpg":     { "left": [["meat",9],["meat",8],["meat",7],["meat",6],["meat",5]], "right": [], "note": "yellow/coffee stalls right" },
+  "stall8 - meat.jpg":     { "left": [["meat",10],["meat",9],["meat",8],["meat",7],["meat",6]], "right": [], "note": "yellow Coffee stall right" },
+  "stall9 - meat.jpg":     { "left": [["meat",11],["meat",10],["meat",9],["meat",8],["meat",7]], "right": [], "note": "coffee/white stall right" },
+  "stall10 -  meat.jpg":   { "left": [["meat",12],["meat",11],["meat",10],["meat",9],["meat",8]], "right": [], "note": "white eatery (AZIL..) right" },
+  "stall11-  meat.jpg":    { "left": [["meat",12],["meat",11],["meat",10]], "right": [], "note": "AZIL.KEN eatery right" },
+  "stall12 - meat.jpg":    { "left": [["meat",12],["meat",11],["meat",10]], "right": [], "note": "AZIL KEN eatery/menu on right; end of meat block #12" },
+  "stall12(2) - meat.jpg": { "left": [["meat",11],["meat",12],["meat",13]], "right": [["fish",23],["fish",22],["fish",21]], "note": "junction: meat col left, blue fish col right" },
+
+  "stall11 -  fishes.jpg": { "left": [["fish",11],["fish",12]], "right": [["fish",22],["fish",21]], "note": "blue fish cols both sides" },
+  "stall13 - meat.jpg":    { "left": [["meat",13],["meat",14],["meat",15]], "right": [["veg",2],["veg",1]], "note": "meat col left; produce stand right (faint 1,2)" },
+  "stall13(2)- meat.jpg":  { "left": [["meat",12],["meat",13],["meat",14]], "right": [["fish",24],["fish",23],["fish",22],["fish",21]], "note": "junction: meat col left, fish col right" },
+  "stall14 - meat.jpg":    { "left": [["meat",13],["meat",14],["meat",15]], "right": [["veg",3],["veg",2],["veg",1]], "note": "meat col left; produce right" },
+  "stall14 - fishes.jpg":  { "left": [["fish",13],["fish",14],["fish",15]], "right": [["fish",25],["fish",24],["fish",23],["fish",22]], "note": "fish cols both sides" }
+}

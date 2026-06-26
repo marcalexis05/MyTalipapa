@@ -1,0 +1,10 @@
+{
+  "stall18 - meat.jpg":   { "left": [["meat",17],["meat",18],["meat",19],["meat",20]], "right": [["veg",7],["veg",6]], "note": "named #18@-90 left; veg right" },
+  "stall18 - fishes.jpg": { "left": [["fish",18],["fish",19]], "right": [["fish",29],["fish",28],["fish",27]], "note": "named #18@-90; fish col right" },
+  "stall19 - fishes.jpg": { "left": [["fish",18],["fish",19]], "right": [["fish",30],["fish",29],["fish",28]], "note": "named #19@-90; fish col right" },
+  "stall19 -meat.jpg":    { "left": [["meat",18],["meat",19],["meat",20]], "right": [["veg",7]], "note": "named #19@-90; veg right" },
+  "stall20 -  meat.jpg":  { "left": [["meat",19],["meat",20],["meat",21]], "right": [["veg",8],["veg",7]], "note": "named #20@-90; veg right" },
+  "stall20 - fishes.jpg": { "left": [["fish",19],["fish",20]], "right": [["fish",30],["fish",29]], "note": "named #20@-90; fish col right" },
+  "stall21 - meat.jpg":   { "left": [["meat",20],["meat",21],["meat",22],["meat",23],["meat",24]], "right": [["meat",10],["meat",9],["meat",8]], "note": "named #21@-90 (EAST col on left => faces opposite/South); meat col 8-10 right" },
+  "stall22 -  meat.jpg":  { "left": [["meat",21],["meat",22],["meat",23],["meat",24]], "right": [["meat",11],["meat",10],["meat",9]], "note": "named #22@-90 (EAST col left); meat 9-11 right" }
+}

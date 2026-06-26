@@ -1,0 +1,10 @@
+{
+  "stall56 - meat.jpg":   { "left": [["meat",55],["meat",56]], "right": [["fish",67],["fish",66],["fish",65]], "note": "end meat Zone C left; fish Zone D right" },
+  "stall57 - fishes.jpg": { "left": [["fish",57],["fish",58]], "right": [["fish",68],["fish",67],["fish",66]], "note": "named #57@-90 left (meat56 at far edge)" },
+  "stall58 - fishes.jpg": { "left": [["fish",57],["fish",58],["fish",59]], "right": [["fish",69],["fish",68],["fish",67]], "note": "named #58@-90 left" },
+  "stall59 - fishes.jpg": { "left": [["fish",58],["fish",59],["fish",60]], "right": [["fish",70],["fish",69],["fish",68]], "note": "named #59@-90 left; green store center" },
+  "stall60 - fishes.jpg": { "left": [["fish",59],["fish",60]], "right": [["fish",70],["fish",69],["fish",68]], "note": "end Zone C; green corner store center" },
+  "stall71 - fishes.jpg": { "left": [], "right": [["fish",71],["fish",72],["fish",73]], "note": "ONE-SIDED: market wall left, fish 71-73 block on RIGHT (faces opposite)" },
+  "stall73 - fishes.jpg": { "left": [], "right": [["fish",71],["fish",72],["fish",73],["fish",74]], "note": "ONE-SIDED: store left, fish block RIGHT" },
+  "stall75 - fishes.jpg": { "left": [], "right": [["fish",73],["fish",74],["fish",75]], "note": "ONE-SIDED: store left, fish block RIGHT" }
+}

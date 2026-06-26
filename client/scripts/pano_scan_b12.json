@@ -1,0 +1,4 @@
+{
+  "stall32 - vegies.jpg": { "left": [["veg",19],["veg",20],["veg",21],["veg",22]], "right": [["veg",33],["veg",32],["veg",31],["veg",30]], "note": "veg cols both sides; named on right" },
+  "stall5(u) - meat.jpg": { "left": [["meat",5],["meat",4],["meat",3]], "right": [], "note": "ONE-SIDED: meat block left, market wall/shutter right (entrance end)" }
+}

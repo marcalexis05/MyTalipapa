@@ -1,0 +1,10 @@
+{
+  "stall38 - vegies.jpg": { "left": [["veg",37],["veg",38],["veg",39]], "right": [["veg",50]], "note": "veg col left; far col + CORA store right" },
+  "stall39 - vegies.jpg": { "left": [["veg",38],["veg",39],["veg",40]], "right": [["veg",52],["veg",51],["veg",50]], "note": "named #39@-90 left" },
+  "stall40 - vegies.jpg": { "left": [["veg",39],["veg",40],["veg",41]], "right": [["veg",53],["veg",52],["veg",51]], "note": "named #40@-90 left" },
+  "stall41 - vegies.jpg": { "left": [["veg",40],["veg",41],["veg",42]], "right": [["veg",54],["veg",53],["veg",52]], "note": "named #41@-90 left" },
+  "stall42 - vegies.jpg": { "left": [["veg",41],["veg",42],["veg",43]], "right": [["veg",55],["veg",54]], "note": "named #42@-90 left" },
+  "stall43 - vegies.jpg": { "left": [["veg",42],["veg",43],["veg",44]], "right": [["veg",57],["veg",56],["veg",55]], "note": "named #43@-90 left" },
+  "stall44 - vegies.jpg": { "left": [["veg",43],["veg",44],["veg",45]], "right": [["veg",57],["veg",56],["veg",55]], "note": "named #44@-90 left" },
+  "stall45 - vegies.jpg": { "left": [["veg",44],["veg",45],["veg",46]], "right": [["veg",59],["veg",57],["veg",56]], "note": "named #45@-90 left" }
+}

@@ -1,0 +1,8 @@
+{
+  "stall67 - vegies.jpg": { "left": [], "right": [["veg",66],["veg",67],["veg",68]], "note": "ONE-SIDED: wall left, veg block RIGHT" },
+  "stall68 - vegies.jpg": { "left": [], "right": [["veg",67],["veg",68],["veg",69]], "note": "ONE-SIDED: wall left, veg block RIGHT" },
+  "stall69 - vegies.jpg": { "left": [], "right": [["veg",68],["veg",69],["veg",70],["veg",71]], "note": "ONE-SIDED: wall left, veg block RIGHT" },
+  "stall70 - vegies.jpg": { "left": [], "right": [["veg",69],["veg",70],["veg",71],["veg",72]], "note": "ONE-SIDED: wall left, veg block RIGHT" },
+  "stall71 - vegies.jpg": { "left": [], "right": [["veg",70],["veg",71],["veg",72]], "note": "ONE-SIDED: wall left, veg block RIGHT" },
+  "stall72 - vegies.jpg": { "left": [], "right": [["veg",70],["veg",71],["veg",72]], "note": "ONE-SIDED: wall left, veg block RIGHT" }
+}

@@ -1,0 +1,10 @@
+{
+  "stall46 - vegies.jpg": { "left": [["veg",45],["veg",46],["veg",47]], "right": [["veg",59],["veg",58],["veg",57]], "note": "named #46@-90 left" },
+  "stall47 - vegies.jpg": { "left": [["veg",46],["veg",47],["veg",48]], "right": [["veg",59],["veg",58]], "note": "named #47@-90 left" },
+  "stall48 - vegies.jpg": { "left": [["veg",47],["veg",48]], "right": [["veg",59]], "center": [["veg",51]], "note": "junction end of veg col" },
+  "stall51 - meat.jpg":   { "left": [["meat",51],["meat",52],["meat",53]], "right": [["fish",62],["fish",61]], "note": "meat Zone C left, fish Zone D right" },
+  "stall52 - meat.jpg":   { "left": [["meat",51],["meat",52],["meat",53]], "right": [["fish",63],["fish",62],["fish",61]], "note": "named #52@-90 left" },
+  "stall53 - meat.jpg":   { "left": [["meat",52],["meat",53],["meat",54]], "right": [["fish",64],["fish",63],["fish",62]], "note": "named #53@-90 left" },
+  "stall54 - meat.jpg":   { "left": [["meat",53],["meat",54],["meat",55]], "right": [["fish",65],["fish",64],["fish",63]], "note": "named #54@-90 left" },
+  "stall55 - meat.jpg":   { "left": [["meat",54],["meat",55],["meat",56]], "right": [["fish",66],["fish",65],["fish",64]], "note": "named #55@-90 left" }
+}

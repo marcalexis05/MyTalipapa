@@ -27,6 +27,55 @@
   --focus-ring: 0 0 0 3px rgba(26, 92, 42, 0.35);
 }
 
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-brand-green:       #22c55e;
+    --color-brand-green-light: #064e3b;
+    --color-green-mid:         #15803d;
+    --color-brand-orange:      #fb923c;
+    --color-bg:                #111827;
+    --color-surface:           #1f2937;
+    --color-text:              #f9fafb;
+    --color-text-muted:        #9ca3af;
+    --color-border:            #374151;
+    --focus-ring: 0 0 0 3px rgba(34, 197, 94, 0.35);
+  }
+}
+
+/* Glass-morphism Utilities */
+.glass {
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+@media (prefers-color-scheme: dark) {
+  .glass {
+    background: rgba(31, 41, 55, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+}
+
+/* Animations */
+@keyframes slideUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes pulse-soft {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 2s ease-in-out infinite;
+}
+
 /* ---- Base typography & rendering polish (applies everywhere) ---- */
 html {
   -webkit-text-size-adjust: 100%;
@@ -41,10 +90,12 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Tighten headings a touch for a more deliberate, premium type voice */
 h1, h2, h3 {
+  font-family: 'Outfit', sans-serif;
   letter-spacing: -0.02em;
 }
 

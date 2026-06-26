@@ -1,0 +1,10 @@
+{
+  "stall72 - fishes.jpg": { "left": [], "right": [["fish",71],["fish",72],["fish",73]], "note": "ONE-SIDED: store/wall left, fish block RIGHT" },
+  "stall74 - fishes.jpg": { "left": [], "right": [["fish",72],["fish",73],["fish",74],["fish",75]], "note": "ONE-SIDED: store left, fish block RIGHT" },
+  "stall61 - vegies.jpg": { "left": [], "right": [["veg",61],["veg",62]], "note": "ONE-SIDED: wall left, veg block RIGHT; grocery center" },
+  "stall62 - vegies.jpg": { "left": [], "right": [["veg",61],["veg",62],["veg",63]], "note": "ONE-SIDED: wall left, veg block RIGHT" },
+  "stall63 - vegies.jpg": { "left": [], "right": [["veg",62],["veg",63],["veg",64]], "note": "ONE-SIDED: wall left, veg block RIGHT" },
+  "stall64 - vegies.jpg": { "left": [], "right": [["veg",63],["veg",64],["veg",65]], "note": "ONE-SIDED: wall left, veg block RIGHT; CORA store center" },
+  "stall65 - vegies.jpg": { "left": [], "right": [["veg",64],["veg",65],["veg",66]], "note": "ONE-SIDED: wall left, veg block RIGHT" },
+  "stall66 - vegies.jpg": { "left": [], "right": [["veg",65],["veg",66],["veg",67]], "note": "ONE-SIDED: wall left, veg block RIGHT" }
+}

@@ -1,0 +1,10 @@
+{
+  "stall23 - meat.jpg":   { "left": [["meat",22],["meat",23],["meat",24]], "right": [["veg",12],["meat",11],["meat",10]], "note": "junction; green #12 + red #11,#10 right" },
+  "stall24 - meat.jpg":   { "left": [["meat",23],["meat",24]], "right": [["veg",12],["meat",11]], "note": "junction end; green #12 right" },
+  "stall24 - vegies.jpg": { "left": [["veg",23],["veg",24]], "right": [["veg",36],["veg",35],["veg",34]], "center": [["veg",31]], "note": "junction; multiple veg cols" },
+  "stall25 - vegies.jpg": { "left": [["veg",14],["veg",15]], "right": [["veg",27],["veg",26],["veg",25]], "note": "veg cols both sides" },
+  "stall26 - vegies.jpg": { "left": [["veg",14],["veg",15]], "right": [["veg",28],["veg",27],["veg",26],["veg",25]], "note": "veg cols both sides" },
+  "stall27 - vegies.jpg": { "left": [["veg",15],["veg",16]], "right": [["veg",29],["veg",28],["veg",27],["veg",26],["veg",25]], "note": "veg cols both sides" },
+  "stall28 - vegies.jpg": { "left": [["veg",15],["veg",16],["veg",17]], "right": [["veg",30],["veg",29],["veg",28],["veg",27]], "note": "veg cols both sides" },
+  "stall29 - vegies.jpg": { "left": [["veg",16],["veg",17],["veg",18]], "right": [["veg",31],["veg",30],["veg",29],["veg",28],["veg",27]], "note": "veg cols both sides" }
+}

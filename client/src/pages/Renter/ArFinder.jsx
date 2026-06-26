@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Compass, Info, HelpCircle, Navigation, RotateCw, Check, X, Camera, CameraOff, Map, ChevronDown, ChevronUp, Locate, ChevronLeft, ChevronRight, Search, QrCode, MapPin, Clock, Tag, Store, Phone, Footprints } from "lucide-react";
 import mapImage from "../../images/map_aligned.jpg";
+import QrScanner from "../../components/QrScanner";
+import ArMapCanvas from "../../components/ArMapCanvas";
+import ArScannerOverlay from "../../components/ArScannerOverlay";
+import { cacheStallsData, getCachedStallsData } from "../../utils/apiCache";
 import { SVG_STALL_COORDS } from "../../utils/coords_dict";
 import { findRoute, snapToWalkable, METERS_PER_PIXEL } from "../../utils/marketGraph";
-import QrScanner from "../../components/QrScanner";
 
 
 
@@ -319,89 +322,104 @@ export default function ArFinder({ onBack, initialStall }) {
   }, [selectedStallId, stallsList]);
 
   useEffect(() => {
+    const processStalls = (dbStalls) => {
+      if (!Array.isArray(dbStalls)) return;
+      const dbStallMap = {};
+      dbStalls.forEach(dbStall => {
+        const key = getCleanDbStallNumber(dbStall.stallNumber || dbStall.id || '');
+        const sec = String(dbStall.section || '').toLowerCase();
+        let category = 'meat';
+        if (sec.includes('fish') || sec.includes('sea')) category = 'fish';
+        else if (sec.includes('veg') || sec.includes('produce')) category = 'veggies';
+        const zoneLetter = String(dbStall.zone || '').replace('Zone ', '').toUpperCase();
+        if (key && zoneLetter) {
+          dbStallMap[`${category}-${zoneLetter}-${key}`] = dbStall;
+        }
+      });
+
+      // Track which database keys are matched to static stalls
+      const matchedDbKeys = new Set();
+
+      const updatedList = STALLS_AR.map(s => {
+        const cleanedId = getCleanDbStallNumber(s.rawId);
+        const zoneLetter = String(s.zone || '').replace('Zone ', '').toUpperCase();
+        const dbKey = `${s.category}-${zoneLetter}-${cleanedId}`;
+        const dbStall = dbStallMap[dbKey];
+        if (dbStall) {
+          matchedDbKeys.add(dbKey);
+          const dbX = dbStall.coordinates?.x;
+          const dbY = dbStall.coordinates?.y;
+          const yOffset = 0;
+          return {
+            ...s,
+            x: dbX !== undefined ? dbX : s.x,
+            y: dbY !== undefined ? dbY + yOffset : s.y,
+            status: dbStall.status || s.status,
+            price: dbStall.monthlyRate || s.price,
+            contractorName: dbStall.contractorName || 'None',
+            contractorContact: dbStall.contractorContact || 'N/A',
+            dbId: dbStall._id || dbStall.id
+          };
+        }
+        return s;
+      });
+
+      // Append any unmatched database stalls dynamically
+      const finalStallsList = [...updatedList];
+      dbStalls.forEach(dbStall => {
+        const key = getCleanDbStallNumber(dbStall.stallNumber || dbStall.id || '');
+        const sec = String(dbStall.section || '').toLowerCase();
+        let category = 'meat';
+        if (sec.includes('fish') || sec.includes('sea')) category = 'fish';
+        else if (sec.includes('veg') || sec.includes('produce')) category = 'veggies';
+        const zoneLetter = String(dbStall.zone || '').replace('Zone ', '').toUpperCase();
+        const dbKey = `${category}-${zoneLetter}-${key}`;
+
+        if (!matchedDbKeys.has(dbKey)) {
+          const coords = getStallCoords(dbStall.stallNumber, category, dbStall.zone);
+          const displayName = `Stall #${dbStall.stallNumber}`;
+          finalStallsList.push({
+            id: `${category}-${dbStall.stallNumber}`,
+            label: `${displayName} (${category.charAt(0).toUpperCase() + category.slice(1)})`,
+            section: category === 'meat' ? 'Meat Section' : category === 'fish' ? 'Fish Section' : 'Vegetables Section',
+            zone: dbStall.zone || `Zone ${zoneLetter}`,
+            x: dbStall.coordinates?.x !== undefined ? dbStall.coordinates.x : coords.x,
+            y: dbStall.coordinates?.y !== undefined ? dbStall.coordinates.y : coords.y,
+            rawId: dbStall.stallNumber,
+            category,
+            status: dbStall.status || 'available',
+            price: dbStall.monthlyRate || 0,
+            contractorName: dbStall.contractorName || 'None',
+            contractorContact: dbStall.contractorContact || 'N/A',
+            dbId: dbStall._id || dbStall.id
+          });
+        }
+      });
+
+      setStallsList(finalStallsList);
+      if (finalStallsList.length > 0) {
+        const exists = finalStallsList.some(s => s.id === selectedStallId);
+        if (!exists) setSelectedStallId(finalStallsList[0].id);
+      }
+    };
+
+    const cachedStalls = getCachedStallsData();
+    if (cachedStalls) {
+      processStalls(cachedStalls);
+      setLoading(false);
+    }
+
     fetch('/api/stalls')
       .then(res => res.json())
       .then(dbStalls => {
         if (!Array.isArray(dbStalls)) return;
-        const dbStallMap = {};
-        dbStalls.forEach(dbStall => {
-          const key = getCleanDbStallNumber(dbStall.stallNumber || dbStall.id || '');
-          const sec = String(dbStall.section || '').toLowerCase();
-          let category = 'meat';
-          if (sec.includes('fish') || sec.includes('sea')) category = 'fish';
-          else if (sec.includes('veg') || sec.includes('produce')) category = 'veggies';
-          const zoneLetter = String(dbStall.zone || '').replace('Zone ', '').toUpperCase();
-          if (key && zoneLetter) {
-            dbStallMap[`${category}-${zoneLetter}-${key}`] = dbStall;
-          }
-        });
-
-        // Track which database keys are matched to static stalls
-        const matchedDbKeys = new Set();
-
-        const updatedList = STALLS_AR.map(s => {
-          const cleanedId = getCleanDbStallNumber(s.rawId);
-          const zoneLetter = String(s.zone || '').replace('Zone ', '').toUpperCase();
-          const dbKey = `${s.category}-${zoneLetter}-${cleanedId}`;
-          const dbStall = dbStallMap[dbKey];
-          if (dbStall) {
-            matchedDbKeys.add(dbKey);
-            const dbX = dbStall.coordinates?.x;
-            const dbY = dbStall.coordinates?.y;
-            const yOffset = 0;
-            return {
-              ...s,
-              x: dbX !== undefined ? dbX : s.x,
-              y: dbY !== undefined ? dbY + yOffset : s.y,
-              status: dbStall.status || s.status,
-              price: dbStall.monthlyRate || s.price,
-              contractorName: dbStall.contractorName || 'None',
-              contractorContact: dbStall.contractorContact || 'N/A',
-              dbId: dbStall._id || dbStall.id
-            };
-          }
-          return s;
-        });
-
-        // Append any unmatched database stalls dynamically
-        const finalStallsList = [...updatedList];
-        dbStalls.forEach(dbStall => {
-          const key = getCleanDbStallNumber(dbStall.stallNumber || dbStall.id || '');
-          const sec = String(dbStall.section || '').toLowerCase();
-          let category = 'meat';
-          if (sec.includes('fish') || sec.includes('sea')) category = 'fish';
-          else if (sec.includes('veg') || sec.includes('produce')) category = 'veggies';
-          const zoneLetter = String(dbStall.zone || '').replace('Zone ', '').toUpperCase();
-          const dbKey = `${category}-${zoneLetter}-${key}`;
-
-          if (!matchedDbKeys.has(dbKey)) {
-            const coords = getStallCoords(dbStall.stallNumber, category, dbStall.zone);
-            const displayName = `Stall #${dbStall.stallNumber}`;
-            finalStallsList.push({
-              id: `${category}-${dbStall.stallNumber}`,
-              label: `${displayName} (${category.charAt(0).toUpperCase() + category.slice(1)})`,
-              section: category === 'meat' ? 'Meat Section' : category === 'fish' ? 'Fish Section' : 'Vegetables Section',
-              zone: dbStall.zone || `Zone ${zoneLetter}`,
-              x: dbStall.coordinates?.x !== undefined ? dbStall.coordinates.x : coords.x,
-              y: dbStall.coordinates?.y !== undefined ? dbStall.coordinates.y : coords.y,
-              rawId: dbStall.stallNumber,
-              category,
-              status: dbStall.status || 'available',
-              price: dbStall.monthlyRate || 0,
-              contractorName: dbStall.contractorName || 'None',
-              contractorContact: dbStall.contractorContact || 'N/A',
-              dbId: dbStall._id || dbStall.id
-            });
-          }
-        });
-
-        setStallsList(finalStallsList);
-        if (finalStallsList.length > 0) {
-          const exists = finalStallsList.some(s => s.id === selectedStallId);
-          if (!exists) setSelectedStallId(finalStallsList[0].id);
-        }
+        cacheStallsData(dbStalls);
+        processStalls(dbStalls);
       })
-      .catch(err => console.error('Failed to fetch stalls in ArFinder:', err))
+      .catch(err => {
+        console.error('Failed to fetch stalls in ArFinder:', err);
+        if (!cachedStalls) setToastMsg("Offline mode: No cached data available.");
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -877,72 +895,18 @@ export default function ArFinder({ onBack, initialStall }) {
 
   // Shared floor-map body — used by the desktop side panel and the mobile slide-up sheet.
   const floorMapBody = (
-    <div className="ar-map-body">
-      <div style={{ position: "absolute", top: 10, left: "50%", transform: "translateX(-50%)", background: "rgba(255,255,255,0.92)", padding: "6px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700, color: "#1e293b", boxShadow: "0 2px 8px rgba(0,0,0,0.15)", pointerEvents: "none", zIndex: 10, border: "1px solid #e2e8f0", whiteSpace: "nowrap", maxWidth: "calc(100% - 24px)", overflow: "hidden", textOverflow: "ellipsis" }}>
-        Tap a stall to route · tap elsewhere to set your spot
-      </div>
-      <svg viewBox="0 0 2305 1824" preserveAspectRatio="xMidYMid meet"
-        onClick={handleMapClick} style={{ width: "100%", height: "100%", cursor: "crosshair", userSelect: "none" }}>
-        {/* Authentic market floor plan, rasterised from the client's draw.io source
-            at the exact coordinate viewBox — so it lines up 1:1 with the stall
-            markers, route and "you are here". */}
-        <image xlinkHref={mapImage} href={mapImage} x="0" y="0" width="2305" height="1824" preserveAspectRatio="none" />
-
-        {/* Per-stall tap targets + highlight for the selected destination */}
-        {stallsList.map(s => {
-          if (s.x === 1020 && s.y === 635) return null; // unmapped fallback — skip
-          const isDest = s.id === selectedStallId;
-          return (
-            <g
-              key={s.id}
-              transform={`translate(${s.x},${s.y})`}
-              style={{ cursor: "pointer" }}
-              onClick={(e) => {
-                e.stopPropagation();
-                setSelectedCategory(s.category);
-                setSelectedStallId(s.id);
-                setToastMsg(`Routing to ${s.label}`);
-              }}
-            >
-              <rect x="-78" y="-32" width="156" height="64" fill="transparent" />
-              {isDest && (
-                <>
-                  <rect x="-78" y="-32" width="156" height="64" rx="12" fill="rgba(232,98,26,0.28)" stroke="#e8621a" strokeWidth="5">
-                    <animate attributeName="stroke-opacity" values="1;0.25;1" dur="1.4s" repeatCount="indefinite" />
-                  </rect>
-                  <circle cx="0" cy="-32" r="11" fill="#e8621a" stroke="#fff" strokeWidth="3" />
-                </>
-              )}
-            </g>
-          );
-        })}
-
-        {/* Walking route — white casing + animated orange dotted line (Google-Maps style) */}
-        {pathPoints.length > 1 && (
-          <g style={{ pointerEvents: "none" }}>
-            <polyline points={pathPoints.map(p => `${p.x},${p.y}`).join(" ")}
-              fill="none" stroke="#ffffff" strokeWidth="18" strokeLinecap="round" strokeLinejoin="round" opacity="0.95" />
-            <polyline points={pathPoints.map(p => `${p.x},${p.y}`).join(" ")}
-              fill="none" stroke="#e8621a" strokeWidth="9" strokeDasharray="1 26" strokeLinecap="round" strokeLinejoin="round">
-              <animate attributeName="stroke-dashoffset" from="27" to="0" dur="0.7s" repeatCount="indefinite" />
-            </polyline>
-          </g>
-        )}
-
-        {/* "You are here" marker — heading-aware cone + dot */}
-        <g transform={`translate(${userX},${userY})`} style={{ pointerEvents: "none" }}>
-          <path d="M0 0 L-70 -120 A140 140 0 0 1 70 -120 Z" fill="rgba(26,92,42,0.22)" transform={`rotate(${heading})`} style={{ transformOrigin: "0px 0px" }} />
-          <g transform={`rotate(${heading})`}>
-            <circle r="25" fill="#1a5c2a" stroke="#fff" strokeWidth="4" />
-            <path d="M0 -15 L12 10 L0 4 L-12 10 Z" fill="#fff" />
-          </g>
-        </g>
-      </svg>
-      <div className="sim-badge">
-        <Compass size={10} className="animate-spin-slow" />
-        <span>{userX}, {userY} | {heading}°{motionActive ? ` | ${stepCount}` : ''}</span>
-      </div>
-    </div>
+    <ArMapCanvas
+      userX={userX} userY={userY} heading={heading}
+      motionActive={motionActive} stepCount={stepCount}
+      stallsList={stallsList} selectedStallId={selectedStallId}
+      pathPoints={pathPoints}
+      onMapClick={handleMapClick}
+      onSelectStall={(s) => {
+        setSelectedCategory(s.category);
+        setSelectedStallId(s.id);
+        setToastMsg(`Routing to ${s.label}`);
+      }}
+    />
   );
 
   return (
@@ -1982,9 +1946,7 @@ export default function ArFinder({ onBack, initialStall }) {
       )}
 
       {/* ── QR SCANNER OVERLAY ── */}
-      {showScanner && (
-        <QrScanner onDetected={handleQrDetected} onClose={closeScanner} />
-      )}
+      <ArScannerOverlay showScanner={showScanner} onScan={handleQrDetected} onClose={closeScanner} />
 
       {/* ── RECOGNIZED: floating ⓘ marker (tap for details) ── */}
       {recognizedStall && !detailsOpen && (

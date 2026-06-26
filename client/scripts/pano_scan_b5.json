@@ -1,0 +1,10 @@
+{
+  "stall30 - vegies.jpg": { "left": [["veg",17],["veg",18],["veg",19]], "right": [["veg",33],["veg",32],["veg",31],["veg",30],["veg",29],["veg",28]], "note": "veg cols both sides; named on right" },
+  "stall31 - fishes.jpg": { "left": [["fish",31],["fish",32],["fish",33]], "right": [["fish",41],["fish",48]], "note": "Zone B->C junction; fish 31-33 left anchor" },
+  "stall31 - vegies.jpg": { "left": [["veg",18],["veg",19],["veg",20],["veg",21]], "right": [["veg",33],["veg",31],["veg",30]], "note": "veg cols both sides; uncertain right nums" },
+  "stall32 - fishes.jpg": { "left": [["fish",31],["fish",32],["fish",33]], "right": [["fish",43],["fish",42],["fish",41]], "note": "named #32@-90 left; fish col right" },
+  "stall33 - fishes.jpg": { "left": [["fish",32],["fish",33],["fish",34]], "right": [["fish",44],["fish",43],["fish",42],["fish",41]], "note": "named #33@-90 left" },
+  "stall34 - fishes.jpg": { "left": [["fish",33],["fish",34],["fish",35]], "right": [["fish",45],["fish",44],["fish",43]], "note": "named #34@-90 left" },
+  "stall33 - vegies.jpg": { "left": [["veg",19],["veg",20],["veg",21],["veg",22],["veg",23]], "right": [["veg",35],["veg",34],["veg",33],["veg",32]], "note": "veg cols both sides; named on right" },
+  "stall34 - vegies.jpg": { "left": [["veg",20],["veg",21],["veg",22],["veg",23],["veg",24]], "right": [["veg",36],["veg",35],["veg",34],["veg",33]], "note": "veg cols both sides; named on right" }
+}

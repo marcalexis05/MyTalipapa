@@ -3,7 +3,9 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import mapImage from '../images/map_aligned.jpg'
 import logoImage from '../images/logo.png'
-import { SVG_STALL_COORDS } from '../utils/coords_dict'
+import { SVG_STALL_COORDS } from '../utils/coords_dict';
+import { STALL_MAP } from '../utils/stallMap';
+import { PANO_HEADINGS } from '../utils/panoHeadings';
 import { findRoute, ENTRANCE, METERS_PER_PIXEL } from '../utils/marketGraph'
 import {
   ArrowLeft,
@@ -110,7 +112,7 @@ const generateStalls = (category, numbers) => {
   const productsData = {
     meat: [
       ['Pork Belly (Liempo): ₱340/kg', 'Pork Chop: ₱310/kg', 'Ground Pork: ₱290/kg', 'Pork Ribs: ₱320/kg'],
-      ['Beef Sirloin: ₱420/kg', 'Beef Shank (Bulalo): ₱380/kg', 'Ground Beef: ₱350/kg', 'Beef Brisket: ₱390/kg'],
+      ['Beef Sirloin: ₱420/kg', 'Beef Shank (Bulalo): ₱380/kg', 'Ground Beef: ₱350/kg', 'Beef Brisket: ₱380/kg'],
       ['Whole Chicken: ₱180/kg', 'Chicken Breast: ₱210/kg', 'Chicken Wings: ₱190/kg', 'Chicken Drumsticks: ₱200/kg'],
       ['Garlic Longganisa: ₱150/pack', 'Sweet Longganisa: ₱150/pack', 'Tocino: ₱160/pack', 'Beef Tapa: ₱180/pack'],
       ['Pork Tenderloin: ₱350/kg', 'Pork Pata: ₱260/kg', 'Beef Caldereta Cuts: ₱370/kg']
@@ -437,7 +439,7 @@ export default function MarketTour360() {
         let closestSec = null;
         Object.entries(sectionsData).forEach(([secKey, sec]) => {
           sec.stalls.forEach(s => {
-            const sc = getRawCoordinates(s, secKey);
+            const sc = getStallInfo(s, secKey);
             const dist = Math.sqrt((sc.x - stepCoords.x)**2 + (sc.y - stepCoords.y)**2);
             if (dist < closestDist) {
               closestDist = dist;
@@ -457,7 +459,7 @@ export default function MarketTour360() {
   // Sync step index when currentStall changes manually in 360 mode
   useEffect(() => {
     if (routeInstructions.length > 0 && destinationStall) {
-      const curCoords = getRawCoordinates(currentStall, activeSectionKey);
+      const curCoords = getStallInfo(currentStall, activeSectionKey);
       
       // Find the step in routeInstructions whose coordinates are closest to curCoords
       let bestStepIdx = arStepIndex;
@@ -539,7 +541,7 @@ export default function MarketTour360() {
     
     const startStall = currentStall;
     const startSec = activeSectionKey;
-    const startCoords = startStall ? getRawCoordinates(startStall, startSec) : ENTRANCE_COORDS;
+    const startCoords = startStall ? getStallInfo(startStall, startSec) : ENTRANCE_COORDS;
     
     // Find section of targetStall
     let targetSec = activeSectionKey;
@@ -549,7 +551,7 @@ export default function MarketTour360() {
       }
     });
     
-    const targetCoords = getRawCoordinates(targetStall, targetSec);
+    const targetCoords = getStallInfo(targetStall, targetSec);
     const routeWaypoints = findMarketRoute(startCoords, targetCoords);
     
     setArWaypoints(routeWaypoints);
@@ -579,7 +581,7 @@ export default function MarketTour360() {
     let closestDist = Infinity;
     Object.entries(sectionsData).forEach(([secKey, sec]) => {
       sec.stalls.forEach((st, idx) => {
-        const c = getRawCoordinates(st, secKey);
+        const c = getStallInfo(st, secKey);
         // Skip stalls that have no real mapped coordinate (fallback position)
         if (c.x === 1020 && (c.y === 635 || c.y === 885)) return;
         const d = Math.hypot(c.x - x, c.y - y);
@@ -982,34 +984,149 @@ export default function MarketTour360() {
   };
 
   // Node Graph to map stalls/hallways to Map X,Y coordinates
-  const getRawCoordinates = (stall, overrideCategory = null) => {
-    const cleanNum = getCleanDbStallNumber(stall.id);
-    const category = overrideCategory || stateRef.current.activeSectionKey;
-    const zoneLetter = String(stall.zone || '').replace('Zone ', '').toUpperCase();
-    const isBottomZone = ['E', 'F', 'G', 'H'].includes(zoneLetter);
-    const yOffset = 0;
+   // ── Missing stall coordinates ────────────────────────────────────────────
+   // Only stalls that have NO entry in SVG_STALL_COORDS need a manual fallback.
+   // These 4 stalls are interpolated from their neighbors' positions.
+   const MISSING_STALL_COORDS = {
+     'meat-4(u)':  { x: 317, y: 1392 },  // between 3(u) at 1452 and 5(u) at 1332
+     'meat-8(u)':  { x: 317, y: 1152 },  // same row as meat-8
+     'meat-9(u)':  { x: 317, y: 1092 },  // same row as meat-9
+     'meat-10(u)': { x: 317, y: 1032 },  // same row as meat-10
+   };
 
-    let x = 1020;
-    let y = 635 + yOffset;
+   // Helper to derive north-offset from the stall's x-column on the SVG map
+   const getNorthOffsetFromX = (x) => {
+     if (x <= 350) return -90;
+     if (x <= 550) return 90;
+     if (x <= 850) return -90;
+     if (x <= 1050) return 90;
+     if (x <= 1350) return -90;
+     if (x <= 1550) return 90;
+     if (x <= 1850) return -90;
+     return 90;
+   };
 
-    const rawKey = `${category}-${stall.id}`;
-    const cleanKey = `${category}-${cleanNum}`;
+   // Helper to retrieve stall info (coords & orientation).
+   // Uses the stall's OWN position on the map — the blue dot always shows
+   // where this stall physically is, regardless of which photo file it shares.
+   const getStallInfo = (stall, overrideCategory = null) => {
+     const category = overrideCategory || stateRef.current.activeSectionKey;
+     const id = stall.id;
 
-    if (SVG_STALL_COORDS[rawKey]) {
-      x = SVG_STALL_COORDS[rawKey].x;
-      y = SVG_STALL_COORDS[rawKey].y + yOffset;
-    } else if (SVG_STALL_COORDS[cleanKey]) {
-      x = SVG_STALL_COORDS[cleanKey].x;
-      y = SVG_STALL_COORDS[cleanKey].y + yOffset;
-    }
+     // 1) Direct lookup in SVG_STALL_COORDS (most stalls have an entry)
+     const rawKey = `${category}-${id}`;
+     if (SVG_STALL_COORDS[rawKey]) {
+       const c = SVG_STALL_COORDS[rawKey];
+       return { x: c.x, y: c.y, northOffset: getNorthOffsetFromX(c.x) };
+     }
 
-    return { x, y };
-  };
+     // 2) Try with cleaned stall number (strip parenthetical suffixes)
+     const cleanNum = getCleanDbStallNumber(id);
+     const cleanKey = `${category}-${cleanNum}`;
+     if (SVG_STALL_COORDS[cleanKey]) {
+       const c = SVG_STALL_COORDS[cleanKey];
+       return { x: c.x, y: c.y, northOffset: getNorthOffsetFromX(c.x) };
+     }
+
+     // 3) Check missing-stall fallback coords
+     if (MISSING_STALL_COORDS[rawKey]) {
+       const c = MISSING_STALL_COORDS[rawKey];
+       return { x: c.x, y: c.y, northOffset: getNorthOffsetFromX(c.x) };
+     }
+
+     // 4) Check STALL_MAP (auto-generated from file scan)
+     if (STALL_MAP[category] && STALL_MAP[category][id]) {
+       return STALL_MAP[category][id];
+     }
+
+     // 5) Ultimate fallback
+     return { x: 1020, y: 635, northOffset: 0 };
+   };
+
+   // ── Panorama heading calibration ─────────────────────────────────────────
+   // The cone must reflect what the *photo* is actually showing — not the map
+   // column of whichever stall happens to reuse that photo. Many stalls share a
+   // single panorama file (see getStallImagePath), so we resolve each photo back
+   // to the stall it was captured at ("canonical" stall) and derive the heading
+   // from THAT position. This makes the cone identical every time the same photo
+   // is shown, instead of pointing different ways per display-stall — which was
+   // the main reason the cone never stayed in sync with the 360 view.
+   const resolveCanonicalCoordsFromPhoto = (photoPath) => {
+     if (!photoPath) return null;
+     // Filenames look like: "stall14 - fishes.jpg", "stall1(u) - meat.jpg",
+     // "stall12(2) - meat.jpg", "stall19 -meat.jpg". Pull the base number and the
+     // file's own category (which is where the photo physically lives).
+     const m = photoPath.match(/stall0*(\d+)(?:\([^)]*\))?\s*-\s*(meat|fishes|vegies)/i);
+     if (!m) return null;
+     const num = m[1];
+     const fileCat = m[2].toLowerCase();
+     const canonCat = fileCat === 'fishes' ? 'fish' : fileCat === 'vegies' ? 'veggies' : 'meat';
+     const key = `${canonCat}-${num}`;
+     if (SVG_STALL_COORDS[key]) return SVG_STALL_COORDS[key];
+     if (STALL_MAP[canonCat] && STALL_MAP[canonCat][num]) return STALL_MAP[canonCat][num];
+     return null;
+   };
+
+   // ── Two global calibration constants (set by testing against the live 360) ──
+   // THETA_SIGN: which way the cone turns as you drag. If the cone rotates the
+   //   OPPOSITE way to the 360 view, flip to -1.
+   // PANO_HEADING_OFFSET: a one-time 0/180 frame fix. If every cone points the
+   //   exact opposite direction to where you're looking, set this to 180.
+   const THETA_SIGN = 1;
+   const PANO_HEADING_OFFSET = 0;
+
+   // Base heading (degrees, 0 = map-north/up) that the panorama faces at theta = 0.
+   // Primary source: PANO_HEADINGS, derived from the painted stall numbers in each
+   // photo (see scripts/compute_headings.py). Falls back to geometry only if a
+   // photo isn't in the table.
+   const getPanoBaseHeading = (stall, category) => {
+     const photoPath = getStallImagePath(stall.id, category);
+     const file = photoPath.split('/').pop();
+     if (PANO_HEADINGS[file] !== undefined) {
+       return (PANO_HEADINGS[file] + PANO_HEADING_OFFSET + 360) % 360;
+     }
+     const rawCoords = getStallInfo(stall, category);
+     // Entrance stalls look straight down the entrance corridor (north).
+     if (rawCoords.y < 800 && rawCoords.x <= 350) return 0;
+     const canon = resolveCanonicalCoordsFromPhoto(photoPath);
+     if (canon) return getNorthOffsetFromX(canon.x);
+     // Fallback: derive from the display stall's own column.
+     return getNorthOffsetFromX(rawCoords.x);
+   };
+
+   // Compute camera (blue dot) position using stall info and entrance handling
+   const getCameraPosition = (stall) => {
+     const info = getStallInfo(stall);
+     let cameraX = info.x;
+     const isEntranceStall = info.y < 800 && info.x <= 350;
+     if (!isEntranceStall) {
+       if (info.x <= 350) cameraX = 392;
+       else if (info.x > 350 && info.x <= 550) cameraX = 392;
+       else if (info.x > 550 && info.x <= 850) cameraX = 892;
+       else if (info.x > 850 && info.x <= 1050) cameraX = 892;
+       else if (info.x > 1050 && info.x <= 1350) cameraX = 1392;
+       else if (info.x > 1350 && info.x <= 1550) cameraX = 1392;
+       else if (info.x > 1550 && info.x <= 1850) cameraX = 1887;
+       else if (info.x > 1850) cameraX = 1887;
+     }
+     return { x: cameraX, y: info.y };
+   };
+
+  // When the stall changes, triggerSceneTransition resets the pan to theta = 0.
+  // updateCamera (which pushes setCompassAngle) only runs on drag/auto-rotate, so
+  // without this the cone would keep the previous stall's heading until touched.
+  // Snap the cone to the new photo's base heading immediately so it stays in sync.
+  useEffect(() => {
+    if (!currentStall) return;
+    const base = ((getPanoBaseHeading(currentStall, activeSectionKey) % 360) + 360) % 360;
+    setCompassAngle(base);
+    stateRef.current.lastCompassDeg = base;
+  }, [currentStall, activeSectionKey]);
 
   const findNearestStallInDirection = (currentStall, currentCompassAngle) => {
     const currentSectionsData = stateRef.current.sectionsData;
     const currentActiveSectionKey = stateRef.current.activeSectionKey;
-    const currentCoords = getRawCoordinates(currentStall, currentActiveSectionKey);
+    const currentInfo = getStallInfo(currentStall, currentActiveSectionKey);
     let bestMatch = null;
     let minDistance = Infinity;
 
@@ -1020,10 +1137,10 @@ export default function MarketTour360() {
       stalls.forEach((stall, idx) => {
         if (secKey === currentActiveSectionKey && stall.id === currentStall.id) return;
 
-        const targetCoords = getRawCoordinates(stall, secKey);
+        const targetInfo = getStallInfo(stall, secKey);
 
-        const dx = targetCoords.x - currentCoords.x;
-        const dy = targetCoords.y - currentCoords.y;
+        const dx = targetInfo.x - currentInfo.x;
+        const dy = targetInfo.y - currentInfo.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
 
         // Filter distance: max 410px so it doesn't jump through walls across the map, min 10px
@@ -1319,23 +1436,11 @@ export default function MarketTour360() {
           const rz = raycaster.ray.direction.z;
           const clickTheta = Math.atan2(rz, rx);
 
-          let northOffset = 0;
           const currentStall = stateRef.current.currentStall;
           const activeSectionKey = stateRef.current.activeSectionKey;
-          const upsideDownStalls = ['13(u)', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24'];
-          const zoneAFishUpsideDown = ['11', '12', '13', '14', '15', '16', '17', '18', '19', '20'];
-          const zoneAMeatUpsideDown = ['12', '13'];
-
-          const isZoneEMeat = activeSectionKey === 'meat' && upsideDownStalls.includes(currentStall.id);
-          const isZoneAFish = activeSectionKey === 'fish' && zoneAFishUpsideDown.includes(currentStall.id);
-          const isZoneAMeat = activeSectionKey === 'meat' && zoneAMeatUpsideDown.includes(currentStall.id);
-
-          if (currentStall && currentStall.id === '1(u)') {
-            northOffset = -90;
-          } else if (currentStall && (isZoneEMeat || isZoneAFish || isZoneAMeat)) {
-            northOffset = 180;
-          }
-
+          
+          const info = getStallInfo(currentStall, activeSectionKey);
+          const northOffset = info.northOffset !== undefined ? info.northOffset : 0;
           const deg = Math.round((clickTheta * 180) / Math.PI) + northOffset;
           const clickCompassDeg = ((deg % 360) + 360) % 360;
 
@@ -1381,6 +1486,9 @@ export default function MarketTour360() {
       }
 
       renderer.domElement.addEventListener('click', onPointerDown)
+
+      // Mutable hover state for arrow — shared by onPointerMove and animate
+      let arrowIsHovered = false;
 
       // Track hovering to show tooltips & change cursors
       function onPointerMove(e) {
@@ -1453,6 +1561,7 @@ export default function MarketTour360() {
       window.addEventListener('mousemove', onPointerMove)
 
       // Camera Look-At Logic
+      let northOffset = 0;
       function updateCamera() {
         const { phi, theta } = spherical.current
         const x = Math.sin(phi) * Math.cos(theta)
@@ -1460,23 +1569,12 @@ export default function MarketTour360() {
         const z = Math.sin(phi) * Math.sin(theta)
         camera.lookAt(x, y, z)
 
-        let northOffset = 0;
-        const upsideDownStalls = ['13(u)', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24'];
-        const zoneAFishUpsideDown = ['11', '12', '13', '14', '15', '16', '17', '18', '19', '20'];
-        const zoneAMeatUpsideDown = ['12', '13'];
+        // Heading the panorama faces at theta = 0, resolved from the PHOTO (so a
+        // reused photo always yields the same cone) rather than the display column.
+        northOffset = getPanoBaseHeading(stateRef.current.currentStall, stateRef.current.activeSectionKey);
 
-        const isZoneEMeat = stateRef.current.activeSectionKey === 'meat' && upsideDownStalls.includes(stateRef.current.currentStall.id);
-        const isZoneAFish = stateRef.current.activeSectionKey === 'fish' && zoneAFishUpsideDown.includes(stateRef.current.currentStall.id);
-        const isZoneAMeat = stateRef.current.activeSectionKey === 'meat' && zoneAMeatUpsideDown.includes(stateRef.current.currentStall.id);
-
-        if (stateRef.current.currentStall && stateRef.current.currentStall.id === '1(u)') {
-          northOffset = -90; // Calibrate left turn to point to Stall #13
-        } else if (stateRef.current.currentStall && (isZoneEMeat || isZoneAFish || isZoneAMeat)) {
-          northOffset = 180; // Correct cone to align with the actual camera orientation for the entire row
-        }
-
-        // Sync compass rotation (0 deg = North)
-        const deg = Math.round((theta * 180) / Math.PI) + northOffset;
+        // Sync compass rotation (0 deg = North). THETA_SIGN flips drag sense if needed.
+        const deg = Math.round((THETA_SIGN * theta * 180) / Math.PI) + northOffset;
         const compassDeg = ((deg % 360) + 360) % 360; // ensure positive
 
         // Optimize: Only recalculate heavy math and React state if the degree actually changed
@@ -1494,7 +1592,7 @@ export default function MarketTour360() {
           // Collect all navigable nearby stalls in both forward and backward directions
           const currentSectData = stateRef.current.sectionsData;
           const curSectionKey = stateRef.current.activeSectionKey;
-          const curCoords = getRawCoordinates(currentStall, curSectionKey);
+          const curCoords = getStallInfo(currentStall, curSectionKey);
           
           const forwards = [];
           const backwards = [];
@@ -1503,7 +1601,7 @@ export default function MarketTour360() {
             const stalls = currentSectData[secKey].stalls;
             stalls.forEach((s, idx) => {
               if (secKey === curSectionKey && s.id === currentStall.id) return;
-              const tCoords = getRawCoordinates(s, secKey);
+              const tCoords = getStallInfo(s, secKey);
               const ddx = tCoords.x - curCoords.x;
               const ddy = tCoords.y - curCoords.y;
               const dist = Math.sqrt(ddx * ddx + ddy * ddy);
@@ -1568,7 +1666,7 @@ export default function MarketTour360() {
         arrowMeshes.forEach((arrowMesh) => {
           const target = arrowMesh.userData.targetStallInfo;
           if (target && target.tCompassAngle !== undefined) {
-            const arrowThetaRad = ((target.tCompassAngle - northOffset) * Math.PI) / 180;
+            const arrowThetaRad = (THETA_SIGN * (target.tCompassAngle - northOffset) * Math.PI) / 180;
             const placeDist = 125;
             const ax = Math.cos(arrowThetaRad) * placeDist;
             const az = Math.sin(arrowThetaRad) * placeDist;
@@ -1581,8 +1679,6 @@ export default function MarketTour360() {
       }
       updateCamera()
 
-      // Mutable hover state for arrow — shared by onPointerMove and animate
-      let arrowIsHovered = false;
 
       // Animation Loop
       function animate() {
@@ -1639,8 +1735,11 @@ export default function MarketTour360() {
         const dy = e.clientY - lastPos.current.y
         lastPos.current = { x: e.clientX, y: e.clientY }
 
+        // Google Maps Street View style "grab the scene" drag: the view follows
+        // the finger. In this rig, theta+ turns the camera right, so horizontal is
+        // -dx (drag right -> look left) and vertical is -dy (drag down -> look up).
         spherical.current.theta -= dx * 0.003
-        spherical.current.phi = Math.max(0.4, Math.min(Math.PI - 0.4, spherical.current.phi + dy * 0.003))
+        spherical.current.phi = Math.max(0.4, Math.min(Math.PI - 0.4, spherical.current.phi - dy * 0.003))
         updateCamera()
       }
 
@@ -1664,8 +1763,9 @@ export default function MarketTour360() {
         const dy = e.touches[0].clientY - lastPos.current.y
         lastPos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
 
+        // Google Maps Street View style "grab" drag (matches the mouse handler).
         spherical.current.theta -= dx * 0.004
-        spherical.current.phi = Math.max(0.4, Math.min(Math.PI - 0.4, spherical.current.phi + dy * 0.004))
+        spherical.current.phi = Math.max(0.4, Math.min(Math.PI - 0.4, spherical.current.phi - dy * 0.004))
         updateCamera()
       }
 
@@ -1912,7 +2012,7 @@ export default function MarketTour360() {
         <div className={`w-10 h-10 sm:w-14 sm:h-14 mb-0 sm:mb-1 bg-white/90 backdrop-blur-md rounded-full flex items-center justify-center border border-black/10 shadow-2xl relative overflow-hidden transition-all duration-300 ${uiVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-75 pointer-events-none'}`}>
           <div
             className="w-10 h-10 flex items-center justify-center transition-transform duration-100"
-            style={{ transform: `rotate(${compassAngle}deg)` }}
+            style={{ transform: `rotate(${-compassAngle}deg)` }}
           >
             <CompassIcon size={24} className="text-[#1a5c2a]" />
           </div>
@@ -2127,26 +2227,26 @@ export default function MarketTour360() {
           {/* Map Body Content */}
           <div className="flex-1 min-h-0 w-full flex items-center justify-center overflow-hidden" onClick={isMapExpanded ? (e) => e.stopPropagation() : undefined}>
             {(() => {
-              const mapCoords = getRawCoordinates(currentStall);
+              const mapCoords = getCameraPosition(currentStall);
               
               // Resolve route coords
               let fromCoords = null;
               let toCoords = null;
               
               if (destinationStall) {
-                fromCoords = getRawCoordinates(currentStall, activeSectionKey);
+                fromCoords = getStallInfo(currentStall, activeSectionKey);
                 let targetSec = activeSectionKey;
                 Object.entries(sectionsData).forEach(([secKey, sec]) => {
                   if (sec.stalls.some(s => s.id === destinationStall.id)) {
                     targetSec = secKey;
                   }
                 });
-                toCoords = getRawCoordinates(destinationStall, targetSec);
+                toCoords = getStallInfo(destinationStall, targetSec);
               } else {
                 const fromStall = routeFrom ? sectionsData[routeFrom.secKey]?.stalls.find(s => s.id === routeFrom.stallId) : null;
                 const toStall = routeTo ? sectionsData[routeTo.secKey]?.stalls.find(s => s.id === routeTo.stallId) : null;
-                fromCoords = fromStall ? getRawCoordinates(fromStall, routeFrom.secKey) : null;
-                toCoords = toStall ? getRawCoordinates(toStall, routeTo.secKey) : null;
+                fromCoords = fromStall ? getStallInfo(fromStall, routeFrom.secKey) : null;
+                toCoords = toStall ? getStallInfo(toStall, routeTo.secKey) : null;
               }
 
               // Determine viewBox parameters
@@ -2281,7 +2381,7 @@ export default function MarketTour360() {
                     {/* Clickable Stall Hotspots on Map (only when expanded) */}
                     {isMapExpanded && Object.entries(sectionsData).map(([secKey, sec]) => {
                       return sec.stalls.map((st, idx) => {
-                        const coords = getRawCoordinates(st, secKey);
+                        const coords = getStallInfo(st, secKey);
                         if (coords.x === 1020 && (coords.y === 635 || coords.y === 885)) return null;
                         const isCurrent = secKey === activeSectionKey && idx === stallIndex;
                         const isFrom = routeFrom && routeFrom.secKey === secKey && routeFrom.stallId === st.id;
