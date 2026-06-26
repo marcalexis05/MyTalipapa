@@ -91,6 +91,30 @@ export default function Landingpage() {
   ];
   const [currentSlide, setCurrentSlide] = useState(0);
 
+  // Contractor Slideshow State
+  const [contractorSlide, setContractorSlide] = useState(0);
+  const contractorSteps = [
+    { step: "01", title: "Access the Contractor Portal", desc: "Go to the custom register page by appending '?role=contractor' to the register route.", tip: "Direct Link: /register?role=contractor" },
+    { step: "02", title: "Enter Business & Contact Info", desc: "Fill out the contractor application form, including your official business name and active mobile number.", tip: "This business name will represent your brand on all assigned stalls." },
+    { step: "03", title: "Select Stalls to Manage", desc: "Browse the visual directory and pick the unmanaged market stalls that your organization will operate.", tip: "You can select one or multiple stalls depending on your lease." },
+    { step: "04", title: "Establish Credentials", desc: "Set up a secure login password and review the registration terms to ensure legal alignment.", tip: "Passwords must be at least 8 characters with letters, numbers, and symbols." },
+    { step: "05", title: "Verify OTP & Apply", desc: "Type in the 4-digit verification code sent to your email to submit the request. Wait for the market administrator to review.", tip: "Admin will receive the application and instantly approve your portal access." }
+  ];
+
+  const nextContractorSlide = (e) => {
+    if (e) e.preventDefault();
+    if (contractorSlide === 4) {
+      navigate('/register?role=contractor');
+    } else {
+      setContractorSlide(prev => prev + 1);
+    }
+  };
+
+  const prevContractorSlide = (e) => {
+    if (e) e.preventDefault();
+    setContractorSlide(prev => Math.max(0, prev - 1));
+  };
+
   const [heroRef, heroInView] = useInView(0.1);
   const [statsRef, statsInView] = useInView(0.2);
   const [whyRef, whyInView] = useInView(0.15);
@@ -612,16 +636,22 @@ export default function Landingpage() {
 
           {/* Toggle Tabs */}
           <div className="flex justify-center" style={fadeUp(howInView, 0.1)}>
-            <div className="bg-gray-100 p-1 rounded-full flex gap-1 border border-gray-200">
+            <div className="bg-gray-100 p-1 rounded-full flex flex-wrap justify-center gap-1 border border-gray-200">
               <button
                 onClick={() => setHowItWorksTab('renter')}
-                className={`px-6 py-2 rounded-full font-bold text-sm transition-all ${howItWorksTab === 'renter' ? 'bg-green-700 text-white shadow' : 'text-gray-600 hover:text-gray-900'}`}
+                className={`px-4 sm:px-6 py-2 rounded-full font-bold text-xs sm:text-sm transition-all ${howItWorksTab === 'renter' ? 'bg-green-700 text-white shadow' : 'text-gray-600 hover:text-gray-900'}`}
               >
                 For Renters / Vendors
               </button>
               <button
+                onClick={() => setHowItWorksTab('contractor')}
+                className={`px-4 sm:px-6 py-2 rounded-full font-bold text-xs sm:text-sm transition-all ${howItWorksTab === 'contractor' ? 'bg-green-700 text-white shadow' : 'text-gray-600 hover:text-gray-900'}`}
+              >
+                For Contractors
+              </button>
+              <button
                 onClick={() => setHowItWorksTab('admin')}
-                className={`px-6 py-2 rounded-full font-bold text-sm transition-all ${howItWorksTab === 'admin' ? 'bg-green-700 text-white shadow' : 'text-gray-600 hover:text-gray-900'}`}
+                className={`px-4 sm:px-6 py-2 rounded-full font-bold text-xs sm:text-sm transition-all ${howItWorksTab === 'admin' ? 'bg-green-700 text-white shadow' : 'text-gray-600 hover:text-gray-900'}`}
               >
                 For Administrators
               </button>
@@ -629,9 +659,9 @@ export default function Landingpage() {
           </div>
 
           {/* Tab Content */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-6">
-            {howItWorksTab === 'renter' ? (
-              <>
+          <div className="mt-6">
+            {howItWorksTab === 'renter' && (
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {[
                   { step: "01", title: "Virtual Exploration", desc: "Browse the live directory and take a 3D Virtual Tour of the market floor to locate vacant spots and pricing options." },
                   { step: "02", title: "Submit Application", desc: "Select a stall, fill in your business description, and register details digitally inside our renter application forms." },
@@ -644,9 +674,11 @@ export default function Landingpage() {
                     <p className="text-gray-600 text-sm leading-relaxed">{s.desc}</p>
                   </div>
                 ))}
-              </>
-            ) : (
-              <>
+              </div>
+            )}
+
+            {howItWorksTab === 'admin' && (
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {[
                   { step: "01", title: "Zoning & Setup", desc: "Define structural stalls and categories (e.g. Meat, Fishes, Vegetables) using geometric grid layouts and SVG coordinates." },
                   { step: "02", title: "Approve Applications", desc: "Review submitted applications, verify documents, and instantly change applicant status to 'approved' to link them as tenants." },
@@ -659,7 +691,127 @@ export default function Landingpage() {
                     <p className="text-gray-600 text-sm leading-relaxed">{s.desc}</p>
                   </div>
                 ))}
-              </>
+              </div>
+            )}
+
+            {howItWorksTab === 'contractor' && (
+              <div 
+                className="bg-gray-50/70 rounded-[2rem] p-6 sm:p-10 border border-gray-100 flex flex-col lg:flex-row gap-8 items-stretch shadow-sm"
+                style={fadeUp(howInView, 0.1)}
+              >
+                {/* Left Side: Interactive Graphic/Visual for the active step */}
+                <div className="w-full lg:w-1/2 flex justify-center items-center h-56 sm:h-72 bg-green-950/5 rounded-2xl border border-green-900/10 p-6 relative overflow-hidden shrink-0">
+                  <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#1a5c2a 1px, transparent 1px)', backgroundSize: '16px 16px' }} />
+                  
+                  {contractorSlide === 0 && (
+                    <div className="text-center space-y-4">
+                      <div className="inline-flex p-3 bg-white text-green-800 rounded-2xl font-mono text-xs sm:text-sm border border-green-200 shadow-sm select-all">
+                        /register?role=contractor
+                      </div>
+                      <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">Access the registration portal</p>
+                    </div>
+                  )}
+                  
+                  {contractorSlide === 1 && (
+                    <div className="w-full max-w-[260px] bg-white rounded-2xl shadow-xl border border-orange-100 p-5 space-y-3">
+                      <div className="h-3.5 w-2/3 bg-gray-200 rounded" />
+                      <div className="h-10 w-full bg-orange-50/65 border border-orange-100 rounded-xl flex items-center px-3 text-xs text-orange-700 font-bold">
+                        Benito Market Inc.
+                      </div>
+                      <div className="h-7 w-1/3 bg-green-700 rounded-lg" />
+                    </div>
+                  )}
+                  
+                  {contractorSlide === 2 && (
+                    <div className="w-full max-w-[260px] bg-white rounded-2xl shadow-xl border border-green-100 p-5 space-y-3">
+                      <div className="h-3.5 w-1/2 bg-gray-200 rounded" />
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="h-10 rounded-lg border border-green-600 bg-green-50 flex items-center justify-center font-bold text-xs text-green-700">Stall 01</div>
+                        <div className="h-10 rounded-lg border border-green-600 bg-green-50 flex items-center justify-center font-bold text-xs text-green-700">Stall 02</div>
+                        <div className="h-10 rounded-lg border border-gray-200 flex items-center justify-center text-xs text-gray-400">Stall 03</div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {contractorSlide === 3 && (
+                    <div className="w-full max-w-[260px] bg-white rounded-2xl shadow-xl border border-slate-100 p-5 space-y-3 text-center">
+                      <div className="h-12 w-12 rounded-full bg-green-100 text-green-700 flex items-center justify-center mx-auto mb-2">
+                        <ShieldCheck size={24} />
+                      </div>
+                      <div className="h-3.5 w-1/2 bg-gray-200 rounded mx-auto" />
+                      <div className="h-3 w-1/3 bg-gray-100 rounded mx-auto" />
+                    </div>
+                  )}
+                  
+                  {contractorSlide === 4 && (
+                    <div className="w-full max-w-[260px] bg-white rounded-2xl shadow-xl border border-slate-100 p-5 space-y-3 text-center">
+                      <div className="h-3.5 w-1/2 bg-gray-200 rounded mx-auto mb-2" />
+                      <div className="flex justify-center gap-2">
+                        <div className="h-10 w-9 border-2 border-green-600 rounded-xl flex items-center justify-center font-bold text-lg text-green-700 bg-green-50">4</div>
+                        <div className="h-10 w-9 border-2 border-green-600 rounded-xl flex items-center justify-center font-bold text-lg text-green-700 bg-green-50">8</div>
+                        <div className="h-10 w-9 border-2 border-green-600 rounded-xl flex items-center justify-center font-bold text-lg text-green-700 bg-green-50">1</div>
+                        <div className="h-10 w-9 border-2 border-green-600 rounded-xl flex items-center justify-center font-bold text-lg text-green-700 bg-green-50">9</div>
+                      </div>
+                      <div className="h-3.5 w-2/3 bg-orange-100 rounded mx-auto mt-2" />
+                    </div>
+                  )}
+                </div>
+
+                {/* Right Side: Step Description & Controls */}
+                <div className="flex-1 flex flex-col justify-between py-2">
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-green-800 bg-green-100 px-3 py-1 rounded-full uppercase tracking-wider">
+                        Step {contractorSteps[contractorSlide].step} of 05
+                      </span>
+                    </div>
+                    <h3 className="text-2xl font-bold text-gray-900">{contractorSteps[contractorSlide].title}</h3>
+                    <p className="text-gray-600 text-sm sm:text-base leading-relaxed">{contractorSteps[contractorSlide].desc}</p>
+                    <div className="p-3.5 rounded-xl bg-orange-50/50 border border-orange-100/50 text-xs font-semibold text-gray-600 leading-normal">
+                      💡 {contractorSteps[contractorSlide].tip}
+                    </div>
+                  </div>
+
+                  {/* Navigation controls */}
+                  <div className="flex flex-wrap items-center justify-between gap-4 pt-6 mt-6 border-t border-gray-200">
+                    <div className="flex gap-2">
+                      {contractorSteps.map((_, idx) => (
+                        <button
+                          key={idx}
+                          onClick={(e) => { e.preventDefault(); setContractorSlide(idx); }}
+                          className={`h-2 rounded-full transition-all duration-300 ${idx === contractorSlide ? 'w-6 bg-green-700' : 'w-2 bg-gray-300 hover:bg-gray-400'}`}
+                          aria-label={`Go to step ${idx + 1}`}
+                        />
+                      ))}
+                    </div>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={prevContractorSlide}
+                        className="p-2.5 rounded-full border border-gray-300 text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition active:scale-95 disabled:opacity-40"
+                        disabled={contractorSlide === 0}
+                      >
+                        <ChevronLeft size={18} />
+                      </button>
+                      <button
+                        onClick={nextContractorSlide}
+                        className="px-5 py-2.5 rounded-full bg-green-700 text-white font-bold hover:bg-green-800 transition active:scale-95 flex items-center gap-1.5 text-sm"
+                      >
+                        {contractorSlide === 4 ? (
+                          <>
+                            Go to Registration
+                            <ArrowRight size={16} />
+                          </>
+                        ) : (
+                          <>
+                            Next Step
+                            <ChevronRight size={16} />
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
             )}
           </div>
 

@@ -372,10 +372,18 @@ export default function Login() {
 
             <div className="h-px divider-line my-4 sm:my-6" />
 
-            <p className="text-center text-xs text-slate-500">
-              Don't have an account?{' '}
-              <a href="/register" style={{ color: '#1a5c2a' }} className="font-bold hover:underline">Register</a>
-            </p>
+            <div className="text-center text-xs text-slate-500 space-y-1.5">
+              <div>Don't have an account?</div>
+              <div className="flex justify-center items-center gap-2 flex-wrap">
+                <a href="/register" style={{ color: '#1a5c2a' }} className="font-bold hover:underline">
+                  Register as Renter
+                </a>
+                <span className="text-slate-300 select-none">|</span>
+                <a href="/register?role=contractor" style={{ color: '#1a5c2a' }} className="font-bold hover:underline">
+                  Register as Contractor
+                </a>
+              </div>
+            </div>
           </div>
 
 
