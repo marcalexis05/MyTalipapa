@@ -81,41 +81,48 @@ router.get('/search', async (req, res) => {
     const { zone, stallNumber, query, productType } = req.query;
     
     let filter = {};
-    
-    // Search by exact zone + stall number
-    if (zone && stallNumber) {
-      filter = { 
-        zone: zone.toUpperCase(), 
-        stallNumber: String(stallNumber).trim().replace(/^0+(?=\d)/, '') 
-      };
+
+    if (zone) {
+      filter.zone = String(zone).replace('Zone ', '').trim().toUpperCase();
     }
-    // Search by productType
-    else if (productType) {
-      filter = { productType: String(productType).toLowerCase() };
+
+    if (stallNumber) {
+      filter.stallNumber = String(stallNumber).trim().replace(/^0+(?=\d)/, '');
     }
-    // Search by query string
-    else if (query) {
+
+    if (productType && productType !== 'all') {
+      filter.productType = String(productType).toLowerCase();
+    }
+
+    if (query) {
       const trimmedQuery = String(query).trim();
-      const numMatch = trimmedQuery.match(/\d+/);
+      const numMatch = trimmedQuery.match(/\b\d+\b/);
       const zoneMatch = trimmedQuery.match(/zone\s+([a-h])/i) || trimmedQuery.match(/\b([a-h])\b/i);
 
-      if (numMatch && zoneMatch) {
-        // Looks like e.g. "stall 11 zone E"
-        filter = { 
-          zone: zoneMatch[1].toUpperCase(), 
-          stallNumber: numMatch[0] 
-        };
-      } else {
+      let categoryMatch = null;
+      if (/meat|pork|beef|chicken/i.test(trimmedQuery)) categoryMatch = 'meat';
+      else if (/fish|sea|shell|shrimp|squid|octopus/i.test(trimmedQuery)) categoryMatch = 'fish';
+      else if (/veg|produce|green|fruit|onion|garlic/i.test(trimmedQuery)) categoryMatch = 'veggies';
+
+      if (zoneMatch) {
+        filter.zone = zoneMatch[1].toUpperCase();
+      }
+      if (numMatch) {
+        filter.stallNumber = numMatch[0];
+      }
+      if (categoryMatch) {
+        filter.productType = categoryMatch;
+      }
+
+      if (!zoneMatch && !numMatch && !categoryMatch) {
         const searchRegex = new RegExp(trimmedQuery, 'i');
-        filter = {
-          $or: [
-            { stallNumber: searchRegex },
-            { zone: searchRegex },
-            { section: searchRegex },
-            { vendorName: searchRegex },
-            { location: searchRegex }
-          ]
-        };
+        filter.$or = [
+          { stallNumber: searchRegex },
+          { zone: searchRegex },
+          { section: searchRegex },
+          { vendorName: searchRegex },
+          { location: searchRegex }
+        ];
       }
     }
     
