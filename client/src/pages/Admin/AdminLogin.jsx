@@ -143,7 +143,7 @@ export default function AdminLogin() {
 
         <button
           onClick={() => navigate('/login')}
-          className="back-btn absolute top-4 left-4 z-10 flex items-center gap-1 text-sm font-semibold bg-[#1a5c2a] rounded-md shadow p-2 text-white hover:bg-[#163721] transition-colors"
+          className="back-btn absolute top-4 left-4 z-30 flex items-center gap-1 text-sm font-semibold bg-[#1a5c2a] rounded-md shadow p-2 text-white hover:bg-[#163721] transition-colors"
         >
           ← Back
         </button>

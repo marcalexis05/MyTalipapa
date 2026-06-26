@@ -266,7 +266,7 @@ export default function Login() {
 
         <button
           onClick={() => navigate('/')}
-          className="back-btn absolute top-4 left-4 sm:top-6 sm:left-6 z-10 flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 bg-white/5 backdrop-blur-md border border-white/10 rounded-full text-white/80 hover:text-white transition-all duration-300 shadow-lg"
+          className="back-btn absolute top-4 left-4 sm:top-6 sm:left-6 z-30 flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 bg-white/5 backdrop-blur-md border border-white/10 rounded-full text-white/80 hover:text-white transition-all duration-300 shadow-lg"
           aria-label="Go back"
         >
           <ArrowLeft size={16} />
