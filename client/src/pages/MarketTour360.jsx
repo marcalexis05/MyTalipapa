@@ -838,17 +838,16 @@ export default function MarketTour360() {
     const stalls = sectionsData[stateRef.current.activeSectionKey].stalls
 
     if (stateRef.current.stallIndex >= stalls.length - 1) {
-      // Go to next section
       const nextSectionIdx = (currentSectionIdx + 1) % sectionKeys.length
       const nextSectionKey = sectionKeys[nextSectionIdx]
       setActiveSectionKey(nextSectionKey)
       setStallIndex(0)
       const nextStall = sectionsData[nextSectionKey].stalls[0]
-      triggerSceneTransition(nextStall, nextSectionKey)
+      triggerSceneTransition(nextStall, nextSectionKey, true) // preserve camera
     } else {
       const nextIdx = stateRef.current.stallIndex + 1
       setStallIndex(nextIdx)
-      triggerSceneTransition(stalls[nextIdx], stateRef.current.activeSectionKey)
+      triggerSceneTransition(stalls[nextIdx], stateRef.current.activeSectionKey, true) // preserve camera
     }
   }
 
@@ -859,23 +858,23 @@ export default function MarketTour360() {
     const stalls = sectionsData[stateRef.current.activeSectionKey].stalls
 
     if (stateRef.current.stallIndex <= 0) {
-      // Go to prev section
       const prevSectionIdx = (currentSectionIdx - 1 + sectionKeys.length) % sectionKeys.length
       const prevSectionKey = sectionKeys[prevSectionIdx]
       const prevStalls = sectionsData[prevSectionKey].stalls
       const prevIdx = prevStalls.length - 1
       setActiveSectionKey(prevSectionKey)
       setStallIndex(prevIdx)
-      triggerSceneTransition(prevStalls[prevIdx], prevSectionKey)
+      triggerSceneTransition(prevStalls[prevIdx], prevSectionKey, true) // preserve camera
     } else {
       const prevIdx = stateRef.current.stallIndex - 1
       setStallIndex(prevIdx)
-      triggerSceneTransition(stalls[prevIdx], stateRef.current.activeSectionKey)
+      triggerSceneTransition(stalls[prevIdx], stateRef.current.activeSectionKey, true) // preserve camera
     }
   }
 
-  // Transition helper — shows chevrons instantly, swaps texture from cache or network
-  const triggerSceneTransition = (targetStall, targetSectionKey, preserveTheta = false) => {
+  // Transition helper — preserveCamera=true keeps theta+phi so the user's
+  // viewing direction is not disturbed (used for chevron/next/prev navigation)
+  const triggerSceneTransition = (targetStall, targetSectionKey, preserveCamera = false) => {
     if (!targetStall || !targetSectionKey) return;
 
     const THREE = window.THREE;
@@ -884,42 +883,37 @@ export default function MarketTour360() {
     const texturePath = getStallImagePath(targetStall.id, targetSectionKey);
     latestRequestedPath.current = texturePath;
 
-    // 1. Immediately sync stateRef so the animation loop's updateCamera() uses the
-    //    NEW stall's coordinates on the very next frame — before React re-renders.
+    // Immediately sync stateRef so updateCamera() reads the new stall on the next frame
     stateRef.current = {
       ...stateRef.current,
       currentStall: targetStall,
       activeSectionKey: targetSectionKey,
     };
 
-    // 2. Recreate chevron meshes for the destination stall
+    // Recreate chevron meshes and position them immediately
     recreateHotspots(sceneRef.current, targetStall, THREE);
-
-    // 3. Run updateCamera immediately so chevrons are positioned and VISIBLE
-    //    right now — user does not need to touch/click the screen first.
     if (updateCameraRef.current) updateCameraRef.current();
 
     const applyTexture = (tex) => {
-      // Bail if a newer transition was requested while this one was loading
       if (latestRequestedPath.current !== texturePath) return;
 
       materialRef.current.map = tex;
       materialRef.current.needsUpdate = true;
 
-      spherical.current.phi = Math.PI / 2;
-      if (!preserveTheta) spherical.current.theta = 0;
-      if (cameraRef.current) {
-        cameraRef.current.fov = 70;
-        cameraRef.current.position.set(0, 0, 0.001);
-        cameraRef.current.updateProjectionMatrix();
+      if (!preserveCamera) {
+        // Full reset — only for map teleports / section jumps
+        spherical.current.phi = Math.PI / 2;
+        spherical.current.theta = 0;
+        if (cameraRef.current) {
+          cameraRef.current.fov = 70;
+          cameraRef.current.position.set(0, 0, 0.001);
+          cameraRef.current.updateProjectionMatrix();
+        }
       }
-
-      // Re-run updateCamera after theta reset so chevrons snap to the
-      // correct positions immediately without waiting for user interaction.
+      // Always re-run updateCamera so chevrons reposition for the new stall
       if (updateCameraRef.current) updateCameraRef.current();
     };
 
-    // 4. Use cached THREE texture (instant) otherwise load from network
     const cached = textureCache.current.get(texturePath);
     if (cached) {
       applyTexture(cached);
@@ -1306,24 +1300,19 @@ export default function MarketTour360() {
         const clientX = touch ? touch.clientX : e.clientX
         const clientY = touch ? touch.clientY : e.clientY
 
-        // Reject clicks that were actually camera drags/swipes (increase threshold to 25 for touch/precise click tolerance)
+        // Separate thresholds: touch fingers drift more than mouse clicks
+        const isTouch = !!touch;
         const dragDist = Math.sqrt((clientX - clickStartX) ** 2 + (clientY - clickStartY) ** 2)
-        console.log('[360Tour] onPointerDown triggered. Drag distance:', dragDist);
-        if (dragDist > 25) {
-          console.log('[360Tour] Click rejected: drag distance exceeded threshold.');
-          return;
-        }
+        if (dragDist > (isTouch ? 20 : 8)) return;
 
         mouse.x = ((clientX - rect.left) / rect.width) * 2 - 1
         mouse.y = -((clientY - rect.top) / rect.height) * 2 + 1
 
         raycaster.setFromCamera(mouse, camera)
         const hits = raycaster.intersectObjects(hotspotMeshes.current)
-        console.log('[360Tour] Raycast hits count:', hits.length);
 
         if (hits.length > 0) {
           const uData = hits[0].object.userData
-          console.log('[360Tour] Clicked object userData:', uData);
           if (uData.type === 'next') {
             handleNextStall()
           } else if (uData.type === 'prev') {
@@ -1331,12 +1320,9 @@ export default function MarketTour360() {
           } else if (uData.type === 'nav_chevron') {
             if (uData.targetStallInfo) {
               const { sectionKey, index, stall: targetStall } = uData.targetStallInfo;
-              console.log('[360Tour] Chevron click transitioning to:', targetStall.name, 'index:', index, 'section:', sectionKey);
               setActiveSectionKey(sectionKey);
               setStallIndex(index);
-              triggerSceneTransition(targetStall, sectionKey);
-            } else {
-              console.warn('[360Tour] Chevron clicked but targetStallInfo is missing!');
+              triggerSceneTransition(targetStall, sectionKey, true); // preserve camera angle
             }
           } else if (uData.type === 'info_button') {
             const { sectionKey, stall } = uData;
@@ -1349,7 +1335,6 @@ export default function MarketTour360() {
                 setStallIndex(targetIdx);
                 setDetailsCollapsed(false);
 
-                // Dynamically query latest details from DB
                 const cleanZone = String(stall.zone || '').replace('Zone ', '').toUpperCase();
                 fetchStallDetailsFromDb(stall.id, cleanZone).then((dbDetails) => {
                   if (dbDetails) {
@@ -1375,7 +1360,10 @@ export default function MarketTour360() {
         }
       }
 
+      // Mouse click — desktop chevron tap
       renderer.domElement.addEventListener('click', onPointerDown)
+      // Touch tap — mobile chevron tap (MUST be registered for mobile to work)
+      renderer.domElement.addEventListener('touchend', onPointerDown)
 
       // Track hovering to show tooltips & change cursors
       function onPointerMove(e) {
@@ -1719,6 +1707,8 @@ export default function MarketTour360() {
       function onTouchEnd() {
         isDragging.current = false
         setCursor('grab')
+        // Reposition chevrons immediately after panning — no extra tap needed
+        updateCamera()
       }
 
       renderer.domElement.addEventListener('mousedown', onMouseDown)
