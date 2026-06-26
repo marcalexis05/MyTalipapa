@@ -167,8 +167,6 @@ const loginStyles = `
 
 export default function Login() {
   const navigate = useNavigate();
-  const [clickCount, setClickCount] = useState(0);
-  const [lastClickTime, setLastClickTime] = useState(0);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -177,20 +175,6 @@ export default function Login() {
   const [showModal, setShowModal] = useState(false);
   const [modalEmail, setModalEmail] = useState('');
   const [modalPassword, setModalPassword] = useState('');
-
-  const handleLogoClick = () => {
-    const now = Date.now();
-    if (now - lastClickTime < 500) {
-      const newCount = clickCount + 1;
-      setClickCount(newCount);
-      if (newCount === 4) {
-        navigate('/admin-login');
-      }
-    } else {
-      setClickCount(0);
-    }
-    setLastClickTime(now);
-  };
 
   async function handleLogin(e) {
     e.preventDefault();
@@ -278,7 +262,7 @@ export default function Login() {
             <div 
               className="login-logo-icon w-12 h-12 sm:w-16 sm:h-16 rounded-xl sm:rounded-[1.25rem] flex items-center justify-center mb-2 sm:mb-4 cursor-pointer shadow-2xl border border-white/10" 
               style={{ backgroundColor: '#1a5c2a' }}
-              onClick={handleLogoClick}
+              onClick={() => navigate('/')}
             >
               <img src="/logo.png" alt="MyTalipapa Logo" className="h-7 w-auto sm:h-9 object-contain" />
             </div>
