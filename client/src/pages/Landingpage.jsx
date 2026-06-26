@@ -94,7 +94,7 @@ export default function Landingpage() {
   // Contractor Slideshow State
   const [contractorSlide, setContractorSlide] = useState(0);
   const contractorSteps = [
-    { step: "01", title: "Access the Contractor Portal", desc: "Go to the custom register page by appending '?role=contractor' to the register route.", tip: "Direct Link: /register?role=contractor" },
+    { step: "01", title: "Initialize Portal Application", desc: "Access the specialized Contractor Registration Portal directly from the portals link or the registration route.", tip: "Make sure the URL contains '?role=contractor' to enable contractor onboarding steps." },
     { step: "02", title: "Enter Business & Contact Info", desc: "Fill out the contractor application form, including your official business name and active mobile number.", tip: "This business name will represent your brand on all assigned stalls." },
     { step: "03", title: "Select Stalls to Manage", desc: "Browse the visual directory and pick the unmanaged market stalls that your organization will operate.", tip: "You can select one or multiple stalls depending on your lease." },
     { step: "04", title: "Establish Credentials", desc: "Set up a secure login password and review the registration terms to ensure legal alignment.", tip: "Passwords must be at least 8 characters with letters, numbers, and symbols." },
@@ -688,11 +688,25 @@ export default function Landingpage() {
                   <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#1a5c2a 1px, transparent 1px)', backgroundSize: '16px 16px' }} />
                   
                   {renterSlide === 0 && (
-                    <div className="text-center space-y-4">
-                      <div className="inline-flex p-3 bg-white text-green-800 rounded-2xl font-mono text-xs sm:text-sm border border-green-200 shadow-sm items-center gap-2">
-                        <Search size={16} /> Search Vacant Stalls
+                    <div className="w-full max-w-[320px] bg-white rounded-2xl shadow-xl border border-gray-150 overflow-hidden flex flex-col">
+                      {/* Search Header */}
+                      <div className="bg-gray-100 px-4 py-3 flex items-center justify-between border-b border-gray-200 shrink-0 select-none">
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-3 h-3 rounded-full bg-green-600" />
+                          <span className="text-[10px] font-bold text-gray-700 uppercase tracking-wider">3D Virtual Finder</span>
+                        </div>
+                        <Compass size={14} className="text-green-700 shrink-0" />
                       </div>
-                      <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">Take a 3D Virtual Tour & Browse Directory</p>
+                      {/* Search Body */}
+                      <div className="p-6 flex flex-col items-center justify-center bg-gray-50/50 flex-1 space-y-3.5 min-h-[120px]">
+                        <div className="w-full bg-white border border-green-200 rounded-xl px-3 py-2 text-[11px] text-green-800 font-bold flex items-center gap-2 shadow-sm">
+                          <Search size={14} className="text-green-600 shrink-0" />
+                          <span>Search vacant stalls...</span>
+                        </div>
+                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider leading-none text-center">
+                          Explore Live 3D Floor Maps
+                        </p>
+                      </div>
                     </div>
                   )}
                   
@@ -812,11 +826,29 @@ export default function Landingpage() {
                   <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#1a5c2a 1px, transparent 1px)', backgroundSize: '16px 16px' }} />
                   
                   {contractorSlide === 0 && (
-                    <div className="text-center space-y-4">
-                      <div className="inline-flex p-3 bg-white text-green-800 rounded-2xl font-mono text-xs sm:text-sm border border-green-200 shadow-sm select-all">
-                        /register?role=contractor
+                    <div className="w-full max-w-[320px] bg-white rounded-2xl shadow-xl border border-gray-150 overflow-hidden flex flex-col">
+                      {/* Browser Window Header */}
+                      <div className="bg-gray-100 px-4 py-3 flex items-center gap-2 border-b border-gray-200 shrink-0 select-none">
+                        <div className="flex gap-1.5">
+                          <div className="w-3 h-3 rounded-full bg-red-400" />
+                          <div className="w-3 h-3 rounded-full bg-yellow-400" />
+                          <div className="w-3 h-3 rounded-full bg-green-400" />
+                        </div>
+                        {/* URL Bar */}
+                        <div className="flex-1 bg-white border border-gray-200 rounded-lg px-2.5 py-1 text-[10px] text-gray-450 font-mono flex items-center gap-1.5 overflow-hidden">
+                          <Lock size={10} className="text-green-600 shrink-0" />
+                          <span className="truncate">mytalipapa.com/register?role=contractor</span>
+                        </div>
                       </div>
-                      <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">Access the registration portal</p>
+                      {/* Browser Window Body */}
+                      <div className="p-6 flex flex-col items-center justify-center bg-gray-50/50 flex-1 space-y-3 min-h-[120px]">
+                        <span className="bg-orange-55 text-orange-700 text-[10px] font-bold uppercase px-3 py-1 rounded-full border border-orange-100">
+                          Contractor Setup
+                        </span>
+                        <p className="text-[11px] font-bold text-gray-800 text-center leading-normal">
+                          Initiate Application Portal
+                        </p>
+                      </div>
                     </div>
                   )}
                   
