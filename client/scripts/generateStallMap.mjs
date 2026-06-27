@@ -1,4 +1,4 @@
-// client/scripts/generateStallMap.mjs (ESM compatible)
+  // client/scripts/generateStallMap.mjs (ESM compatible)
 
 import fs from 'fs';
 import path from 'path';
