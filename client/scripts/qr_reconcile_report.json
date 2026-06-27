@@ -1,0 +1,15 @@
+{
+  "generatedAt": "2026-06-27T15:40:12.341Z",
+  "counts": {
+    "db": 173,
+    "export": 173,
+    "exactPayloadMatch": 173,
+    "sharedStallIgnoringZone": 159,
+    "codeOnly": 0,
+    "dbOnly": 0,
+    "zoneMismatch": 0
+  },
+  "zoneMismatch": [],
+  "codeOnly": [],
+  "dbOnly": []
+}

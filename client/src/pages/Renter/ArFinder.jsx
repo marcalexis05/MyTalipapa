@@ -14,7 +14,10 @@ import { findRoute, snapToWalkable, METERS_PER_PIXEL } from "../../utils/marketG
 const getStallZone = (num, category) => {
   const stallId = String(num);
   if (category === 'meat') {
-    if (['1', '2', '3', '4', '5', '12', '13', 'empty', 'empty2', 'empty3'].includes(stallId)) return 'Zone A';
+    // Zone A holds the upper-floor "(u)" twins of meat 1–5/12/13 plus the empties;
+    // the bare base numbers live in Zone E. This matches the live DB so QR stickers
+    // (built from DB zones) resolve to the correct stall — see reconcile_stall_qr.js.
+    if (['1(u)', '2(u)', '3(u)', '4(u)', '5(u)', '12(u)', '13(u)', 'empty', 'empty2', 'empty3'].includes(stallId)) return 'Zone A';
     if (['51', '52', '53', '54', '55', '56'].includes(stallId)) return 'Zone C';
     if (['1(u2)', '2(u2)', '3(u2)', '4(u2)', '8(u2)', '9(u2)', '10(u2)'].includes(stallId)) return 'Zone F';
     return 'Zone E';

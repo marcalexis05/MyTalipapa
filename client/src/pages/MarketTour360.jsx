@@ -53,7 +53,10 @@ const findMarketRoute = (fromCoords, toCoords) => findRoute(fromCoords, toCoords
 const getStallZone = (num, category) => {
   const stallId = String(num);
   if (category === 'meat') {
-    if (['1', '2', '3', '4', '5', '12', '13'].includes(stallId) || stallId.startsWith('empty')) {
+    // Zone A holds the upper-floor "(u)" twins of meat 1–5/12/13 plus the empties;
+    // the bare base numbers fall through to Zone E. Kept in sync with the DB and
+    // ArFinder.getStallZone so stall lookups resolve to the correct zone.
+    if (['1(u)', '2(u)', '3(u)', '4(u)', '5(u)', '12(u)', '13(u)'].includes(stallId) || stallId.startsWith('empty')) {
       return 'Zone A';
     }
     if (['51', '52', '53', '54', '55', '56'].includes(stallId)) {

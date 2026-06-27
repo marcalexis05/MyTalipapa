@@ -1,0 +1,1559 @@
+[
+  {
+    "category": "meat",
+    "rawId": "1",
+    "zone": "Zone E",
+    "payload": "MTP:STALL:meat-1@E",
+    "displayName": "Stall #1",
+    "png": "meat/meat-1.png",
+    "svg": "meat/meat-1.svg"
+  },
+  {
+    "category": "meat",
+    "rawId": "1(u)",
+    "zone": "Zone A",
+    "payload": "MTP:STALL:meat-1(u)@A",
+    "displayName": "Stall #1(u)",
+    "png": "meat/meat-1u.png",
+    "svg": "meat/meat-1u.svg"
+  },
+  {
+    "category": "meat",
+    "rawId": "1(u2)",
+    "zone": "Zone F",
+    "payload": "MTP:STALL:meat-1(u2)@F",
+    "displayName": "Stall #1(u2)",
+    "png": "meat/meat-1u2.png",
+    "svg": "meat/meat-1u2.svg"
+  },
+  {
+    "category": "meat",
+    "rawId": "2",
+    "zone": "Zone E",
+    "payload": "MTP:STALL:meat-2@E",
+    "displayName": "Stall #2",
+    "png": "meat/meat-2.png",
+    "svg": "meat/meat-2.svg"
+  },
+  {
+    "category": "meat",
+    "rawId": "2(u)",
+    "zone": "Zone A",
+    "payload": "MTP:STALL:meat-2(u)@A",
+    "displayName": "Stall #2(u)",
+    "png": "meat/meat-2u.png",
+    "svg": "meat/meat-2u.svg"
+  },
+  {
+    "category": "meat",
+    "rawId": "2(u2)",
+    "zone": "Zone F",
+    "payload": "MTP:STALL:meat-2(u2)@F",
+    "displayName": "Stall #2(u2)",
+    "png": "meat/meat-2u2.png",
+    "svg": "meat/meat-2u2.svg"
+  },
+  {
+    "category": "meat",
+    "rawId": "3",
+    "zone": "Zone E",
+    "payload": "MTP:STALL:meat-3@E",
+    "displayName": "Stall #3",
+    "png": "meat/meat-3.png",
+    "svg": "meat/meat-3.svg"
+  },
+  {
+    "category": "meat",
+    "rawId": "3(u)",
+    "zone": "Zone A",
+    "payload": "MTP:STALL:meat-3(u)@A",
+    "displayName": "Stall #3(u)",
+    "png": "meat/meat-3u.png",
+    "svg": "meat/meat-3u.svg"
+  },
+  {
+    "category": "meat",
+    "rawId": "3(u2)",
+    "zone": "Zone F",
+    "payload": "MTP:STALL:meat-3(u2)@F",
+    "displayName": "Stall #3(u2)",
+    "png": "meat/meat-3u2.png",
+    "svg": "meat/meat-3u2.svg"
+  },
+  {
+    "category": "meat",
+    "rawId": "4",
+    "zone": "Zone E",
+    "payload": "MTP:STALL:meat-4@E",
+    "displayName": "Stall #4",
+    "png": "meat/meat-4.png",
+    "svg": "meat/meat-4.svg"
+  },
+  {
+    "category": "meat",
+    "rawId": "4(u)",
+    "zone": "Zone A",
+    "payload": "MTP:STALL:meat-4(u)@A",
+    "displayName": "Stall #4(u)",
+    "png": "meat/meat-4u.png",
+    "svg": "meat/meat-4u.svg"
+  },
+  {
+    "category": "meat",
+    "rawId": "4(u2)",
+    "zone": "Zone F",
+    "payload": "MTP:STALL:meat-4(u2)@F",
+    "displayName": "Stall #4(u2)",
+    "png": "meat/meat-4u2.png",
+    "svg": "meat/meat-4u2.svg"
+  },
+  {
+    "category": "meat",
+    "rawId": "5",
+    "zone": "Zone E",
+    "payload": "MTP:STALL:meat-5@E",
+    "displayName": "Stall #5",
+    "png": "meat/meat-5.png",
+    "svg": "meat/meat-5.svg"
+  },
+  {
+    "category": "meat",
+    "rawId": "empty",
+    "zone": "Zone A",
+    "payload": "MTP:STALL:meat-empty@A",
+    "displayName": "Empty Stall #1",
+    "png": "meat/meat-empty.png",
+    "svg": "meat/meat-empty.svg"
+  },
+  {
+    "category": "meat",
+    "rawId": "empty2",
+    "zone": "Zone A",
+    "payload": "MTP:STALL:meat-empty2@A",
+    "displayName": "Empty Stall #2",
+    "png": "meat/meat-empty2.png",
+    "svg": "meat/meat-empty2.svg"
+  },
+  {
+    "category": "meat",
+    "rawId": "empty3",
+    "zone": "Zone A",
+    "payload": "MTP:STALL:meat-empty3@A",
+    "displayName": "Empty Stall #3",
+    "png": "meat/meat-empty3.png",
+    "svg": "meat/meat-empty3.svg"
+  },
+  {
+    "category": "meat",
+    "rawId": "5(u)",
+    "zone": "Zone A",
+    "payload": "MTP:STALL:meat-5(u)@A",
+    "displayName": "Stall #5(u)",
+    "png": "meat/meat-5u.png",
+    "svg": "meat/meat-5u.svg"
+  },
+  {
+    "category": "meat",
+    "rawId": "6",
+    "zone": "Zone E",
+    "payload": "MTP:STALL:meat-6@E",
+    "displayName": "Stall #6",
+    "png": "meat/meat-6.png",
+    "svg": "meat/meat-6.svg"
+  },
+  {
+    "category": "meat",
+    "rawId": "7",
+    "zone": "Zone E",
+    "payload": "MTP:STALL:meat-7@E",
+    "displayName": "Stall #7",
+    "png": "meat/meat-7.png",
+    "svg": "meat/meat-7.svg"
+  },
+  {
+    "category": "meat",
+    "rawId": "8",
+    "zone": "Zone E",
+    "payload": "MTP:STALL:meat-8@E",
+    "displayName": "Stall #8",
+    "png": "meat/meat-8.png",
+    "svg": "meat/meat-8.svg"
+  },
+  {
+    "category": "meat",
+    "rawId": "9",
+    "zone": "Zone E",
+    "payload": "MTP:STALL:meat-9@E",
+    "displayName": "Stall #9",
+    "png": "meat/meat-9.png",
+    "svg": "meat/meat-9.svg"
+  },
+  {
+    "category": "meat",
+    "rawId": "10",
+    "zone": "Zone E",
+    "payload": "MTP:STALL:meat-10@E",
+    "displayName": "Stall #10",
+    "png": "meat/meat-10.png",
+    "svg": "meat/meat-10.svg"
+  },
+  {
+    "category": "meat",
+    "rawId": "8(u2)",
+    "zone": "Zone F",
+    "payload": "MTP:STALL:meat-8(u2)@F",
+    "displayName": "Stall #8(u2)",
+    "png": "meat/meat-8u2.png",
+    "svg": "meat/meat-8u2.svg"
+  },
+  {
+    "category": "meat",
+    "rawId": "9(u2)",
+    "zone": "Zone F",
+    "payload": "MTP:STALL:meat-9(u2)@F",
+    "displayName": "Stall #9(u2)",
+    "png": "meat/meat-9u2.png",
+    "svg": "meat/meat-9u2.svg"
+  },
+  {
+    "category": "meat",
+    "rawId": "10(u2)",
+    "zone": "Zone F",
+    "payload": "MTP:STALL:meat-10(u2)@F",
+    "displayName": "Stall #10(u2)",
+    "png": "meat/meat-10u2.png",
+    "svg": "meat/meat-10u2.svg"
+  },
+  {
+    "category": "meat",
+    "rawId": "11",
+    "zone": "Zone E",
+    "payload": "MTP:STALL:meat-11@E",
+    "displayName": "Stall #11",
+    "png": "meat/meat-11.png",
+    "svg": "meat/meat-11.svg"
+  },
+  {
+    "category": "meat",
+    "rawId": "12",
+    "zone": "Zone E",
+    "payload": "MTP:STALL:meat-12@E",
+    "displayName": "Stall #12",
+    "png": "meat/meat-12.png",
+    "svg": "meat/meat-12.svg"
+  },
+  {
+    "category": "meat",
+    "rawId": "12(u)",
+    "zone": "Zone A",
+    "payload": "MTP:STALL:meat-12(u)@A",
+    "displayName": "Stall #12(u)",
+    "png": "meat/meat-12u.png",
+    "svg": "meat/meat-12u.svg"
+  },
+  {
+    "category": "meat",
+    "rawId": "13",
+    "zone": "Zone E",
+    "payload": "MTP:STALL:meat-13@E",
+    "displayName": "Stall #13",
+    "png": "meat/meat-13.png",
+    "svg": "meat/meat-13.svg"
+  },
+  {
+    "category": "meat",
+    "rawId": "13(u)",
+    "zone": "Zone A",
+    "payload": "MTP:STALL:meat-13(u)@A",
+    "displayName": "Stall #13(u)",
+    "png": "meat/meat-13u.png",
+    "svg": "meat/meat-13u.svg"
+  },
+  {
+    "category": "meat",
+    "rawId": "14",
+    "zone": "Zone E",
+    "payload": "MTP:STALL:meat-14@E",
+    "displayName": "Stall #14",
+    "png": "meat/meat-14.png",
+    "svg": "meat/meat-14.svg"
+  },
+  {
+    "category": "meat",
+    "rawId": "15",
+    "zone": "Zone E",
+    "payload": "MTP:STALL:meat-15@E",
+    "displayName": "Stall #15",
+    "png": "meat/meat-15.png",
+    "svg": "meat/meat-15.svg"
+  },
+  {
+    "category": "meat",
+    "rawId": "16",
+    "zone": "Zone E",
+    "payload": "MTP:STALL:meat-16@E",
+    "displayName": "Stall #16",
+    "png": "meat/meat-16.png",
+    "svg": "meat/meat-16.svg"
+  },
+  {
+    "category": "meat",
+    "rawId": "17",
+    "zone": "Zone E",
+    "payload": "MTP:STALL:meat-17@E",
+    "displayName": "Stall #17",
+    "png": "meat/meat-17.png",
+    "svg": "meat/meat-17.svg"
+  },
+  {
+    "category": "meat",
+    "rawId": "18",
+    "zone": "Zone E",
+    "payload": "MTP:STALL:meat-18@E",
+    "displayName": "Stall #18",
+    "png": "meat/meat-18.png",
+    "svg": "meat/meat-18.svg"
+  },
+  {
+    "category": "meat",
+    "rawId": "19",
+    "zone": "Zone E",
+    "payload": "MTP:STALL:meat-19@E",
+    "displayName": "Stall #19",
+    "png": "meat/meat-19.png",
+    "svg": "meat/meat-19.svg"
+  },
+  {
+    "category": "meat",
+    "rawId": "20",
+    "zone": "Zone E",
+    "payload": "MTP:STALL:meat-20@E",
+    "displayName": "Stall #20",
+    "png": "meat/meat-20.png",
+    "svg": "meat/meat-20.svg"
+  },
+  {
+    "category": "meat",
+    "rawId": "21",
+    "zone": "Zone E",
+    "payload": "MTP:STALL:meat-21@E",
+    "displayName": "Stall #21",
+    "png": "meat/meat-21.png",
+    "svg": "meat/meat-21.svg"
+  },
+  {
+    "category": "meat",
+    "rawId": "22",
+    "zone": "Zone E",
+    "payload": "MTP:STALL:meat-22@E",
+    "displayName": "Stall #22",
+    "png": "meat/meat-22.png",
+    "svg": "meat/meat-22.svg"
+  },
+  {
+    "category": "meat",
+    "rawId": "23",
+    "zone": "Zone E",
+    "payload": "MTP:STALL:meat-23@E",
+    "displayName": "Stall #23",
+    "png": "meat/meat-23.png",
+    "svg": "meat/meat-23.svg"
+  },
+  {
+    "category": "meat",
+    "rawId": "24",
+    "zone": "Zone E",
+    "payload": "MTP:STALL:meat-24@E",
+    "displayName": "Stall #24",
+    "png": "meat/meat-24.png",
+    "svg": "meat/meat-24.svg"
+  },
+  {
+    "category": "meat",
+    "rawId": "51",
+    "zone": "Zone C",
+    "payload": "MTP:STALL:meat-51@C",
+    "displayName": "Stall #51",
+    "png": "meat/meat-51.png",
+    "svg": "meat/meat-51.svg"
+  },
+  {
+    "category": "meat",
+    "rawId": "52",
+    "zone": "Zone C",
+    "payload": "MTP:STALL:meat-52@C",
+    "displayName": "Stall #52",
+    "png": "meat/meat-52.png",
+    "svg": "meat/meat-52.svg"
+  },
+  {
+    "category": "meat",
+    "rawId": "53",
+    "zone": "Zone C",
+    "payload": "MTP:STALL:meat-53@C",
+    "displayName": "Stall #53",
+    "png": "meat/meat-53.png",
+    "svg": "meat/meat-53.svg"
+  },
+  {
+    "category": "meat",
+    "rawId": "54",
+    "zone": "Zone C",
+    "payload": "MTP:STALL:meat-54@C",
+    "displayName": "Stall #54",
+    "png": "meat/meat-54.png",
+    "svg": "meat/meat-54.svg"
+  },
+  {
+    "category": "meat",
+    "rawId": "55",
+    "zone": "Zone C",
+    "payload": "MTP:STALL:meat-55@C",
+    "displayName": "Stall #55",
+    "png": "meat/meat-55.png",
+    "svg": "meat/meat-55.svg"
+  },
+  {
+    "category": "meat",
+    "rawId": "56",
+    "zone": "Zone C",
+    "payload": "MTP:STALL:meat-56@C",
+    "displayName": "Stall #56",
+    "png": "meat/meat-56.png",
+    "svg": "meat/meat-56.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "11",
+    "zone": "Zone A",
+    "payload": "MTP:STALL:fish-11@A",
+    "displayName": "Stall #11",
+    "png": "fish/fish-11.png",
+    "svg": "fish/fish-11.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "14",
+    "zone": "Zone A",
+    "payload": "MTP:STALL:fish-14@A",
+    "displayName": "Stall #14",
+    "png": "fish/fish-14.png",
+    "svg": "fish/fish-14.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "15",
+    "zone": "Zone A",
+    "payload": "MTP:STALL:fish-15@A",
+    "displayName": "Stall #15",
+    "png": "fish/fish-15.png",
+    "svg": "fish/fish-15.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "16",
+    "zone": "Zone A",
+    "payload": "MTP:STALL:fish-16@A",
+    "displayName": "Stall #16",
+    "png": "fish/fish-16.png",
+    "svg": "fish/fish-16.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "17",
+    "zone": "Zone A",
+    "payload": "MTP:STALL:fish-17@A",
+    "displayName": "Stall #17",
+    "png": "fish/fish-17.png",
+    "svg": "fish/fish-17.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "18",
+    "zone": "Zone A",
+    "payload": "MTP:STALL:fish-18@A",
+    "displayName": "Stall #18",
+    "png": "fish/fish-18.png",
+    "svg": "fish/fish-18.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "19",
+    "zone": "Zone A",
+    "payload": "MTP:STALL:fish-19@A",
+    "displayName": "Stall #19",
+    "png": "fish/fish-19.png",
+    "svg": "fish/fish-19.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "20",
+    "zone": "Zone A",
+    "payload": "MTP:STALL:fish-20@A",
+    "displayName": "Stall #20",
+    "png": "fish/fish-20.png",
+    "svg": "fish/fish-20.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "21",
+    "zone": "Zone B",
+    "payload": "MTP:STALL:fish-21@B",
+    "displayName": "Stall #21",
+    "png": "fish/fish-21.png",
+    "svg": "fish/fish-21.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "22",
+    "zone": "Zone B",
+    "payload": "MTP:STALL:fish-22@B",
+    "displayName": "Stall #22",
+    "png": "fish/fish-22.png",
+    "svg": "fish/fish-22.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "23",
+    "zone": "Zone B",
+    "payload": "MTP:STALL:fish-23@B",
+    "displayName": "Stall #23",
+    "png": "fish/fish-23.png",
+    "svg": "fish/fish-23.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "24",
+    "zone": "Zone B",
+    "payload": "MTP:STALL:fish-24@B",
+    "displayName": "Stall #24",
+    "png": "fish/fish-24.png",
+    "svg": "fish/fish-24.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "25",
+    "zone": "Zone B",
+    "payload": "MTP:STALL:fish-25@B",
+    "displayName": "Stall #25",
+    "png": "fish/fish-25.png",
+    "svg": "fish/fish-25.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "26",
+    "zone": "Zone B",
+    "payload": "MTP:STALL:fish-26@B",
+    "displayName": "Stall #26",
+    "png": "fish/fish-26.png",
+    "svg": "fish/fish-26.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "27",
+    "zone": "Zone B",
+    "payload": "MTP:STALL:fish-27@B",
+    "displayName": "Stall #27",
+    "png": "fish/fish-27.png",
+    "svg": "fish/fish-27.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "28",
+    "zone": "Zone B",
+    "payload": "MTP:STALL:fish-28@B",
+    "displayName": "Stall #28",
+    "png": "fish/fish-28.png",
+    "svg": "fish/fish-28.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "29",
+    "zone": "Zone B",
+    "payload": "MTP:STALL:fish-29@B",
+    "displayName": "Stall #29",
+    "png": "fish/fish-29.png",
+    "svg": "fish/fish-29.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "30",
+    "zone": "Zone B",
+    "payload": "MTP:STALL:fish-30@B",
+    "displayName": "Stall #30",
+    "png": "fish/fish-30.png",
+    "svg": "fish/fish-30.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "31",
+    "zone": "Zone B",
+    "payload": "MTP:STALL:fish-31@B",
+    "displayName": "Stall #31",
+    "png": "fish/fish-31.png",
+    "svg": "fish/fish-31.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "32",
+    "zone": "Zone B",
+    "payload": "MTP:STALL:fish-32@B",
+    "displayName": "Stall #32",
+    "png": "fish/fish-32.png",
+    "svg": "fish/fish-32.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "33",
+    "zone": "Zone B",
+    "payload": "MTP:STALL:fish-33@B",
+    "displayName": "Stall #33",
+    "png": "fish/fish-33.png",
+    "svg": "fish/fish-33.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "34",
+    "zone": "Zone B",
+    "payload": "MTP:STALL:fish-34@B",
+    "displayName": "Stall #34",
+    "png": "fish/fish-34.png",
+    "svg": "fish/fish-34.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "35",
+    "zone": "Zone B",
+    "payload": "MTP:STALL:fish-35@B",
+    "displayName": "Stall #35",
+    "png": "fish/fish-35.png",
+    "svg": "fish/fish-35.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "36",
+    "zone": "Zone B",
+    "payload": "MTP:STALL:fish-36@B",
+    "displayName": "Stall #36",
+    "png": "fish/fish-36.png",
+    "svg": "fish/fish-36.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "37",
+    "zone": "Zone B",
+    "payload": "MTP:STALL:fish-37@B",
+    "displayName": "Stall #37",
+    "png": "fish/fish-37.png",
+    "svg": "fish/fish-37.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "38",
+    "zone": "Zone B",
+    "payload": "MTP:STALL:fish-38@B",
+    "displayName": "Stall #38",
+    "png": "fish/fish-38.png",
+    "svg": "fish/fish-38.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "39",
+    "zone": "Zone B",
+    "payload": "MTP:STALL:fish-39@B",
+    "displayName": "Stall #39",
+    "png": "fish/fish-39.png",
+    "svg": "fish/fish-39.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "40",
+    "zone": "Zone B",
+    "payload": "MTP:STALL:fish-40@B",
+    "displayName": "Stall #40",
+    "png": "fish/fish-40.png",
+    "svg": "fish/fish-40.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "41",
+    "zone": "Zone C",
+    "payload": "MTP:STALL:fish-41@C",
+    "displayName": "Stall #41",
+    "png": "fish/fish-41.png",
+    "svg": "fish/fish-41.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "42",
+    "zone": "Zone C",
+    "payload": "MTP:STALL:fish-42@C",
+    "displayName": "Stall #42",
+    "png": "fish/fish-42.png",
+    "svg": "fish/fish-42.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "43",
+    "zone": "Zone C",
+    "payload": "MTP:STALL:fish-43@C",
+    "displayName": "Stall #43",
+    "png": "fish/fish-43.png",
+    "svg": "fish/fish-43.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "44",
+    "zone": "Zone C",
+    "payload": "MTP:STALL:fish-44@C",
+    "displayName": "Stall #44",
+    "png": "fish/fish-44.png",
+    "svg": "fish/fish-44.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "45",
+    "zone": "Zone C",
+    "payload": "MTP:STALL:fish-45@C",
+    "displayName": "Stall #45",
+    "png": "fish/fish-45.png",
+    "svg": "fish/fish-45.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "46",
+    "zone": "Zone C",
+    "payload": "MTP:STALL:fish-46@C",
+    "displayName": "Stall #46",
+    "png": "fish/fish-46.png",
+    "svg": "fish/fish-46.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "47",
+    "zone": "Zone C",
+    "payload": "MTP:STALL:fish-47@C",
+    "displayName": "Stall #47",
+    "png": "fish/fish-47.png",
+    "svg": "fish/fish-47.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "48",
+    "zone": "Zone C",
+    "payload": "MTP:STALL:fish-48@C",
+    "displayName": "Stall #48",
+    "png": "fish/fish-48.png",
+    "svg": "fish/fish-48.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "49",
+    "zone": "Zone C",
+    "payload": "MTP:STALL:fish-49@C",
+    "displayName": "Stall #49",
+    "png": "fish/fish-49.png",
+    "svg": "fish/fish-49.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "50",
+    "zone": "Zone C",
+    "payload": "MTP:STALL:fish-50@C",
+    "displayName": "Stall #50",
+    "png": "fish/fish-50.png",
+    "svg": "fish/fish-50.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "57",
+    "zone": "Zone C",
+    "payload": "MTP:STALL:fish-57@C",
+    "displayName": "Stall #57",
+    "png": "fish/fish-57.png",
+    "svg": "fish/fish-57.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "58",
+    "zone": "Zone C",
+    "payload": "MTP:STALL:fish-58@C",
+    "displayName": "Stall #58",
+    "png": "fish/fish-58.png",
+    "svg": "fish/fish-58.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "59",
+    "zone": "Zone C",
+    "payload": "MTP:STALL:fish-59@C",
+    "displayName": "Stall #59",
+    "png": "fish/fish-59.png",
+    "svg": "fish/fish-59.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "60",
+    "zone": "Zone C",
+    "payload": "MTP:STALL:fish-60@C",
+    "displayName": "Stall #60",
+    "png": "fish/fish-60.png",
+    "svg": "fish/fish-60.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "61",
+    "zone": "Zone D",
+    "payload": "MTP:STALL:fish-61@D",
+    "displayName": "Stall #61",
+    "png": "fish/fish-61.png",
+    "svg": "fish/fish-61.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "62",
+    "zone": "Zone D",
+    "payload": "MTP:STALL:fish-62@D",
+    "displayName": "Stall #62",
+    "png": "fish/fish-62.png",
+    "svg": "fish/fish-62.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "63",
+    "zone": "Zone D",
+    "payload": "MTP:STALL:fish-63@D",
+    "displayName": "Stall #63",
+    "png": "fish/fish-63.png",
+    "svg": "fish/fish-63.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "64",
+    "zone": "Zone D",
+    "payload": "MTP:STALL:fish-64@D",
+    "displayName": "Stall #64",
+    "png": "fish/fish-64.png",
+    "svg": "fish/fish-64.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "65",
+    "zone": "Zone D",
+    "payload": "MTP:STALL:fish-65@D",
+    "displayName": "Stall #65",
+    "png": "fish/fish-65.png",
+    "svg": "fish/fish-65.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "66",
+    "zone": "Zone D",
+    "payload": "MTP:STALL:fish-66@D",
+    "displayName": "Stall #66",
+    "png": "fish/fish-66.png",
+    "svg": "fish/fish-66.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "67",
+    "zone": "Zone D",
+    "payload": "MTP:STALL:fish-67@D",
+    "displayName": "Stall #67",
+    "png": "fish/fish-67.png",
+    "svg": "fish/fish-67.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "68",
+    "zone": "Zone D",
+    "payload": "MTP:STALL:fish-68@D",
+    "displayName": "Stall #68",
+    "png": "fish/fish-68.png",
+    "svg": "fish/fish-68.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "69",
+    "zone": "Zone D",
+    "payload": "MTP:STALL:fish-69@D",
+    "displayName": "Stall #69",
+    "png": "fish/fish-69.png",
+    "svg": "fish/fish-69.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "70",
+    "zone": "Zone D",
+    "payload": "MTP:STALL:fish-70@D",
+    "displayName": "Stall #70",
+    "png": "fish/fish-70.png",
+    "svg": "fish/fish-70.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "71",
+    "zone": "Zone D",
+    "payload": "MTP:STALL:fish-71@D",
+    "displayName": "Stall #71",
+    "png": "fish/fish-71.png",
+    "svg": "fish/fish-71.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "72",
+    "zone": "Zone D",
+    "payload": "MTP:STALL:fish-72@D",
+    "displayName": "Stall #72",
+    "png": "fish/fish-72.png",
+    "svg": "fish/fish-72.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "73",
+    "zone": "Zone D",
+    "payload": "MTP:STALL:fish-73@D",
+    "displayName": "Stall #73",
+    "png": "fish/fish-73.png",
+    "svg": "fish/fish-73.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "74",
+    "zone": "Zone D",
+    "payload": "MTP:STALL:fish-74@D",
+    "displayName": "Stall #74",
+    "png": "fish/fish-74.png",
+    "svg": "fish/fish-74.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "75",
+    "zone": "Zone D",
+    "payload": "MTP:STALL:fish-75@D",
+    "displayName": "Stall #75",
+    "png": "fish/fish-75.png",
+    "svg": "fish/fish-75.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "nostallnum1",
+    "zone": "Zone D",
+    "payload": "MTP:STALL:fish-nostallnum1@D",
+    "displayName": "Unnumbered Stall #1",
+    "png": "fish/fish-nostallnum1.png",
+    "svg": "fish/fish-nostallnum1.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "nostallnum2",
+    "zone": "Zone D",
+    "payload": "MTP:STALL:fish-nostallnum2@D",
+    "displayName": "Unnumbered Stall #2",
+    "png": "fish/fish-nostallnum2.png",
+    "svg": "fish/fish-nostallnum2.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "nostallnum3",
+    "zone": "Zone D",
+    "payload": "MTP:STALL:fish-nostallnum3@D",
+    "displayName": "Unnumbered Stall #3",
+    "png": "fish/fish-nostallnum3.png",
+    "svg": "fish/fish-nostallnum3.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "nostallnum4",
+    "zone": "Zone D",
+    "payload": "MTP:STALL:fish-nostallnum4@D",
+    "displayName": "Unnumbered Stall #4",
+    "png": "fish/fish-nostallnum4.png",
+    "svg": "fish/fish-nostallnum4.svg"
+  },
+  {
+    "category": "fish",
+    "rawId": "nostallnum5",
+    "zone": "Zone D",
+    "payload": "MTP:STALL:fish-nostallnum5@D",
+    "displayName": "Unnumbered Stall #5",
+    "png": "fish/fish-nostallnum5.png",
+    "svg": "fish/fish-nostallnum5.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "5",
+    "zone": "Zone F",
+    "payload": "MTP:STALL:veggies-5@F",
+    "displayName": "Stall #5",
+    "png": "veggies/veggies-5.png",
+    "svg": "veggies/veggies-5.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "6",
+    "zone": "Zone F",
+    "payload": "MTP:STALL:veggies-6@F",
+    "displayName": "Stall #6",
+    "png": "veggies/veggies-6.png",
+    "svg": "veggies/veggies-6.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "7",
+    "zone": "Zone F",
+    "payload": "MTP:STALL:veggies-7@F",
+    "displayName": "Stall #7",
+    "png": "veggies/veggies-7.png",
+    "svg": "veggies/veggies-7.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "11",
+    "zone": "Zone F",
+    "payload": "MTP:STALL:veggies-11@F",
+    "displayName": "Stall #11",
+    "png": "veggies/veggies-11.png",
+    "svg": "veggies/veggies-11.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "12",
+    "zone": "Zone F",
+    "payload": "MTP:STALL:veggies-12@F",
+    "displayName": "Stall #12",
+    "png": "veggies/veggies-12.png",
+    "svg": "veggies/veggies-12.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "13",
+    "zone": "Zone F",
+    "payload": "MTP:STALL:veggies-13@F",
+    "displayName": "Stall #13",
+    "png": "veggies/veggies-13.png",
+    "svg": "veggies/veggies-13.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "14",
+    "zone": "Zone F",
+    "payload": "MTP:STALL:veggies-14@F",
+    "displayName": "Stall #14",
+    "png": "veggies/veggies-14.png",
+    "svg": "veggies/veggies-14.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "15",
+    "zone": "Zone F",
+    "payload": "MTP:STALL:veggies-15@F",
+    "displayName": "Stall #15",
+    "png": "veggies/veggies-15.png",
+    "svg": "veggies/veggies-15.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "16",
+    "zone": "Zone F",
+    "payload": "MTP:STALL:veggies-16@F",
+    "displayName": "Stall #16",
+    "png": "veggies/veggies-16.png",
+    "svg": "veggies/veggies-16.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "17",
+    "zone": "Zone F",
+    "payload": "MTP:STALL:veggies-17@F",
+    "displayName": "Stall #17",
+    "png": "veggies/veggies-17.png",
+    "svg": "veggies/veggies-17.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "18",
+    "zone": "Zone F",
+    "payload": "MTP:STALL:veggies-18@F",
+    "displayName": "Stall #18",
+    "png": "veggies/veggies-18.png",
+    "svg": "veggies/veggies-18.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "19",
+    "zone": "Zone F",
+    "payload": "MTP:STALL:veggies-19@F",
+    "displayName": "Stall #19",
+    "png": "veggies/veggies-19.png",
+    "svg": "veggies/veggies-19.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "20",
+    "zone": "Zone F",
+    "payload": "MTP:STALL:veggies-20@F",
+    "displayName": "Stall #20",
+    "png": "veggies/veggies-20.png",
+    "svg": "veggies/veggies-20.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "21",
+    "zone": "Zone F",
+    "payload": "MTP:STALL:veggies-21@F",
+    "displayName": "Stall #21",
+    "png": "veggies/veggies-21.png",
+    "svg": "veggies/veggies-21.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "22",
+    "zone": "Zone F",
+    "payload": "MTP:STALL:veggies-22@F",
+    "displayName": "Stall #22",
+    "png": "veggies/veggies-22.png",
+    "svg": "veggies/veggies-22.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "23",
+    "zone": "Zone F",
+    "payload": "MTP:STALL:veggies-23@F",
+    "displayName": "Stall #23",
+    "png": "veggies/veggies-23.png",
+    "svg": "veggies/veggies-23.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "24",
+    "zone": "Zone F",
+    "payload": "MTP:STALL:veggies-24@F",
+    "displayName": "Stall #24",
+    "png": "veggies/veggies-24.png",
+    "svg": "veggies/veggies-24.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "25",
+    "zone": "Zone G",
+    "payload": "MTP:STALL:veggies-25@G",
+    "displayName": "Stall #25",
+    "png": "veggies/veggies-25.png",
+    "svg": "veggies/veggies-25.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "26",
+    "zone": "Zone G",
+    "payload": "MTP:STALL:veggies-26@G",
+    "displayName": "Stall #26",
+    "png": "veggies/veggies-26.png",
+    "svg": "veggies/veggies-26.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "27",
+    "zone": "Zone G",
+    "payload": "MTP:STALL:veggies-27@G",
+    "displayName": "Stall #27",
+    "png": "veggies/veggies-27.png",
+    "svg": "veggies/veggies-27.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "28",
+    "zone": "Zone G",
+    "payload": "MTP:STALL:veggies-28@G",
+    "displayName": "Stall #28",
+    "png": "veggies/veggies-28.png",
+    "svg": "veggies/veggies-28.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "29",
+    "zone": "Zone G",
+    "payload": "MTP:STALL:veggies-29@G",
+    "displayName": "Stall #29",
+    "png": "veggies/veggies-29.png",
+    "svg": "veggies/veggies-29.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "30",
+    "zone": "Zone G",
+    "payload": "MTP:STALL:veggies-30@G",
+    "displayName": "Stall #30",
+    "png": "veggies/veggies-30.png",
+    "svg": "veggies/veggies-30.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "31",
+    "zone": "Zone G",
+    "payload": "MTP:STALL:veggies-31@G",
+    "displayName": "Stall #31",
+    "png": "veggies/veggies-31.png",
+    "svg": "veggies/veggies-31.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "32",
+    "zone": "Zone G",
+    "payload": "MTP:STALL:veggies-32@G",
+    "displayName": "Stall #32",
+    "png": "veggies/veggies-32.png",
+    "svg": "veggies/veggies-32.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "33",
+    "zone": "Zone G",
+    "payload": "MTP:STALL:veggies-33@G",
+    "displayName": "Stall #33",
+    "png": "veggies/veggies-33.png",
+    "svg": "veggies/veggies-33.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "34",
+    "zone": "Zone G",
+    "payload": "MTP:STALL:veggies-34@G",
+    "displayName": "Stall #34",
+    "png": "veggies/veggies-34.png",
+    "svg": "veggies/veggies-34.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "35",
+    "zone": "Zone G",
+    "payload": "MTP:STALL:veggies-35@G",
+    "displayName": "Stall #35",
+    "png": "veggies/veggies-35.png",
+    "svg": "veggies/veggies-35.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "36",
+    "zone": "Zone G",
+    "payload": "MTP:STALL:veggies-36@G",
+    "displayName": "Stall #36",
+    "png": "veggies/veggies-36.png",
+    "svg": "veggies/veggies-36.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "37",
+    "zone": "Zone G",
+    "payload": "MTP:STALL:veggies-37@G",
+    "displayName": "Stall #37",
+    "png": "veggies/veggies-37.png",
+    "svg": "veggies/veggies-37.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "38",
+    "zone": "Zone G",
+    "payload": "MTP:STALL:veggies-38@G",
+    "displayName": "Stall #38",
+    "png": "veggies/veggies-38.png",
+    "svg": "veggies/veggies-38.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "39",
+    "zone": "Zone G",
+    "payload": "MTP:STALL:veggies-39@G",
+    "displayName": "Stall #39",
+    "png": "veggies/veggies-39.png",
+    "svg": "veggies/veggies-39.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "40",
+    "zone": "Zone G",
+    "payload": "MTP:STALL:veggies-40@G",
+    "displayName": "Stall #40",
+    "png": "veggies/veggies-40.png",
+    "svg": "veggies/veggies-40.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "41",
+    "zone": "Zone G",
+    "payload": "MTP:STALL:veggies-41@G",
+    "displayName": "Stall #41",
+    "png": "veggies/veggies-41.png",
+    "svg": "veggies/veggies-41.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "42",
+    "zone": "Zone G",
+    "payload": "MTP:STALL:veggies-42@G",
+    "displayName": "Stall #42",
+    "png": "veggies/veggies-42.png",
+    "svg": "veggies/veggies-42.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "43",
+    "zone": "Zone G",
+    "payload": "MTP:STALL:veggies-43@G",
+    "displayName": "Stall #43",
+    "png": "veggies/veggies-43.png",
+    "svg": "veggies/veggies-43.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "44",
+    "zone": "Zone G",
+    "payload": "MTP:STALL:veggies-44@G",
+    "displayName": "Stall #44",
+    "png": "veggies/veggies-44.png",
+    "svg": "veggies/veggies-44.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "45",
+    "zone": "Zone G",
+    "payload": "MTP:STALL:veggies-45@G",
+    "displayName": "Stall #45",
+    "png": "veggies/veggies-45.png",
+    "svg": "veggies/veggies-45.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "46",
+    "zone": "Zone G",
+    "payload": "MTP:STALL:veggies-46@G",
+    "displayName": "Stall #46",
+    "png": "veggies/veggies-46.png",
+    "svg": "veggies/veggies-46.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "47",
+    "zone": "Zone G",
+    "payload": "MTP:STALL:veggies-47@G",
+    "displayName": "Stall #47",
+    "png": "veggies/veggies-47.png",
+    "svg": "veggies/veggies-47.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "48",
+    "zone": "Zone G",
+    "payload": "MTP:STALL:veggies-48@G",
+    "displayName": "Stall #48",
+    "png": "veggies/veggies-48.png",
+    "svg": "veggies/veggies-48.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "50",
+    "zone": "Zone H",
+    "payload": "MTP:STALL:veggies-50@H",
+    "displayName": "Stall #50",
+    "png": "veggies/veggies-50.png",
+    "svg": "veggies/veggies-50.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "51",
+    "zone": "Zone H",
+    "payload": "MTP:STALL:veggies-51@H",
+    "displayName": "Stall #51",
+    "png": "veggies/veggies-51.png",
+    "svg": "veggies/veggies-51.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "52",
+    "zone": "Zone H",
+    "payload": "MTP:STALL:veggies-52@H",
+    "displayName": "Stall #52",
+    "png": "veggies/veggies-52.png",
+    "svg": "veggies/veggies-52.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "53",
+    "zone": "Zone H",
+    "payload": "MTP:STALL:veggies-53@H",
+    "displayName": "Stall #53",
+    "png": "veggies/veggies-53.png",
+    "svg": "veggies/veggies-53.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "54",
+    "zone": "Zone H",
+    "payload": "MTP:STALL:veggies-54@H",
+    "displayName": "Stall #54",
+    "png": "veggies/veggies-54.png",
+    "svg": "veggies/veggies-54.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "55",
+    "zone": "Zone H",
+    "payload": "MTP:STALL:veggies-55@H",
+    "displayName": "Stall #55",
+    "png": "veggies/veggies-55.png",
+    "svg": "veggies/veggies-55.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "56",
+    "zone": "Zone H",
+    "payload": "MTP:STALL:veggies-56@H",
+    "displayName": "Stall #56",
+    "png": "veggies/veggies-56.png",
+    "svg": "veggies/veggies-56.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "57",
+    "zone": "Zone H",
+    "payload": "MTP:STALL:veggies-57@H",
+    "displayName": "Stall #57",
+    "png": "veggies/veggies-57.png",
+    "svg": "veggies/veggies-57.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "58",
+    "zone": "Zone H",
+    "payload": "MTP:STALL:veggies-58@H",
+    "displayName": "Stall #58",
+    "png": "veggies/veggies-58.png",
+    "svg": "veggies/veggies-58.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "59",
+    "zone": "Zone H",
+    "payload": "MTP:STALL:veggies-59@H",
+    "displayName": "Stall #59",
+    "png": "veggies/veggies-59.png",
+    "svg": "veggies/veggies-59.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "60",
+    "zone": "Zone H",
+    "payload": "MTP:STALL:veggies-60@H",
+    "displayName": "Stall #60",
+    "png": "veggies/veggies-60.png",
+    "svg": "veggies/veggies-60.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "61",
+    "zone": "Zone H",
+    "payload": "MTP:STALL:veggies-61@H",
+    "displayName": "Stall #61",
+    "png": "veggies/veggies-61.png",
+    "svg": "veggies/veggies-61.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "62",
+    "zone": "Zone H",
+    "payload": "MTP:STALL:veggies-62@H",
+    "displayName": "Stall #62",
+    "png": "veggies/veggies-62.png",
+    "svg": "veggies/veggies-62.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "63",
+    "zone": "Zone H",
+    "payload": "MTP:STALL:veggies-63@H",
+    "displayName": "Stall #63",
+    "png": "veggies/veggies-63.png",
+    "svg": "veggies/veggies-63.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "64",
+    "zone": "Zone H",
+    "payload": "MTP:STALL:veggies-64@H",
+    "displayName": "Stall #64",
+    "png": "veggies/veggies-64.png",
+    "svg": "veggies/veggies-64.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "65",
+    "zone": "Zone H",
+    "payload": "MTP:STALL:veggies-65@H",
+    "displayName": "Stall #65",
+    "png": "veggies/veggies-65.png",
+    "svg": "veggies/veggies-65.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "66",
+    "zone": "Zone H",
+    "payload": "MTP:STALL:veggies-66@H",
+    "displayName": "Stall #66",
+    "png": "veggies/veggies-66.png",
+    "svg": "veggies/veggies-66.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "67",
+    "zone": "Zone H",
+    "payload": "MTP:STALL:veggies-67@H",
+    "displayName": "Stall #67",
+    "png": "veggies/veggies-67.png",
+    "svg": "veggies/veggies-67.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "68",
+    "zone": "Zone H",
+    "payload": "MTP:STALL:veggies-68@H",
+    "displayName": "Stall #68",
+    "png": "veggies/veggies-68.png",
+    "svg": "veggies/veggies-68.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "69",
+    "zone": "Zone H",
+    "payload": "MTP:STALL:veggies-69@H",
+    "displayName": "Stall #69",
+    "png": "veggies/veggies-69.png",
+    "svg": "veggies/veggies-69.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "70",
+    "zone": "Zone H",
+    "payload": "MTP:STALL:veggies-70@H",
+    "displayName": "Stall #70",
+    "png": "veggies/veggies-70.png",
+    "svg": "veggies/veggies-70.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "71",
+    "zone": "Zone H",
+    "payload": "MTP:STALL:veggies-71@H",
+    "displayName": "Stall #71",
+    "png": "veggies/veggies-71.png",
+    "svg": "veggies/veggies-71.svg"
+  },
+  {
+    "category": "veggies",
+    "rawId": "72",
+    "zone": "Zone H",
+    "payload": "MTP:STALL:veggies-72@H",
+    "displayName": "Stall #72",
+    "png": "veggies/veggies-72.png",
+    "svg": "veggies/veggies-72.svg"
+  }
+]
