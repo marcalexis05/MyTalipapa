@@ -666,6 +666,44 @@ export default function MarketTour360() {
   const hotspotMeshes = useRef([])
   const latestRequestedPath = useRef(null)
   const textureCache = useRef(new Map())
+  const loadingTextures = useRef(new Map())
+
+  const loadTexture = (path, callback) => {
+    const THREE = window.THREE;
+    if (!THREE) return;
+
+    const cached = textureCache.current.get(path);
+    if (cached) {
+      if (callback) callback(cached);
+      return;
+    }
+
+    if (loadingTextures.current.has(path)) {
+      if (callback) {
+        loadingTextures.current.get(path).push(callback);
+      }
+      return;
+    }
+
+    const callbacks = callback ? [callback] : [];
+    loadingTextures.current.set(path, callbacks);
+
+    new THREE.TextureLoader().load(
+      path,
+      (tex) => {
+        textureCache.current.set(path, tex);
+        const list = loadingTextures.current.get(path) || [];
+        loadingTextures.current.delete(path);
+        list.forEach((cb) => cb(tex));
+      },
+      null,
+      (err) => {
+        console.error('Failed to load panorama', err);
+        loadingTextures.current.delete(path);
+      }
+    );
+  };
+
   const updateCameraRef = useRef(null)  // allows triggerSceneTransition to call updateCamera
   const [compassAngle, setCompassAngle] = useState(0)
 
@@ -690,7 +728,7 @@ export default function MarketTour360() {
     }
   }, [activeSectionKey, stallIndex, currentStall, sectionsData, showBadges, destinationStall])
 
-  // Image Preloader: Quietly preload adjacent panoramas into browser cache
+  // Image Preloader: Quietly preload adjacent panoramas into texture cache
   useEffect(() => {
     if (!sectionsData[activeSectionKey] || !sectionsData[activeSectionKey].stalls) return;
     const stalls = sectionsData[activeSectionKey].stalls;
@@ -705,8 +743,12 @@ export default function MarketTour360() {
     ];
 
     preloads.forEach(src => {
-      const img = new Image();
-      img.src = src;
+      if (window.THREE) {
+        loadTexture(src);
+      } else {
+        const img = new Image();
+        img.src = src;
+      }
     });
   }, [stallIndex, activeSectionKey, sectionsData]);
 
@@ -914,20 +956,7 @@ export default function MarketTour360() {
       if (updateCameraRef.current) updateCameraRef.current();
     };
 
-    const cached = textureCache.current.get(texturePath);
-    if (cached) {
-      applyTexture(cached);
-    } else {
-      new THREE.TextureLoader().load(
-        texturePath,
-        (tex) => {
-          textureCache.current.set(texturePath, tex);
-          applyTexture(tex);
-        },
-        null,
-        (err) => console.error('Failed to load panorama', err)
-      );
-    }
+    loadTexture(texturePath, applyTexture);
   }
 
   // Helper to create beautiful glowing canvas textures for hotspots
@@ -1257,9 +1286,11 @@ export default function MarketTour360() {
 
       // Initial Texture Loading
       setLoadingProgress(25)
+      const initialPath = getStallImagePath(stateRef.current.currentStall.id, stateRef.current.activeSectionKey);
       const texture = new THREE.TextureLoader().load(
-        getStallImagePath(stateRef.current.currentStall.id, stateRef.current.activeSectionKey),
-        () => {
+        initialPath,
+        (tex) => {
+          textureCache.current.set(initialPath, tex);
           setLoadingProgress(100)
           setTimeout(() => {
             if (!cancelled) setLoaded(true)
@@ -1614,11 +1645,7 @@ export default function MarketTour360() {
             const info = m.userData.targetStallInfo;
             if (!info) return;
             const path = getStallImagePath(info.stall.id, info.sectionKey);
-            if (!textureCache.current.has(path)) {
-              new THREE.TextureLoader().load(path, (tex) => {
-                textureCache.current.set(path, tex);
-              });
-            }
+            loadTexture(path);
           });
         }
       } // end updateCamera
@@ -2213,7 +2240,7 @@ export default function MarketTour360() {
                                 setActiveSectionKey(secKey);
                                 setStallIndex(idx);
                                 setSelectedStall(st);
-                                triggerSceneTransition(getStallImagePath(st.id, secKey));
+                                triggerSceneTransition(st, secKey);
                                 setIsMapExpanded(false);
                                 let count = 0;
                                 const interval = setInterval(() => {
