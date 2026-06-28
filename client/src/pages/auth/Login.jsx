@@ -167,8 +167,6 @@ const loginStyles = `
 
 export default function Login() {
   const navigate = useNavigate();
-  const [clickCount, setClickCount] = useState(0);
-  const [lastClickTime, setLastClickTime] = useState(0);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -177,20 +175,6 @@ export default function Login() {
   const [showModal, setShowModal] = useState(false);
   const [modalEmail, setModalEmail] = useState('');
   const [modalPassword, setModalPassword] = useState('');
-
-  const handleLogoClick = () => {
-    const now = Date.now();
-    if (now - lastClickTime < 500) {
-      const newCount = clickCount + 1;
-      setClickCount(newCount);
-      if (newCount === 4) {
-        navigate('/admin-login');
-      }
-    } else {
-      setClickCount(0);
-    }
-    setLastClickTime(now);
-  };
 
   async function handleLogin(e) {
     e.preventDefault();
@@ -266,7 +250,7 @@ export default function Login() {
 
         <button
           onClick={() => navigate('/')}
-          className="back-btn absolute top-4 left-4 sm:top-6 sm:left-6 z-10 flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 bg-white/5 backdrop-blur-md border border-white/10 rounded-full text-white/80 hover:text-white transition-all duration-300 shadow-lg"
+          className="back-btn absolute top-4 left-4 sm:top-6 sm:left-6 z-30 flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 bg-white/5 backdrop-blur-md border border-white/10 rounded-full text-white/80 hover:text-white transition-all duration-300 shadow-lg"
           aria-label="Go back"
         >
           <ArrowLeft size={16} />
@@ -278,7 +262,7 @@ export default function Login() {
             <div 
               className="login-logo-icon w-12 h-12 sm:w-16 sm:h-16 rounded-xl sm:rounded-[1.25rem] flex items-center justify-center mb-2 sm:mb-4 cursor-pointer shadow-2xl border border-white/10" 
               style={{ backgroundColor: '#1a5c2a' }}
-              onClick={handleLogoClick}
+              onClick={() => navigate('/')}
             >
               <img src="/logo.png" alt="MyTalipapa Logo" className="h-7 w-auto sm:h-9 object-contain" />
             </div>
@@ -372,10 +356,14 @@ export default function Login() {
 
             <div className="h-px divider-line my-4 sm:my-6" />
 
-            <p className="text-center text-xs text-slate-500">
-              Don't have an account?{' '}
-              <a href="/register" style={{ color: '#1a5c2a' }} className="font-bold hover:underline">Register</a>
-            </p>
+            <div className="text-center text-xs text-slate-500 space-y-1.5">
+              <div>Don't have an account?</div>
+              <div className="flex justify-center items-center gap-2 flex-wrap">
+                <a href="/register" style={{ color: '#1a5c2a' }} className="font-bold hover:underline">
+                  Register
+                </a>
+              </div>
+            </div>
           </div>
 
 

@@ -12,10 +12,9 @@ async function inspect() {
     await mongoose.connect(process.env.MONGODB_URI);
     console.log("Connected to DB");
     const stalls = await Stall.find({});
-    
     stalls.forEach(s => {
-      if (s.zone === 'A') {
-        console.log(`ID: ${s._id} | Stall: ${s.stallNumber} | Section: ${s.section} | Zone: ${s.zone} | Coords:`, s.coordinates);
+      if (/[a-zA-Z\(\)]/.test(s.stallNumber)) {
+        console.log(`Stall: ${s.stallNumber} | Section: ${s.section} | Zone: ${s.zone} | Coords:`, s.coordinates);
       }
     });
 

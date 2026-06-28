@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { ArrowLeft, Compass, Info, HelpCircle, Navigation, RotateCw, Check, X, Camera, CameraOff, Map, ChevronDown, ChevronUp, Locate, ChevronLeft, ChevronRight, Search, QrCode, MapPin, Clock, Tag, Store, Phone, Footprints } from "lucide-react";
 import mapImage from "../../images/map_aligned.jpg";
 import QrScanner from "../../components/QrScanner";
@@ -100,7 +100,7 @@ const buildAllStalls = () => {
       else if (id.startsWith('empty')) displayName = `Empty Stall #${id.replace('empty', '') || '1'}`;
       list.push({
         id: `${category}-${id}`,
-        label: `${displayName} (${category.charAt(0).toUpperCase() + category.slice(1)})`,
+        label: `${displayName} (${category === 'veggies' ? 'Vegetables' : category.charAt(0).toUpperCase() + category.slice(1)})`,
         section: category === 'meat' ? 'Meat Section' : category === 'fish' ? 'Fish Section' : 'Vegetables Section',
         zone, x, y, rawId: id, category
       });
@@ -263,6 +263,108 @@ export default function ArFinder({ onBack, initialStall }) {
   const [showStallPicker, setShowStallPicker] = useState(false);
   const [stallPickerSearch, setStallPickerSearch] = useState("");
 
+  // Dynamic filtering based on search query and category selector
+  const filteredStalls = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) {
+      return selectedCategory === "all"
+        ? stallsList
+        : stallsList.filter(s => s.category === selectedCategory);
+    }
+
+    // Helper to calculate score for a single stall based on the search query
+    const getSearchScore = (s) => {
+      let score = 0;
+
+      const sNum = getCleanDbStallNumber(s.rawId).toLowerCase();
+      const sCategory = s.category.toLowerCase();
+      const sZone = String(s.zone || '').replace('Zone ', '').toLowerCase();
+      const sContractor = String(s.contractorName || '').toLowerCase();
+      const sStatus = String(s.status || '').toLowerCase();
+      const sLabel = s.label.toLowerCase();
+
+      const words = q.split(/\s+/);
+
+      // 1. Check exact stall number match
+      const numMatch = q.match(/\b\d+\b/);
+      if (numMatch) {
+        if (sNum !== numMatch[0]) {
+          return 0; // Exclude non-exact matches when number is specified
+        }
+        score += 100;
+      }
+      const hasExactNumber = !!numMatch;
+
+      // 2. Check category/section match
+      let matchesCategory = false;
+      if (q.includes("meat") || q.includes("pork") || q.includes("beef") || q.includes("chicken")) {
+        matchesCategory = sCategory === "meat";
+      } else if (q.includes("fish") || q.includes("seafood") || q.includes("shrimp") || q.includes("sea")) {
+        matchesCategory = sCategory === "fish";
+      } else if (q.includes("veg") || q.includes("vegetable") || q.includes("produce") || q.includes("green")) {
+        matchesCategory = sCategory === "veggies";
+      }
+
+      if (matchesCategory) {
+        score += 40;
+        if (hasExactNumber) score += 20; // Number + Category match bonus
+      }
+
+      // 3. Check zone match
+      const zoneMatch = q.match(/zone\s+([a-h])/i) || q.match(/\b([a-h])\b/i);
+      if (zoneMatch && sZone === zoneMatch[1].toLowerCase()) {
+        score += 50;
+        if (hasExactNumber) score += 15; // Number + Zone match bonus
+      }
+
+      // 4. Check contractor name match
+      if (sContractor && sContractor.includes(q)) {
+        score += 80;
+      } else if (sContractor) {
+        const wordMatch = words.some(w => w.length > 2 && sContractor.includes(w));
+        if (wordMatch) score += 30;
+      }
+
+      // 5. Check status match
+      if (sStatus && q.includes(sStatus)) {
+        score += 30;
+      }
+
+      // 6. General label match
+      if (sLabel.includes(q)) {
+        score += 20;
+      }
+
+      return score;
+    };
+
+    // Calculate score for all stalls and filter those with score > 0
+    return stallsList
+      .map(s => ({ stall: s, score: getSearchScore(s) }))
+      .filter(item => item.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .map(item => item.stall);
+  }, [stallsList, searchQuery, selectedCategory]);
+
+  // Synchronize the SECTION dropdown with category keyword in search query
+  useEffect(() => {
+    const q = searchQuery.toLowerCase().trim();
+    if (q.includes("meat") || q.includes("pork") || q.includes("beef") || q.includes("chicken")) {
+      setSelectedCategory("meat");
+    } else if (q.includes("fish") || q.includes("seafood") || q.includes("shrimp") || q.includes("sea")) {
+      setSelectedCategory("fish");
+    } else if (q.includes("veg") || q.includes("vegetable") || q.includes("produce") || q.includes("green")) {
+      setSelectedCategory("veggies");
+    }
+  }, [searchQuery]);
+
+  // Automatically select the first available filtered stall if current selection gets filtered out
+  useEffect(() => {
+    if (filteredStalls.length > 0 && !filteredStalls.some(s => s.id === selectedStallId)) {
+      setSelectedStallId(filteredStalls[0].id);
+    }
+  }, [filteredStalls, selectedStallId]);
+
   // ── Step Detection ──────────────────────────────────────
   const [motionActive, setMotionActive] = useState(false);
   const [stepCount, setStepCount] = useState(0);
@@ -270,37 +372,15 @@ export default function ArFinder({ onBack, initialStall }) {
   // NEW: rolling buffer for averaged compass heading
   const headingBufferRef = useRef([]);
 
-  const handleSearchSubmit = async () => {
+  const handleSearchSubmit = () => {
     if (!searchQuery.trim()) return;
-    try {
-      const response = await fetch(`/api/stalls/search?query=${encodeURIComponent(searchQuery)}`);
-      const data = await response.json();
-      if (data.success && data.stall) {
-        const foundStall = data.stall;
-        const targetClean = getCleanDbStallNumber(foundStall.stallNumber);
-        const matched = stallsList.find(s => {
-          const sec = String(foundStall.section || '').toLowerCase();
-          let category = 'meat';
-          if (sec.includes('fish') || sec.includes('sea')) category = 'fish';
-          else if (sec.includes('veg') || sec.includes('produce')) category = 'veggies';
-          const sNum = getCleanDbStallNumber(s.rawId);
-          const sZone = String(s.zone || '').replace('Zone ', '').toUpperCase();
-          const fZone = String(foundStall.zone || '').replace('Zone ', '').toUpperCase();
-          return sNum === targetClean && s.category === category && sZone === fZone;
-        });
-        if (matched) {
-          setSelectedStallId(matched.id);
-          setSearchDirections(foundStall.directions || "");
-          setToastMsg(`Found Stall #${foundStall.stallNumber} in Zone ${foundStall.zone}`);
-        } else {
-          setToastMsg(`Stall found in DB but not active/contracted.`);
-        }
-      } else {
-        setToastMsg("Stall not found.");
-      }
-    } catch (error) {
-      console.error("Search failed:", error);
-      setToastMsg("Search failed.");
+    if (filteredStalls.length > 0) {
+      const bestMatch = filteredStalls[0];
+      setSelectedStallId(bestMatch.id);
+      setShowStallPicker(true);
+      setToastMsg(`Found and selected ${bestMatch.label}`);
+    } else {
+      setToastMsg("Stall not found matching search criteria.");
     }
   };
 
@@ -441,6 +521,7 @@ export default function ArFinder({ onBack, initialStall }) {
   const [hasOrientation, setHasOrientation] = useState(false);
   const [showCard, setShowCard] = useState(true);
   const [showStartSelector, setShowStartSelector] = useState(false);
+  const [showSectionSelector, setShowSectionSelector] = useState(false);
   const [selectedStartId, setSelectedStartId] = useState("entrance");
   const [toastMsg, setToastMsg] = useState("");
   const [isMobile, setIsMobile] = useState(false);
@@ -886,8 +967,23 @@ export default function ArFinder({ onBack, initialStall }) {
   const MAP_EXPANDED_H = 220;
   const MAP_HEADER_H = 44;
 
-  const filteredStallsForPicker = (selectedCategory === "all" ? stallsList : stallsList.filter(s => s.category === selectedCategory))
-    .filter(s => !stallPickerSearch.trim() || s.label.toLowerCase().includes(stallPickerSearch.toLowerCase()) || s.zone.toLowerCase().includes(stallPickerSearch.toLowerCase()));
+  const filteredStallsForPicker = useMemo(() => {
+    let baseList = searchQuery.trim() ? filteredStalls : stallsList;
+
+    if (selectedCategory !== "all") {
+      baseList = baseList.filter(s => s.category === selectedCategory);
+    }
+
+    const localSearch = stallPickerSearch.trim().toLowerCase();
+    if (localSearch) {
+      baseList = baseList.filter(s =>
+        s.label.toLowerCase().includes(localSearch) ||
+        s.zone.toLowerCase().includes(localSearch)
+      );
+    }
+
+    return baseList;
+  }, [stallsList, filteredStalls, searchQuery, selectedCategory, stallPickerSearch]);
 
   const getShortStallLabel = (stall) => {
     if (!stall) return "Select Stall";
@@ -898,6 +994,7 @@ export default function ArFinder({ onBack, initialStall }) {
 
   // Shared floor-map body — used by the desktop side panel and the mobile slide-up sheet.
   const floorMapBody = (
+<<<<<<< HEAD
     <ArMapCanvas
       userX={userX} userY={userY} heading={heading}
       motionActive={motionActive} stepCount={stepCount}
@@ -910,6 +1007,91 @@ export default function ArFinder({ onBack, initialStall }) {
         setToastMsg(`Routing to ${s.label}`);
       }}
     />
+=======
+    <div className="ar-map-body">
+      <div style={{ position: "absolute", top: 10, left: "50%", transform: "translateX(-50%)", background: "rgba(255,255,255,0.92)", padding: "6px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700, color: "#1e293b", boxShadow: "0 2px 8px rgba(0,0,0,0.15)", pointerEvents: "none", zIndex: 10, border: "1px solid #e2e8f0", whiteSpace: "nowrap", maxWidth: "calc(100% - 24px)", overflow: "hidden", textOverflow: "ellipsis" }}>
+        Tap a stall to route · tap elsewhere to set your spot
+      </div>
+      <svg viewBox="0 0 2305 1824" preserveAspectRatio="xMidYMid meet"
+        onClick={handleMapClick} style={{ width: "100%", height: "100%", cursor: "crosshair", userSelect: "none" }}>
+        {/* Authentic market floor plan, rasterised from the client's draw.io source
+            at the exact coordinate viewBox — so it lines up 1:1 with the stall
+            markers, route and "you are here". */}
+        <image xlinkHref={mapImage} href={mapImage} x="0" y="0" width="2305" height="1824" preserveAspectRatio="none" />
+
+        {/* Cover up static ghost location pins printed on the background JPEG map */}
+        <circle cx="205" cy="803" r="22" fill="#c4c6c4" opacity="0.95" />
+        <circle cx="205" cy="1603" r="22" fill="#c4c6c4" opacity="0.95" />
+
+        {/* Per-stall tap targets + highlight for the selected destination */}
+        {stallsList.map(s => {
+          if (s.x === 1020 && s.y === 635) return null; // unmapped fallback — skip
+          const isMatched = filteredStalls.some(f => f.id === s.id);
+          const isDest = s.id === selectedStallId;
+          return (
+            <g
+              key={s.id}
+              transform={`translate(${s.x},${s.y})`}
+              style={{
+                cursor: isMatched ? "pointer" : "default",
+                opacity: isMatched ? 1 : 0.12,
+                pointerEvents: isMatched ? "auto" : "none",
+                transition: "opacity 0.2s"
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedCategory(s.category);
+                setSelectedStallId(s.id);
+                setToastMsg(`Routing to ${s.label}`);
+              }}
+            >
+              <rect x="-78" y="-32" width="156" height="64" fill="transparent" />
+              {isDest && (
+                <>
+                  <rect x="-78" y="-32" width="156" height="64" rx="12" fill="rgba(232,98,26,0.22)" stroke="#e8621a" strokeWidth="5">
+                    <animate attributeName="stroke-opacity" values="1;0.25;1" dur="1.4s" repeatCount="indefinite" />
+                  </rect>
+                  <path
+                    d="M 0 16 C -11 7, -14 0, -14 -6 A 14 14 0 0 1 14 -6 C 14 0, 11 7, 0 16 Z"
+                    fill="#e8621a"
+                    stroke="#ffffff"
+                    strokeWidth="3"
+                    strokeLinejoin="round"
+                  />
+                  <circle cx="0" cy="-6" r="4.5" fill="#ffffff" />
+                </>
+              )}
+            </g>
+          );
+        })}
+
+        {/* Walking route — white casing + animated orange dotted line (Google-Maps style) */}
+        {pathPoints.length > 1 && (
+          <g style={{ pointerEvents: "none" }}>
+            <polyline points={pathPoints.map(p => `${p.x},${p.y}`).join(" ")}
+              fill="none" stroke="#ffffff" strokeWidth="18" strokeLinecap="round" strokeLinejoin="round" opacity="0.95" />
+            <polyline points={pathPoints.map(p => `${p.x},${p.y}`).join(" ")}
+              fill="none" stroke="#e8621a" strokeWidth="9" strokeDasharray="1 26" strokeLinecap="round" strokeLinejoin="round">
+              <animate attributeName="stroke-dashoffset" from="27" to="0" dur="0.7s" repeatCount="indefinite" />
+            </polyline>
+          </g>
+        )}
+
+        {/* "You are here" marker — heading-aware cone + dot */}
+        <g transform={`translate(${userX},${userY})`} style={{ pointerEvents: "none" }}>
+          <path d="M0 0 L-70 -120 A140 140 0 0 1 70 -120 Z" fill="rgba(26,92,42,0.22)" transform={`rotate(${heading})`} style={{ transformOrigin: "0px 0px" }} />
+          <g transform={`rotate(${heading})`}>
+            <circle r="25" fill="#1a5c2a" stroke="#fff" strokeWidth="4" />
+            <path d="M0 -15 L12 10 L0 4 L-12 10 Z" fill="#fff" />
+          </g>
+        </g>
+      </svg>
+      <div className="sim-badge">
+        <Compass size={10} className="animate-spin-slow" />
+        <span>{userX}, {userY} | {heading}°{motionActive ? ` | ${stepCount}` : ''}</span>
+      </div>
+    </div>
+>>>>>>> b04b418c562b2fa9f54c4476f46bceede8752ea4
   );
 
   return (
@@ -1088,7 +1270,12 @@ export default function ArFinder({ onBack, initialStall }) {
           background: rgba(10,15,10,0.95);
           border-bottom: 1px solid rgba(255,255,255,0.08);
           flex-shrink: 0;
-          overflow: hidden;
+          overflow-x: auto;
+          scrollbar-width: none;
+          -webkit-overflow-scrolling: touch;
+        }
+        .header-selects-bar::-webkit-scrollbar {
+          display: none;
         }
 
         .mobile-select-pill {
@@ -1109,7 +1296,7 @@ export default function ArFinder({ onBack, initialStall }) {
         .mobile-select-pill select {
           font-size: 12px; font-weight: 700; color: #fff;
           background: transparent; border: none; outline: none; cursor: pointer;
-          appearance: none; -webkit-appearance: none;
+          max-width: 140px;
         }
         .mobile-select-pill select option { color: #1e293b; background: #fff; }
 
@@ -1269,8 +1456,8 @@ export default function ArFinder({ onBack, initialStall }) {
           z-index: 25; backdrop-filter: blur(6px);
         }
         @media (max-width: 640px) {
-          .step-badge { right: 16px; top: calc(env(safe-area-inset-top, 0px) + 116px); }
-          .toast { top: calc(env(safe-area-inset-top, 0px) + 116px); }
+          .step-badge { right: 16px; top: calc(env(safe-area-inset-top, 0px) + 208px); }
+          .toast { top: calc(env(safe-area-inset-top, 0px) + 208px); }
         }
 
         /* ============================================================
@@ -1451,7 +1638,7 @@ export default function ArFinder({ onBack, initialStall }) {
             <div className="stall-select">
               <label>STALL:</label>
               <select value={selectedStallId} onChange={e => setSelectedStallId(e.target.value)} style={{ maxWidth: 180 }}>
-                {(selectedCategory === "all" ? stallsList : stallsList.filter(s => s.category === selectedCategory)).map(s => (
+                {filteredStalls.map(s => (
                   <option key={s.id} value={s.id}>{s.label} - {s.zone}</option>
                 ))}
               </select>
@@ -1487,7 +1674,7 @@ export default function ArFinder({ onBack, initialStall }) {
         <div style={{ position: "relative", flex: 1, display: "flex", alignItems: "center" }}>
           <input
             type="text"
-            placeholder="Search stall (e.g. 'Stall 11', 'Zone E', 'veggies')..."
+            placeholder="Search stall (e.g. 'Stall 11', 'Zone E', 'vegetables')..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') handleSearchSubmit(); }}
@@ -1549,6 +1736,41 @@ export default function ArFinder({ onBack, initialStall }) {
                   <button onClick={() => setSearchQuery("")} aria-label="Clear search" style={{ background: "none", border: "none", color: "#94a3b8", cursor: "pointer", padding: 4, flexShrink: 0, display: "flex" }}><X size={14} /></button>
                 )}
                 <button className="ar-m-search-btn" onClick={handleSearchSubmit}>Find</button>
+              </div>
+              <div className="header-selects-bar" style={{
+                position: "absolute", left: 12, right: 12,
+                top: "calc(env(safe-area-inset-top, 0px) + 116px)", zIndex: 28,
+                background: "transparent", border: "none", padding: 0,
+                display: "flex", flexDirection: "column", gap: "6px"
+              }}>
+                <div style={{ display: "flex", gap: "6px", width: "100%" }}>
+                  <button className="mobile-select-pill" onClick={() => setShowStartSelector(true)} style={{ backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", flex: 1, minWidth: 0, padding: "8px 10px", justifyContent: "space-between", border: "1px solid rgba(255,255,255,0.18)", cursor: "pointer", color: "#fff", outline: "none", display: "flex", alignItems: "center", background: "rgba(255,255,255,0.10)" }}>
+                    <span style={{ fontSize: 9, fontWeight: 800, color: "rgba(255,255,255,0.65)", textTransform: "uppercase", letterSpacing: "0.06em", marginRight: 4, flexShrink: 0 }}>START:</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flex: 1, minWidth: 0, textAlign: "left" }}>
+                      {selectedStartId === "custom" ? "Custom" : (() => {
+                        const found = HALLWAYS.find(h => h.id === selectedStartId);
+                        return found ? found.label.replace(/\s*\(.*?\)/g, "").trim() : "Select...";
+                      })()}
+                    </span>
+                    <ChevronDown size={12} color="rgba(255,255,255,0.7)" style={{ marginLeft: 4, flexShrink: 0 }} />
+                  </button>
+
+                  <button className="mobile-select-pill" onClick={() => setShowSectionSelector(true)} style={{ backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", flex: 1, minWidth: 0, padding: "8px 10px", justifyContent: "space-between", border: "1px solid rgba(255,255,255,0.18)", cursor: "pointer", color: "#fff", outline: "none", display: "flex", alignItems: "center", background: "rgba(255,255,255,0.10)" }}>
+                    <span style={{ fontSize: 9, fontWeight: 800, color: "rgba(255,255,255,0.65)", textTransform: "uppercase", letterSpacing: "0.06em", marginRight: 4, flexShrink: 0 }}>SECTION:</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flex: 1, minWidth: 0, textAlign: "left" }}>
+                      {selectedCategory === "all" ? "All" : selectedCategory === "meat" ? "Meat" : selectedCategory === "fish" ? "Fish" : "Vegetables"}
+                    </span>
+                    <ChevronDown size={12} color="rgba(255,255,255,0.7)" style={{ marginLeft: 4, flexShrink: 0 }} />
+                  </button>
+                </div>
+
+                <button className="stall-picker-btn" onClick={() => { setStallPickerSearch(""); setShowStallPicker(true); }} style={{ backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", width: "100%", flex: "none" }}>
+                  <div className="spb-label-wrap" style={{ flex: 1 }}>
+                    <span className="spb-caption">STALL:</span>
+                    <span className="spb-value" style={{ maxWidth: "none" }}>{currentStall ? currentStall.label : "Select..."}</span>
+                  </div>
+                  <ChevronDown size={14} color="#fff" style={{ flexShrink: 0 }} />
+                </button>
               </div>
             </>
           )}
@@ -1846,43 +2068,75 @@ export default function ArFinder({ onBack, initialStall }) {
         )}
       </div>
 
-      {/* ── START SELECTOR OVERLAY ── */}
+      {/* ── START SELECTOR BOTTOM SHEET (mobile) ── */}
       {showStartSelector && (
-        <div className="scanner-overlay" style={{ background: "rgba(10,15,10,0.98)" }}>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "100%", maxWidth: 440, gap: 14 }}>
-            <div style={{ textAlign: "center", width: "100%" }}>
-              <p style={{ fontSize: 15, fontWeight: 800, color: "#fff", margin: "0 0 4px" }}>Select Starting Point</p>
-              <p style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", margin: 0 }}>Choose a hallway or entrance as your navigation start location.</p>
+        <div className="stall-picker-backdrop" onClick={() => setShowStartSelector(false)}>
+          <div className="stall-picker-sheet" onClick={e => e.stopPropagation()} style={{ maxHeight: "78vh" }}>
+            <div className="stall-picker-handle" />
+            <div className="stall-picker-header">
+              <span className="stall-picker-title">Choose Start Point</span>
+              <button className="stall-picker-close" onClick={() => setShowStartSelector(false)}>
+                <X size={13} />
+              </button>
             </div>
-            <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 12, maxHeight: "65vh", overflowY: "auto", paddingRight: 4 }}>
+            <div style={{ flex: 1, overflowY: "auto", padding: "0 10px 20px" }}>
               {Object.entries(HALLWAY_GROUPS).map(([groupName, items]) => (
-                <div key={groupName} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  <div style={{ fontSize: 10, fontWeight: 800, color: "#e8621a", textTransform: "uppercase", letterSpacing: "0.06em", paddingLeft: 4, marginTop: 4 }}>{groupName}</div>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 6 }}>
+                <div key={groupName} style={{ marginBottom: 14 }}>
+                  <div style={{ fontSize: 9, fontWeight: 800, color: "#e8621a", textTransform: "uppercase", letterSpacing: "0.06em", margin: "8px 10px 4px" }}>
+                    {groupName}
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                     {items.map(item => (
-                      <button key={item.id} onClick={() => handleSelectStartPoint(item)} style={{
-                        display: "flex", alignItems: "center", justifyContent: "space-between",
-                        padding: "10px 12px",
-                        background: selectedStartId === item.id ? "#1a5c2a" : "rgba(255,255,255,0.06)",
-                        border: `1px solid ${selectedStartId === item.id ? "#22c55e" : "rgba(255,255,255,0.12)"}`,
-                        borderRadius: 12, fontSize: 11, fontWeight: 700, color: "#fff",
-                        cursor: "pointer", textAlign: "left",
-                      }}>
-                        <span>{item.label}</span>
-                        {selectedStartId === item.id && <Check size={12} color="#22c55e" />}
-                      </button>
+                      <div
+                        key={item.id}
+                        className={`stall-item${selectedStartId === item.id ? " selected" : ""}`}
+                        onClick={() => handleSelectStartPoint(item)}
+                      >
+                        <span className="stall-item-label">{item.label}</span>
+                        {selectedStartId === item.id && <Check size={13} color="#e8621a" style={{ flexShrink: 0 }} />}
+                      </div>
                     ))}
                   </div>
                 </div>
               ))}
             </div>
-            <button onClick={() => setShowStartSelector(false)} style={{
-              display: "flex", alignItems: "center", gap: 6, padding: "9px 20px",
-              background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)",
-              borderRadius: 12, fontSize: 12, fontWeight: 700, color: "#fff", cursor: "pointer", marginTop: 8,
-            }}>
-              <X size={14} /><span>Close</span>
-            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── SECTION SELECTOR BOTTOM SHEET (mobile) ── */}
+      {showSectionSelector && (
+        <div className="stall-picker-backdrop" onClick={() => setShowSectionSelector(false)}>
+          <div className="stall-picker-sheet" onClick={e => e.stopPropagation()} style={{ maxHeight: "42vh" }}>
+            <div className="stall-picker-handle" />
+            <div className="stall-picker-header">
+              <span className="stall-picker-title">Choose Section</span>
+              <button className="stall-picker-close" onClick={() => setShowSectionSelector(false)}>
+                <X size={13} />
+              </button>
+            </div>
+            <div style={{ flex: 1, overflowY: "auto", padding: "0 10px 20px" }}>
+              {[
+                { id: "all", label: "All Sections" },
+                { id: "meat", label: "Meat Section" },
+                { id: "fish", label: "Fishes Section" },
+                { id: "veggies", label: "Vegetables Section" },
+              ].map(item => (
+                <div
+                  key={item.id}
+                  className={`stall-item${selectedCategory === item.id ? " selected" : ""}`}
+                  onClick={() => {
+                    setSelectedCategory(item.id);
+                    const filtered = item.id === "all" ? stallsList : stallsList.filter(s => s.category === item.id);
+                    if (filtered.length > 0) setSelectedStallId(filtered[0].id);
+                    setShowSectionSelector(false);
+                  }}
+                >
+                  <span className="stall-item-label">{item.label}</span>
+                  {selectedCategory === item.id && <Check size={13} color="#e8621a" style={{ flexShrink: 0 }} />}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
@@ -1916,7 +2170,7 @@ export default function ArFinder({ onBack, initialStall }) {
                 { id: "all", label: "All" },
                 { id: "meat", label: "Meat" },
                 { id: "fish", label: "Fish" },
-                { id: "veggies", label: "Veg" },
+                { id: "veggies", label: "Vegetables" },
               ].map(c => (
                 <button
                   key={c.id}
@@ -1935,7 +2189,7 @@ export default function ArFinder({ onBack, initialStall }) {
                   <div
                     key={s.id}
                     className={`stall-item${s.id === selectedStallId ? " selected" : ""}`}
-                    onClick={() => { setSelectedStallId(s.id); setShowStallPicker(false); setStallPickerSearch(""); }}
+                    onClick={() => { setSelectedStallId(s.id); }}
                   >
                     <span className="stall-item-label">{s.label}</span>
                     <span className="stall-item-zone">{s.zone}</span>

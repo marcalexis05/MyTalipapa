@@ -156,35 +156,35 @@ export default function RenterLayout() {
   const [stallListFilter, setStallListFilter] = useState('All')
   const [stallListShowAll, setStallListShowAll] = useState(true)
 
-  const navigate = useCallback((tab, extraState = null) => {
+  const navigate = useCallback((tab, extraState = null, replace = false) => {
     setActiveTab(tab)
 
     if (tab === 'home') {
       setSelectedStall(null)
       const token = localStorage.getItem('authToken')
       if (token) {
-        routerNavigate('/renter/dashboard')
+        routerNavigate('/renter/dashboard', { replace })
       } else {
-        routerNavigate('/')
+        routerNavigate('/', { replace })
       }
     }
     else if (tab === 'stalls') {
-      routerNavigate('/renter/stalls')
+      routerNavigate('/renter/stalls', { replace })
     }
     else if (tab === 'applications') {
       setSelectedStall(null)
-      routerNavigate('/renter/applications')
+      routerNavigate('/renter/applications', { replace })
     }
     else if (tab === 'profile') {
       setSelectedStall(null)
-      routerNavigate('/renter/profile')
+      routerNavigate('/renter/profile', { replace })
     }
     else if (tab === 'ar-finder') {
       setSelectedStall(null)
-      routerNavigate('/renter/ar-finder', { state: extraState })
+      routerNavigate('/renter/ar-finder', { state: extraState, replace })
     }
     else if (tab === 'navigate') {
-      routerNavigate('/renter/market-tour', { state: extraState || { stall: selectedStall } })
+      routerNavigate('/renter/market-tour', { state: extraState || { stall: selectedStall }, replace })
     }
   }, [routerNavigate, selectedStall])
 
@@ -223,7 +223,7 @@ export default function RenterLayout() {
       return <MarketTour360 />
     }
     if (location.pathname.includes('ar-finder')) {
-      return <ArFinder onBack={() => routerNavigate('/')} initialStall={location.state?.stall} />
+      return <ArFinder onBack={() => navigate('navigate')} initialStall={location.state?.stall} />
     }
 
     switch (activeTab) {
@@ -264,7 +264,7 @@ export default function RenterLayout() {
         return <RenterApplications onNavigate={navigate} prefill={prefillStall} />
 
       case 'ar-finder':
-        return <ArFinder onBack={() => routerNavigate('/')} initialStall={location.state?.stall} />
+        return <ArFinder onBack={() => navigate('navigate')} initialStall={location.state?.stall} />
 
       case 'navigate':
         return <MarketTour360 />

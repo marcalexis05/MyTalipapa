@@ -13,7 +13,6 @@ import ContractorProfile from './pages/Contractor/ContractorProfile'
 import AdminDashboard from './pages/Admin/AdminDashboard'
 import VerifyEmail from './pages/VerifyEmail';
 import SetNewPassword from './pages/auth/SetNewPassword';
-import AdminLogin from './pages/Admin/AdminLogin'
 import AdminRecord from './pages/Admin/AdminRecord'
 import AdminApplication from './pages/Admin/AdminApplication'
 import AdminStalls from './pages/Admin/AdminStalls'
@@ -38,7 +37,6 @@ export default function App() {
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/admin-login" element={<AdminLogin />} />
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
