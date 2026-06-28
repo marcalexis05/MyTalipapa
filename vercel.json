@@ -1,5 +1,6 @@
 {
   "version": 2,
+  "alias": "mytalipapa-market.vercel.app",
   "builds": [
     {
       "src": "client/package.json",
