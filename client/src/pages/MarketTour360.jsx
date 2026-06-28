@@ -1499,7 +1499,7 @@ export default function MarketTour360() {
         }
 
         // Sync compass rotation (0 deg = North)
-        const deg = -Math.round((theta * 180) / Math.PI) + northOffset;
+        const deg = Math.round((theta * 180) / Math.PI) + northOffset;
         const compassDeg = ((deg % 360) + 360) % 360; // ensure positive
 
         // Optimize: Only update compass state if the degree actually changed
@@ -1979,7 +1979,7 @@ export default function MarketTour360() {
           <div className={`w-10 h-10 sm:w-14 sm:h-14 mb-0 sm:mb-1 bg-white/90 backdrop-blur-md rounded-full flex items-center justify-center border border-black/10 shadow-2xl relative overflow-hidden transition-all duration-300 ${uiVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-75 pointer-events-none'}`}>
             <div
               className="w-10 h-10 flex items-center justify-center transition-transform duration-100"
-              style={{ transform: `rotate(${compassAngle}deg)` }}
+              style={{ transform: `rotate(${-compassAngle}deg)` }}
             >
               <CompassIcon size={24} className="text-[#1a5c2a]" />
             </div>
