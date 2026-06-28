@@ -7,6 +7,7 @@ const StallRemovalRequestSchema = new mongoose.Schema(
     contractorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     requestReason: { type: String, required: true },
     status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
+    archived: { type: Boolean, default: false },
     adminNotes: { type: String, default: '' },
     requestedAt: { type: Date, default: Date.now },
     reviewedAt: { type: Date },

@@ -1,7 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
-import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
-import { ChevronRight, Store, QrCode, Printer, X, Plus } from "lucide-react";
+import { ChevronRight, Store, QrCode, X, Plus } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useCurrentUser } from '../../utils/auth';
 
@@ -76,23 +75,7 @@ export default function AdminStalls() {
   const [formSubmitting, setFormSubmitting] = useState(false);
   const [togglingStatus, setTogglingStatus] = useState(false);
 
-  // Stalls queued for QR printing (single stall or the whole filtered view).
-  const [printList, setPrintList] = useState([]);
 
-  // When a print batch is queued, give the QR SVGs a moment to render, then
-  // open the browser print dialog; clear the batch once printing finishes.
-  useEffect(() => {
-    if (printList.length === 0) return;
-    const clear = () => setPrintList([]);
-    window.addEventListener("afterprint", clear);
-    const t = setTimeout(() => window.print(), 200);
-    const fallback = setTimeout(clear, 60000);
-    return () => {
-      clearTimeout(t);
-      clearTimeout(fallback);
-      window.removeEventListener("afterprint", clear);
-    };
-  }, [printList]);
 
   const [stalls, setStalls] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -290,6 +273,132 @@ export default function AdminStalls() {
         </div>
       )}
 
+      {/* Add Stall Modal */}
+      {showAddModal && (
+        <div className="logout-overlay" onClick={() => setShowAddModal(false)}>
+          <div className="logout-modal form-modal" onClick={e => e.stopPropagation()}>
+            <div className="form-modal-header">
+              <h3 className="logout-modal-title" style={{ margin: 0 }}>Add New Stall</h3>
+              <button className="form-modal-close-icon" onClick={() => setShowAddModal(false)}>
+                <X size={18} />
+              </button>
+            </div>
+            
+            <form onSubmit={handleAddStallSubmit} className="stall-form">
+              {formError && (
+                <div className="form-error-msg">{formError}</div>
+              )}
+              
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="stallNumber">Stall Number</label>
+                  <input
+                    type="text"
+                    id="stallNumber"
+                    required
+                    value={newStallData.stallNumber}
+                    onChange={e => setNewStallData(prev => ({ ...prev, stallNumber: e.target.value }))}
+                    placeholder="e.g. 51"
+                  />
+                </div>
+                
+                <div className="form-group">
+                  <label htmlFor="size">Size (sqm)</label>
+                  <input
+                    type="number"
+                    id="size"
+                    required
+                    value={newStallData.size}
+                    onChange={e => setNewStallData(prev => ({ ...prev, size: Number(e.target.value) }))}
+                    placeholder="12"
+                    min="1"
+                  />
+                </div>
+              </div>
+              
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="section">Section</label>
+                  <select
+                    id="section"
+                    value={newStallData.section}
+                    onChange={e => setNewStallData(prev => ({ ...prev, section: e.target.value }))}
+                  >
+                    <option value="Fishes">Fishes</option>
+                    <option value="Meat">Meat</option>
+                    <option value="Vegetables">Vegetables</option>
+                  </select>
+                </div>
+                
+                <div className="form-group">
+                  <label htmlFor="zone">Zone</label>
+                  <select
+                    id="zone"
+                    value={newStallData.zone}
+                    onChange={e => setNewStallData(prev => ({ ...prev, zone: e.target.value }))}
+                  >
+                    <option value="A">Zone A</option>
+                    <option value="B">Zone B</option>
+                    <option value="C">Zone C</option>
+                    <option value="D">Zone D</option>
+                    <option value="E">Zone E</option>
+                    <option value="F">Zone F</option>
+                    <option value="G">Zone G</option>
+                    <option value="H">Zone H</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="monthlyRate">Monthly Rate (₱)</label>
+                <input
+                  type="number"
+                  id="monthlyRate"
+                  required
+                  value={newStallData.monthlyRate}
+                  onChange={e => setNewStallData(prev => ({ ...prev, monthlyRate: Number(e.target.value) }))}
+                  placeholder="e.g. 3500"
+                  min="0"
+                />
+              </div>
+
+              <div className="form-group toggle-group">
+                <div className="toggle-label">
+                  <span>List for rent immediately</span>
+                  <div className="status-toggle-wrap">
+                    <button
+                      type="button"
+                      className={`custom-toggle-btn ${newStallData.isActive ? 'active' : 'inactive'}`}
+                      onClick={() => setNewStallData(prev => ({ ...prev, isActive: !prev.isActive }))}
+                    >
+                      {newStallData.isActive ? 'Active' : 'Inactive'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="form-actions">
+                <button
+                  type="button"
+                  className="form-cancel-btn"
+                  onClick={() => setShowAddModal(false)}
+                  disabled={formSubmitting}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="form-submit-btn"
+                  disabled={formSubmitting}
+                >
+                  {formSubmitting ? 'Creating...' : 'Create Stall'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
         {/* Header */}
         <header className="bg-white border-b border-gray-100 px-4 md:px-6 py-3.5 flex items-center justify-between sticky top-0 z-30 shrink-0">
@@ -443,14 +552,7 @@ export default function AdminStalls() {
                   >
                     <Plus size={14} /> Add Stall
                   </button>
-                  <button
-                    className="stalls-qr-btn"
-                    onClick={() => setPrintList(displayStalls)}
-                    disabled={displayStalls.length === 0}
-                    title="Generate & print QR codes for the listed stalls"
-                  >
-                    <QrCode size={14} /> Print QR ({displayStalls.length})
-                  </button>
+
                   <div className="stalls-filter-wrap">
                   <button className="stalls-filter-btn" onClick={() => setFilterOpen(o => !o)}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -607,8 +709,16 @@ export default function AdminStalls() {
                 <QRCodeSVG value={buildStallQrPayload(selectedStall)} size={132} level="M" marginSize={2} />
               </div>
               <code className="stall-qr-payload">{buildStallQrPayload(selectedStall)}</code>
-              <button className="stall-qr-print-btn" onClick={() => setPrintList([selectedStall])}>
-                <Printer size={14} /> Print this QR
+
+            </div>
+
+            <div style={{ width: '100%', marginTop: '8px' }}>
+              <button
+                className={`stall-listing-toggle-btn ${selectedStall.listing?.isActive !== false ? 'btn-disable' : 'btn-enable'}`}
+                onClick={() => handleToggleListingStatus(selectedStall)}
+                disabled={togglingStatus}
+              >
+                {togglingStatus ? 'Updating...' : selectedStall.listing?.isActive !== false ? 'Disable Listing' : 'Enable Listing'}
               </button>
             </div>
 
@@ -617,23 +727,7 @@ export default function AdminStalls() {
         </div>
       )}
 
-      {/* ── QR PRINT SHEET (portaled to <body>; visible only when printing) ── */}
-      {printList.length > 0 && createPortal(
-        <div className="qr-print-portal">
-          <div className="qr-print-title">MyTalipapa — Stall QR Codes ({printList.length})</div>
-          <div className="qr-print-grid">
-            {printList.map((s) => (
-              <div className="qr-print-card" key={s._id || `${s.section}-${s.zone}-${s.stallNumber}`}>
-                <QRCodeSVG value={buildStallQrPayload(s)} size={150} level="M" marginSize={2} />
-                <div className="qr-print-num">Stall #{s.stallNumber}</div>
-                <div className="qr-print-meta">{s.section} · Zone {s.zone}</div>
-                <div className="qr-print-payload">{buildStallQrPayload(s)}</div>
-              </div>
-            ))}
-          </div>
-        </div>,
-        document.body
-      )}
+
 
       <style>{`
         .stalls-main { padding-bottom: 80px; }
@@ -803,7 +897,7 @@ export default function AdminStalls() {
         .stall-form { display: flex; flex-direction: column; gap: 14px; margin-top: 8px; }
         .form-group { display: flex; flex-direction: column; gap: 6px; }
         .form-group label { font-size: 11px; font-weight: 700; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
-        .form-group input, .form-group select { padding: 9px 12px; border-radius: 8px; border: 1.5px solid var(--color-border); font-size: 13px; font-weight: 600; font-family: 'Inter', sans-serif; outline: none; transition: border-color 0.2s; background: var(--color-surface); color: var(--color-text); }
+        .form-group input, .form-group select { width: 100%; box-sizing: border-box; padding: 9px 12px; border-radius: 8px; border: 1.5px solid var(--color-border); font-size: 13px; font-weight: 600; font-family: 'Inter', sans-serif; outline: none; transition: border-color 0.2s; background: var(--color-surface); color: var(--color-text); }
         .form-group input:focus, .form-group select:focus { border-color: var(--color-brand-green); }
         .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .toggle-group { flex-direction: row; align-items: center; justify-content: space-between; padding: 8px 12px; background: #f9fafb; border-radius: 8px; border: 1px solid var(--color-border-soft); }

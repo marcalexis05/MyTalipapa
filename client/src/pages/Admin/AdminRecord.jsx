@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronRight, Store } from "lucide-react";
+import { ChevronRight, Store, Archive, Info, RotateCcw } from "lucide-react";
 import { useCurrentUser } from '../../utils/auth';
 
 import NotificationBell from '../../components/NotificationBell';
@@ -28,6 +28,26 @@ export default function AdminRecord() {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const { userName, loading: authLoading } = useCurrentUser();
   const navigate = useNavigate();
+
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: null,
+  });
+  const [alertModal, setAlertModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+  });
+
+  const showConfirm = (title, message, onConfirm) => {
+    setConfirmModal({ isOpen: true, title, message, onConfirm });
+  };
+
+  const showAlert = (title, message) => {
+    setAlertModal({ isOpen: true, title, message });
+  };
 
   // Fetch records from backend
   const [records, setRecords] = useState([]);
@@ -157,7 +177,7 @@ export default function AdminRecord() {
       }));
 
       setEditingLease(false);
-      alert('Lease terms updated successfully.');
+      showAlert('Success', 'Lease terms updated successfully.');
 
       fetch('/api/admin/records')
         .then(res => res.json())
@@ -166,7 +186,7 @@ export default function AdminRecord() {
 
     } catch (err) {
       console.error(err);
-      alert(err.message);
+      showAlert('Error', err.message);
     } finally {
       setSavingLease(false);
     }
@@ -232,11 +252,80 @@ export default function AdminRecord() {
       if (!res.ok) throw new Error(`Failed to ${action} request`);
       
       setArchiveRequests(prev => prev.filter(req => req._id !== userId));
-      alert(`Archive request successfully ${action}ed.`);
+      showAlert('Success', `Archive request successfully ${action}ed.`);
     } catch (err) {
       console.error(err);
-      alert(`Error updating request: ${err.message}`);
+      showAlert('Error', `Error updating request: ${err.message}`);
     }
+  };
+
+  const handleArchiveRenter = (renter) => {
+    showConfirm(
+      'Archive Renter',
+      `Are you sure you want to archive/move out ${renter.name} from ${renter.stall}? This will release the stall back to 'available'.`,
+      async () => {
+        try {
+          const res = await fetch(`/api/admin/records/${renter.id}/archive`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          });
+          if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.error || 'Failed to archive renter');
+          }
+          showAlert('Success', `${renter.name} has been archived and stall released.`);
+          setSelectedRenter(null);
+          // reload records
+          fetch('/api/admin/records')
+            .then(res => {
+              if (res.ok) return res.json();
+              throw new Error('Reload records failed');
+            })
+            .then(data => setRecords(data))
+            .catch(err => console.error('Error reloading records:', err));
+        } catch (err) {
+          console.error(err);
+          showAlert('Error', err.message);
+        }
+      }
+    );
+  };
+
+  const handleUnarchiveRenter = (renter) => {
+    showConfirm(
+      'Restore Renter',
+      `Are you sure you want to restore/unarchive ${renter.name}? This will set their status back to active and assign them to ${renter.stall} (if available).`,
+      async () => {
+        try {
+          const res = await fetch(`/api/admin/records/${renter.id}/unarchive`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          });
+          if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.error || 'Failed to restore renter');
+          }
+          showAlert('Success', `${renter.name} has been restored successfully.`);
+          setSelectedRenter(null);
+          // reload records
+          fetch('/api/admin/admin/records/archived')
+            .then(res => res.json())
+            .then(data => setArchivedRecords(data))
+            .catch(err => console.error('Error reloading archived records:', err));
+          fetch('/api/admin/records')
+            .then(res => res.json())
+            .then(data => setRecords(data))
+            .catch(err => console.error('Error reloading records:', err));
+        } catch (err) {
+          console.error(err);
+          showAlert('Error', err.message);
+        }
+      }
+    );
   };
 
   const RENTERS = isShowingArchives ? archivedRecords : records;
@@ -295,6 +384,59 @@ export default function AdminRecord() {
             <div className="logout-modal-actions">
               <button className="logout-cancel-btn" onClick={() => setShowLogoutModal(false)}>Cancel</button>
               <button className="logout-confirm-btn" onClick={handleLogout}>Yes, Log Out</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reusable Confirm Modal */}
+      {confirmModal.isOpen && (
+        <div className="logout-overlay" onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}>
+          <div className="logout-modal" onClick={e => e.stopPropagation()}>
+            <div className="logout-modal-icon">
+              <Info size={24} className="text-amber-500" />
+            </div>
+            <h3 className="logout-modal-title">{confirmModal.title}</h3>
+            <p className="logout-modal-msg">{confirmModal.message}</p>
+            <div className="logout-modal-actions">
+              <button
+                className="logout-cancel-btn"
+                onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+              >
+                Cancel
+              </button>
+              <button
+                className="logout-confirm-btn"
+                style={{ backgroundColor: '#1a5c2a' }}
+                onClick={() => {
+                  if (confirmModal.onConfirm) confirmModal.onConfirm();
+                  setConfirmModal(prev => ({ ...prev, isOpen: false }));
+                }}
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reusable Alert Modal */}
+      {alertModal.isOpen && (
+        <div className="logout-overlay" onClick={() => setAlertModal(prev => ({ ...prev, isOpen: false }))}>
+          <div className="logout-modal" onClick={e => e.stopPropagation()}>
+            <div className="logout-modal-icon">
+              <Info size={24} className="text-blue-500" />
+            </div>
+            <h3 className="logout-modal-title">{alertModal.title}</h3>
+            <p className="logout-modal-msg">{alertModal.message}</p>
+            <div className="logout-modal-actions">
+              <button
+                className="logout-confirm-btn"
+                style={{ backgroundColor: '#1a5c2a', width: '100%' }}
+                onClick={() => setAlertModal(prev => ({ ...prev, isOpen: false }))}
+              >
+                OK
+              </button>
             </div>
           </div>
         </div>
@@ -528,9 +670,28 @@ export default function AdminRecord() {
                       <span className="rec-stall-label">Stall Location</span>
                       <span className="rec-stall-value">{renter.stall}</span>
                     </div>
-                    <button className="rec-history-btn" onClick={() => handleSelectRenterForModal(renter)}>
-                      View History
-                    </button>
+                    <div className="flex gap-2 w-full">
+                      <button className="rec-history-btn flex-1" onClick={() => handleSelectRenterForModal(renter)}>
+                        View History
+                      </button>
+                      {renter.status === 'archived' ? (
+                        <button
+                          title="Restore/Unarchive Renter"
+                          className="px-3 border border-green-200 text-green-600 rounded-xl hover:bg-green-50 hover:text-green-700 transition-colors cursor-pointer bg-white flex items-center justify-center"
+                          onClick={(e) => { e.stopPropagation(); handleUnarchiveRenter(renter); }}
+                        >
+                          <RotateCcw size={16} />
+                        </button>
+                      ) : (
+                        <button
+                          title="Archive/Move Out Renter"
+                          className="px-3 border border-amber-200 text-amber-600 rounded-xl hover:bg-amber-50 hover:text-amber-700 transition-colors cursor-pointer bg-white flex items-center justify-center"
+                          onClick={(e) => { e.stopPropagation(); handleArchiveRenter(renter); }}
+                        >
+                          <Archive size={16} />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 );
               })
@@ -681,7 +842,32 @@ export default function AdminRecord() {
                 <p>No payment history available.</p>
               )}
             </div>
-            <button className="stall-modal-close" onClick={() => setSelectedRenter(null)}>Close</button>
+            <div className="flex gap-2.5 mt-2">
+              <button 
+                type="button"
+                className="flex-1 py-3 border border-gray-200 text-gray-500 rounded-xl text-xs font-bold hover:bg-gray-50 transition-colors cursor-pointer bg-white" 
+                onClick={() => setSelectedRenter(null)}
+              >
+                Close
+              </button>
+              {selectedRenter.status === 'archived' ? (
+                <button 
+                  type="button"
+                  className="flex-1 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer border-none"
+                  onClick={() => handleUnarchiveRenter(selectedRenter)}
+                >
+                  Restore/Unarchive
+                </button>
+              ) : (
+                <button 
+                  type="button"
+                  className="flex-1 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer border-none"
+                  onClick={() => handleArchiveRenter(selectedRenter)}
+                >
+                  Archive/Move Out
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}

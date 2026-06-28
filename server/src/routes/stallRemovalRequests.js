@@ -94,7 +94,7 @@ router.post('/request', verifyContractor, async (req, res) => {
 // GET /api/stall-removal-requests/admin/requests/pending
 router.get('/admin/requests/pending', verifyAdmin, async (req, res) => {
   try {
-    const pendingRequests = await StallRemovalRequest.find({ status: 'pending' })
+    const pendingRequests = await StallRemovalRequest.find({ status: 'pending', archived: { $ne: true } })
       .sort({ createdAt: -1 })
       .populate('contractorId', 'businessName email');
 
@@ -123,7 +123,7 @@ router.get('/admin/requests/pending', verifyAdmin, async (req, res) => {
 // GET /api/stall-removal-requests/admin/requests/approved
 router.get('/admin/requests/approved', verifyAdmin, async (req, res) => {
   try {
-    const approvedRequests = await StallRemovalRequest.find({ status: 'approved' })
+    const approvedRequests = await StallRemovalRequest.find({ status: 'approved', archived: { $ne: true } })
       .sort({ updatedAt: -1 })
       .populate('contractorId', 'businessName email');
 
@@ -151,7 +151,7 @@ router.get('/admin/requests/approved', verifyAdmin, async (req, res) => {
 // GET /api/stall-removal-requests/admin/requests/rejected
 router.get('/admin/requests/rejected', verifyAdmin, async (req, res) => {
   try {
-    const rejectedRequests = await StallRemovalRequest.find({ status: 'rejected' })
+    const rejectedRequests = await StallRemovalRequest.find({ status: 'rejected', archived: { $ne: true } })
       .sort({ updatedAt: -1 })
       .populate('contractorId', 'businessName email');
 
@@ -259,6 +259,66 @@ router.put('/admin/requests/:requestId/reject', verifyAdmin, async (req, res) =>
   } catch (err) {
     console.error('Error rejecting removal request:', err);
     return res.status(500).json({ error: 'Failed to reject removal request' });
+  }
+});
+
+// DELETE /api/stall-removal-requests/admin/requests/:requestId
+router.delete('/admin/requests/:requestId', verifyAdmin, async (req, res) => {
+  const { requestId } = req.params;
+  try {
+    const deleted = await StallRemovalRequest.findByIdAndDelete(requestId);
+    if (!deleted) {
+      return res.status(404).json({ error: 'Removal request not found' });
+    }
+    return res.json({ message: 'Removal request deleted successfully' });
+  } catch (err) {
+    console.error('Error deleting removal request:', err);
+    return res.status(500).json({ error: 'Failed to delete removal request' });
+  }
+});
+
+// GET /api/stall-removal-requests/admin/requests/archived
+router.get('/admin/requests/archived', verifyAdmin, async (req, res) => {
+  try {
+    const archived = await StallRemovalRequest.find({ archived: true });
+    return res.json(archived);
+  } catch (err) {
+    console.error('Error fetching archived removal requests:', err);
+    return res.status(500).json({ error: 'Failed to fetch archived removal requests' });
+  }
+});
+
+// PUT /api/stall-removal-requests/admin/requests/:requestId/archive
+router.put('/admin/requests/:requestId/archive', verifyAdmin, async (req, res) => {
+  const { requestId } = req.params;
+  try {
+    const request = await StallRemovalRequest.findById(requestId);
+    if (!request) {
+      return res.status(404).json({ error: 'Removal request not found' });
+    }
+    request.archived = true;
+    await request.save();
+    return res.json({ message: 'Removal request archived successfully', request });
+  } catch (err) {
+    console.error('Error archiving removal request:', err);
+    return res.status(500).json({ error: 'Failed to archive removal request' });
+  }
+});
+
+// PUT /api/stall-removal-requests/admin/requests/:requestId/unarchive
+router.put('/admin/requests/:requestId/unarchive', verifyAdmin, async (req, res) => {
+  const { requestId } = req.params;
+  try {
+    const request = await StallRemovalRequest.findById(requestId);
+    if (!request) {
+      return res.status(404).json({ error: 'Removal request not found' });
+    }
+    request.archived = false;
+    await request.save();
+    return res.json({ message: 'Removal request unarchived successfully', request });
+  } catch (err) {
+    console.error('Error unarchiving removal request:', err);
+    return res.status(500).json({ error: 'Failed to unarchive removal request' });
   }
 });
 
