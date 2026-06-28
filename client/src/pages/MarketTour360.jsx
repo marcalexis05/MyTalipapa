@@ -1033,15 +1033,7 @@ export default function MarketTour360() {
         // reused photo always yields the same cone) rather than the display column.
         northOffset = 0;
 
-        const isZoneEMeat = stateRef.current.activeSectionKey === 'meat' && upsideDownStalls.includes(stateRef.current.currentStall.id);
-        const isZoneAFish = stateRef.current.activeSectionKey === 'fish' && zoneAFishUpsideDown.includes(stateRef.current.currentStall.id);
-        const isZoneAMeat = stateRef.current.activeSectionKey === 'meat' && zoneAMeatUpsideDown.includes(stateRef.current.currentStall.id);
-
-        if (stateRef.current.currentStall && stateRef.current.currentStall.id === '1(u)') {
-          northOffset = -90; // Calibrate left turn to point to Stall #13
-        } else if (stateRef.current.currentStall && (isZoneEMeat || isZoneAFish || isZoneAMeat)) {
-          northOffset = 180; // Correct cone to align with the actual camera orientation for the entire row
-        }
+        // Calibration removed
 
         // Sync compass rotation (0 deg = North)
         const deg = -Math.round((theta * 180) / Math.PI) + northOffset;
