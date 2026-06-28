@@ -1,4 +1,4 @@
-<!-- src/components/PalengkeMap.jsx -->
+// src/components/PalengkeMap.jsx
 import React, { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import PanoramaViewer from './PanoramaViewer';

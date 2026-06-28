@@ -736,6 +736,22 @@ export default function ArFinder({ onBack, initialStall }) {
     window.addEventListener("deviceorientation", handleOrientation);
     return () => { stopCamera(); window.removeEventListener("deviceorientation", handleOrientation); };
   }, [cameraEnabled]);
+  
+  const advanceToNextCheckpoint = (e) => {
+    if (e) e.stopPropagation();
+    const path = findRoute({ x: userX, y: userY }, { x: currentStall.x, y: currentStall.y });
+    if (path.length > 1) {
+      let nextIndex = 1;
+      const ARRIVED_THRESHOLD = 80;
+      while (nextIndex < path.length && Math.sqrt((userX - path[nextIndex].x) ** 2 + (userY - path[nextIndex].y) ** 2) < ARRIVED_THRESHOLD) {
+        nextIndex++;
+      }
+      const nextWP = path[nextIndex] || currentStall;
+      setUserX(nextWP.x);
+      setUserY(nextWP.y);
+      setToastMsg("Advanced to next checkpoint.");
+    }
+  };
 
   const handleMapClick = (e) => {
     const svg = e.currentTarget;
@@ -994,7 +1010,6 @@ export default function ArFinder({ onBack, initialStall }) {
 
   // Shared floor-map body — used by the desktop side panel and the mobile slide-up sheet.
   const floorMapBody = (
-<<<<<<< HEAD
     <ArMapCanvas
       userX={userX} userY={userY} heading={heading}
       motionActive={motionActive} stepCount={stepCount}
@@ -1007,91 +1022,6 @@ export default function ArFinder({ onBack, initialStall }) {
         setToastMsg(`Routing to ${s.label}`);
       }}
     />
-=======
-    <div className="ar-map-body">
-      <div style={{ position: "absolute", top: 10, left: "50%", transform: "translateX(-50%)", background: "rgba(255,255,255,0.92)", padding: "6px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700, color: "#1e293b", boxShadow: "0 2px 8px rgba(0,0,0,0.15)", pointerEvents: "none", zIndex: 10, border: "1px solid #e2e8f0", whiteSpace: "nowrap", maxWidth: "calc(100% - 24px)", overflow: "hidden", textOverflow: "ellipsis" }}>
-        Tap a stall to route · tap elsewhere to set your spot
-      </div>
-      <svg viewBox="0 0 2305 1824" preserveAspectRatio="xMidYMid meet"
-        onClick={handleMapClick} style={{ width: "100%", height: "100%", cursor: "crosshair", userSelect: "none" }}>
-        {/* Authentic market floor plan, rasterised from the client's draw.io source
-            at the exact coordinate viewBox — so it lines up 1:1 with the stall
-            markers, route and "you are here". */}
-        <image xlinkHref={mapImage} href={mapImage} x="0" y="0" width="2305" height="1824" preserveAspectRatio="none" />
-
-        {/* Cover up static ghost location pins printed on the background JPEG map */}
-        <circle cx="205" cy="803" r="22" fill="#c4c6c4" opacity="0.95" />
-        <circle cx="205" cy="1603" r="22" fill="#c4c6c4" opacity="0.95" />
-
-        {/* Per-stall tap targets + highlight for the selected destination */}
-        {stallsList.map(s => {
-          if (s.x === 1020 && s.y === 635) return null; // unmapped fallback — skip
-          const isMatched = filteredStalls.some(f => f.id === s.id);
-          const isDest = s.id === selectedStallId;
-          return (
-            <g
-              key={s.id}
-              transform={`translate(${s.x},${s.y})`}
-              style={{
-                cursor: isMatched ? "pointer" : "default",
-                opacity: isMatched ? 1 : 0.12,
-                pointerEvents: isMatched ? "auto" : "none",
-                transition: "opacity 0.2s"
-              }}
-              onClick={(e) => {
-                e.stopPropagation();
-                setSelectedCategory(s.category);
-                setSelectedStallId(s.id);
-                setToastMsg(`Routing to ${s.label}`);
-              }}
-            >
-              <rect x="-78" y="-32" width="156" height="64" fill="transparent" />
-              {isDest && (
-                <>
-                  <rect x="-78" y="-32" width="156" height="64" rx="12" fill="rgba(232,98,26,0.22)" stroke="#e8621a" strokeWidth="5">
-                    <animate attributeName="stroke-opacity" values="1;0.25;1" dur="1.4s" repeatCount="indefinite" />
-                  </rect>
-                  <path
-                    d="M 0 16 C -11 7, -14 0, -14 -6 A 14 14 0 0 1 14 -6 C 14 0, 11 7, 0 16 Z"
-                    fill="#e8621a"
-                    stroke="#ffffff"
-                    strokeWidth="3"
-                    strokeLinejoin="round"
-                  />
-                  <circle cx="0" cy="-6" r="4.5" fill="#ffffff" />
-                </>
-              )}
-            </g>
-          );
-        })}
-
-        {/* Walking route — white casing + animated orange dotted line (Google-Maps style) */}
-        {pathPoints.length > 1 && (
-          <g style={{ pointerEvents: "none" }}>
-            <polyline points={pathPoints.map(p => `${p.x},${p.y}`).join(" ")}
-              fill="none" stroke="#ffffff" strokeWidth="18" strokeLinecap="round" strokeLinejoin="round" opacity="0.95" />
-            <polyline points={pathPoints.map(p => `${p.x},${p.y}`).join(" ")}
-              fill="none" stroke="#e8621a" strokeWidth="9" strokeDasharray="1 26" strokeLinecap="round" strokeLinejoin="round">
-              <animate attributeName="stroke-dashoffset" from="27" to="0" dur="0.7s" repeatCount="indefinite" />
-            </polyline>
-          </g>
-        )}
-
-        {/* "You are here" marker — heading-aware cone + dot */}
-        <g transform={`translate(${userX},${userY})`} style={{ pointerEvents: "none" }}>
-          <path d="M0 0 L-70 -120 A140 140 0 0 1 70 -120 Z" fill="rgba(26,92,42,0.22)" transform={`rotate(${heading})`} style={{ transformOrigin: "0px 0px" }} />
-          <g transform={`rotate(${heading})`}>
-            <circle r="25" fill="#1a5c2a" stroke="#fff" strokeWidth="4" />
-            <path d="M0 -15 L12 10 L0 4 L-12 10 Z" fill="#fff" />
-          </g>
-        </g>
-      </svg>
-      <div className="sim-badge">
-        <Compass size={10} className="animate-spin-slow" />
-        <span>{userX}, {userY} | {heading}°{motionActive ? ` | ${stepCount}` : ''}</span>
-      </div>
-    </div>
->>>>>>> b04b418c562b2fa9f54c4476f46bceede8752ea4
   );
 
   return (
@@ -1856,7 +1786,7 @@ export default function ArFinder({ onBack, initialStall }) {
                   <li>Follow the route on the floor map; the camera marker points to your stall.</li>
                   <li>Use the right-side HUD to simulate walking or rotating.</li>
                   <li>Tap anywhere on the floor map to set your position manually.</li>
-                  <li>Tap <strong>STEP</strong> to enable automatic step detection — walk and the map updates automatically!</li>
+                  <li>Tap <strong>Next Checkpoint</strong> to manually advance your location along the route.</li>
                 </ul>
               </div>
             )}
@@ -1904,6 +1834,19 @@ export default function ArFinder({ onBack, initialStall }) {
 
           {/* Right HUD */}
           <div style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", zIndex: 20, display: "flex", flexDirection: "column", gap: 5 }}>
+            
+            {/* Next Checkpoint Button */}
+            {pathPoints && pathPoints.length > 1 && !isArrived && (
+              <button 
+                onClick={advanceToNextCheckpoint}
+                className="ctrl-btn motion-on"
+                style={{ marginBottom: 4 }}
+                title="Next Checkpoint"
+              >
+                <Footprints size={17} />
+              </button>
+            )}
+
             {/* GPS Button */}
             <button onClick={toggleGps} className={`ctrl-btn${gpsActive ? " primary" : ""}`}
               style={gpsActive ? { background: "#1a5c2a", color: "#fff", borderColor: "#1a5c2a", marginBottom: 4 } : { marginBottom: 4 }}
@@ -1911,20 +1854,7 @@ export default function ArFinder({ onBack, initialStall }) {
               <Locate size={15} />
             </button>
 
-            {/* Step Detection Button */}
-            <button
-              onClick={() => {
-                setMotionActive(m => !m);
-                if (motionActive) {
-                  setToastMsg('Step detection OFF.');
-                }
-              }}
-              className={`ctrl-btn${motionActive ? " motion-on" : ""}`}
-              style={{ marginBottom: 4 }}
-              title="Toggle Step Detection"
-            >
-              <Footprints size={17} />
-            </button>
+            
 
             {!hasOrientation && (
               <button onClick={requestCompassPermission} className="ctrl-btn" style={{ background: "#e8621a", color: "#fff", borderColor: "#e8621a", marginBottom: 4 }}>
