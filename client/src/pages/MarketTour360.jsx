@@ -1105,9 +1105,14 @@ export default function MarketTour360() {
         updateCamera()
       }
 
-      function onMouseUp() {
+      function onMouseUp(e) {
         isDragging.current = false
         setCursor('grab')
+        if (e) {
+          const dx = Math.abs(e.clientX - clickStartX)
+          const dy = Math.abs(e.clientY - clickStartY)
+          if (dx < 10 && dy < 10) handleNextStall()
+        }
       }
 
       // Touch handlers
@@ -1131,11 +1136,18 @@ export default function MarketTour360() {
         updateCamera()
       }
 
-      function onTouchEnd() {
+      function onTouchEnd(e) {
         isDragging.current = false
         setCursor('grab')
-        // Reposition chevrons immediately after panning — no extra tap needed
-        updateCamera()
+        
+        if (e && e.changedTouches && e.changedTouches.length > 0) {
+          const dx = Math.abs(e.changedTouches[0].clientX - clickStartX)
+          const dy = Math.abs(e.changedTouches[0].clientY - clickStartY)
+          if (dx < 10 && dy < 10) handleNextStall()
+        } else {
+          // If the browser doesn't populate changedTouches properly, fallback to simple tap check
+          handleNextStall()
+        }
       }
 
       renderer.domElement.addEventListener('mousedown', onMouseDown)
