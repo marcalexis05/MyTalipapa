@@ -26,7 +26,11 @@ import MarketTour360 from './pages/MarketTour360'
 import AdminRequests from './pages/Admin/AdminRequests'
 import ContractorRequests from './pages/Contractor/ContractorRequests'
 import AdminLayout from './components/AdminLayout'
-import ContractorLayout from './components/ContractorLayout'
+import ContractorLayout from './components/ContractorLayout';
+import PalengkeMap from './components/PalengkeMap';
+import 'mapbox-gl/dist/mapbox-gl.css';
+import './components/PalengkeMap.css';
+import './components/PanoramaViewer.css';
 
 export default function App() {
   return (
@@ -70,6 +74,7 @@ export default function App() {
         <Route path="/renter/market-tour" element={<MarketTour360 />} />
         <Route path="/renter/*" element={<RenterLayout />} />
         <Route path="/tour" element={<MarketTour360 />} />
+        <Route path="/palengke" element={<PalengkeMap />} />
 
         {/* Unknown URLs fall back to the landing page instead of a blank screen */}
         <Route path="*" element={<Navigate to="/" replace />} />

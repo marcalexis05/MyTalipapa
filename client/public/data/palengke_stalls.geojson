@@ -1,0 +1,29 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "stallId": "stall-01",
+        "name": "Stall 1",
+        "image": "/images/360/stall-01.jpg"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [120.9825, 14.5998]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "stallId": "stall-02",
+        "name": "Stall 2",
+        "image": "/images/360/stall-02.jpg"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [120.9830, 14.6000]
+      }
+    }
+  ]
+}
