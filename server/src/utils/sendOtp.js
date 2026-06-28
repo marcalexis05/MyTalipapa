@@ -24,8 +24,9 @@ async function sendEmailOtp(email, otp, type = 'verify', fullName = '') {
   }
 
   try {
+    const smtpHost = process.env.SMTP_HOST === 'smtp.example.com' ? 'smtp.gmail.com' : (process.env.SMTP_HOST || 'smtp.gmail.com');
     const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || 'smtp.gmail.com',
+      host: smtpHost,
       port: parseInt(process.env.SMTP_PORT || '587'),
       secure: process.env.SMTP_PORT === '465',
       auth: {
@@ -182,6 +183,12 @@ async function sendEmailOtp(email, otp, type = 'verify', fullName = '') {
     return { success: true, mocked: false };
   } catch (error) {
     console.error('Failed to send SMTP email:', error);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('--------------------------------------------------');
+      console.log(`[DEV FALLBACK] SMTP failed. Mocking successful delivery of OTP code: ${otp}`);
+      console.log('--------------------------------------------------');
+      return { success: true, mocked: true };
+    }
     throw error;
   }
 }
