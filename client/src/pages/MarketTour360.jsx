@@ -1031,7 +1031,7 @@ export default function MarketTour360() {
 
         // Heading the panorama faces at theta = 0, resolved from the PHOTO (so a
         // reused photo always yields the same cone) rather than the display column.
-        northOffset = getPanoBaseHeading(stateRef.current.currentStall, stateRef.current.activeSectionKey);
+        northOffset = 0;
 
         const isZoneEMeat = stateRef.current.activeSectionKey === 'meat' && upsideDownStalls.includes(stateRef.current.currentStall.id);
         const isZoneAFish = stateRef.current.activeSectionKey === 'fish' && zoneAFishUpsideDown.includes(stateRef.current.currentStall.id);
