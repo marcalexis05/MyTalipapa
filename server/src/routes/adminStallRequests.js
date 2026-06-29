@@ -21,7 +21,7 @@ router.use((req, res, next) => {
 // GET pending requests
 router.get('/pending', async (req, res) => {
   try {
-    const pending = await StallRequest.find({ status: 'pending' }).populate('stallId');
+    const pending = await StallRequest.find({ status: 'pending', archived: { $ne: true } }).populate('stallId');
     res.json(pending);
   } catch (err) {
     console.error('Error fetching pending stall requests:', err);
@@ -63,10 +63,11 @@ router.post('/review', async (req, res) => {
     res.status(500).json({ error: 'Failed to review request' });
   }
 });
+
 // GET approved requests
 router.get('/approved', async (req, res) => {
   try {
-    const approved = await StallRequest.find({ status: 'approved' }).populate('stallId');
+    const approved = await StallRequest.find({ status: 'approved', archived: { $ne: true } }).populate('stallId');
     res.json(approved);
   } catch (err) {
     console.error('Error fetching approved stall requests:', err);
@@ -77,11 +78,64 @@ router.get('/approved', async (req, res) => {
 // GET rejected requests
 router.get('/rejected', async (req, res) => {
   try {
-    const rejected = await StallRequest.find({ status: 'rejected' }).populate('stallId');
+    const rejected = await StallRequest.find({ status: 'rejected', archived: { $ne: true } }).populate('stallId');
     res.json(rejected);
   } catch (err) {
     console.error('Error fetching rejected stall requests:', err);
     res.status(500).json({ error: 'Failed to fetch rejected requests' });
+  }
+});
+
+// GET archived requests
+router.get('/archived', async (req, res) => {
+  try {
+    const archived = await StallRequest.find({ archived: true }).populate('stallId');
+    res.json(archived);
+  } catch (err) {
+    console.error('Error fetching archived stall requests:', err);
+    res.status(500).json({ error: 'Failed to fetch archived requests' });
+  }
+});
+
+// DELETE request (permanently remove)
+router.delete('/:id', async (req, res) => {
+  try {
+    const deleted = await StallRequest.findByIdAndDelete(req.params.id);
+    if (!deleted) return res.status(404).json({ error: 'Request not found' });
+    res.json({ message: 'Request deleted successfully' });
+  } catch (err) {
+    console.error('Error deleting stall request:', err);
+    res.status(500).json({ error: 'Failed to delete request' });
+  }
+});
+
+// PUT archive request
+router.put('/:id/archive', async (req, res) => {
+  try {
+    const request = await StallRequest.findById(req.params.id);
+    if (!request) return res.status(404).json({ error: 'Request not found' });
+    request.archived = true;
+    request.updatedAt = new Date();
+    await request.save();
+    res.json({ message: 'Request archived successfully', request });
+  } catch (err) {
+    console.error('Error archiving stall request:', err);
+    res.status(500).json({ error: 'Failed to archive request' });
+  }
+});
+
+// PUT unarchive request
+router.put('/:id/unarchive', async (req, res) => {
+  try {
+    const request = await StallRequest.findById(req.params.id);
+    if (!request) return res.status(404).json({ error: 'Request not found' });
+    request.archived = false;
+    request.updatedAt = new Date();
+    await request.save();
+    res.json({ message: 'Request unarchived successfully', request });
+  } catch (err) {
+    console.error('Error unarchiving stall request:', err);
+    res.status(500).json({ error: 'Failed to unarchive request' });
   }
 });
 

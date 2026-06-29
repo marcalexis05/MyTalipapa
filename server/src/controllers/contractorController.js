@@ -700,7 +700,7 @@ exports.getArchivedRecords = async (req, res) => {
         name: app.fullName,
         phone: app.contactNumber,
         email: app.email,
-        stall: `Stall #${app.preferredStall}`,
+        stall: stall ? `Stall #${stall.stallNumber}` : `Stall #${app.preferredStall}`,
         status: 'archived',
         since: app.reviewedAt ? new Date(app.reviewedAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '',
         archivedAt: app.archivedAt ? new Date(app.archivedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '',
@@ -799,7 +799,7 @@ exports.getAdminArchivedRecords = async (req, res) => {
         name: app.fullName,
         phone: app.contactNumber,
         email: app.email,
-        stall: `Stall #${app.preferredStall}`,
+        stall: stall ? `Stall #${stall.stallNumber}` : `Stall #${app.preferredStall}`,
         status: 'archived',
         since: app.reviewedAt ? new Date(app.reviewedAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '',
         archivedAt: app.archivedAt ? new Date(app.archivedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '',
@@ -1091,5 +1091,57 @@ exports.toggleStallStatus = async (req, res) => {
   } catch (err) {
     console.error('toggleStallStatus error:', err);
     return res.status(500).json({ error: 'Server error: ' + err.message });
+  }
+};
+
+// ── POST /api/admin/records/:renterId/unarchive ─────────
+exports.unarchiveRenter = async (req, res) => {
+  try {
+    const { renterId } = req.params;
+    const Application = require('../models/Application');
+    const Stall = require('../models/Stall');
+    const Notification = require('../models/Notification');
+
+    const app = await Application.findById(renterId);
+    if (!app) {
+      return res.status(404).json({ error: 'Renter application not found' });
+    }
+
+    const stall = await findStallByAppStallNumber(app.preferredStall, app.intendedBusinessUse);
+    if (stall && stall.status === 'occupied') {
+      return res.status(400).json({ error: `Cannot restore renter. Stall #${stall.stallNumber} is currently occupied by another tenant.` });
+    }
+
+    app.archived = false;
+    app.archivedAt = null;
+    await app.save();
+
+    if (stall) {
+      await Stall.findByIdAndUpdate(stall._id, {
+        $set: {
+          status: 'occupied',
+          tenant: {
+            name: app.fullName,
+            contact: app.contactNumber,
+            email: app.email,
+            leaseStart: app.reviewedAt || new Date(),
+            leaseEnd: null,
+          },
+          updatedAt: new Date(),
+        }
+      });
+    }
+
+    await Notification.create({
+      recipient: 'admin',
+      title: 'Renter Restored',
+      message: `Renter ${app.fullName} has been unarchived and restored to Stall #${stall ? stall.stallNumber : app.preferredStall}.`,
+      link: '/admin/records'
+    });
+
+    res.json({ message: 'Renter restored successfully', renter: app });
+  } catch (err) {
+    console.error('unarchiveRenter error:', err);
+    res.status(500).json({ error: 'Failed to restore renter' });
   }
 };

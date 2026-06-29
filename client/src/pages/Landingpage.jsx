@@ -176,7 +176,7 @@ export default function Landingpage() {
 
   const handleInstallClick = async () => {
     if (!installPrompt) {
-      window.open('https://my-talipapa-market.vercel.app', '_blank');
+      window.open('https://mytalipapa-market.vercel.app', '_blank');
       return;
     }
     installPrompt.prompt();
@@ -1071,7 +1071,7 @@ export default function Landingpage() {
               <h4 className="text-white font-bold text-xs uppercase tracking-wider">Get Mobile App</h4>
               <div className="bg-white p-2 rounded-xl inline-block shadow-md">
                 <img
-                  src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&ecc=M&data=https%3A%2F%2Fmy-talipapa-market.vercel.app"
+                  src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&ecc=M&data=https%3A%2F%2Fmytalipapa-market.vercel.app"
                   alt="Scan to visit MyTalipapa"
                   width="84"
                   height="84"

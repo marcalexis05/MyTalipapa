@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronRight, Store, Trash2, User, Mail, Calendar, Info, FileText } from 'lucide-react';
+import { ChevronRight, Store, Trash2, User, Mail, Calendar, Info, FileText, Archive, RotateCcw } from 'lucide-react';
 import { useCurrentUser, getToken } from '../../utils/auth';
 
 import NotificationBell from '../../components/NotificationBell';
@@ -13,7 +13,7 @@ const LogoutIcon = () => (
   </svg>
 );
 
-const TABS = ["Pending", "Approved", "Rejected"];
+const TABS = ["Pending", "Approved", "Rejected", "Archived"];
 
 export default function AdminRequests() {
   const [requestType, setRequestType] = useState('additions'); // 'additions' or 'removals'
@@ -43,6 +43,36 @@ export default function AdminRequests() {
   const [processingId, setProcessingId] = useState(null);
   const [animating, setAnimating] = useState({});
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: null,
+    isAlert: false,
+  });
+
+  const showAlert = (title, message) => {
+    setConfirmModal({
+      isOpen: true,
+      title,
+      message,
+      onConfirm: () => setConfirmModal(prev => ({ ...prev, isOpen: false })),
+      isAlert: true,
+    });
+  };
+
+  const showConfirm = (title, message, onConfirm) => {
+    setConfirmModal({
+      isOpen: true,
+      title,
+      message,
+      onConfirm: () => {
+        onConfirm();
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+      },
+      isAlert: false,
+    });
+  };
 
   const navigate = useNavigate();
   const { userName, loading: authLoading } = useCurrentUser();
@@ -79,6 +109,8 @@ export default function AdminRequests() {
         ? '/api/admin/stall-requests/approved'
         : additionTab === 'Rejected'
         ? '/api/admin/stall-requests/rejected'
+        : additionTab === 'Archived'
+        ? '/api/admin/stall-requests/archived'
         : '/api/admin/stall-requests/pending';
 
     try {
@@ -105,6 +137,8 @@ export default function AdminRequests() {
         ? '/api/stall-removal-requests/admin/requests/approved'
         : removalTab === 'Rejected'
         ? '/api/stall-removal-requests/admin/requests/rejected'
+        : removalTab === 'Archived'
+        ? '/api/stall-removal-requests/admin/requests/archived'
         : '/api/stall-removal-requests/admin/requests/pending';
 
     try {
@@ -157,7 +191,7 @@ export default function AdminRequests() {
       fetchHeaderCounts();
     } catch (err) {
       console.error('Failed to update stall request:', err);
-      alert('Action failed. Please try again.');
+      showAlert('Error', 'Action failed. Please try again.');
     } finally {
       setProcessingId(null);
       setAnimating(prev => { const next = { ...prev }; delete next[id]; return next; });
@@ -187,12 +221,174 @@ export default function AdminRequests() {
       // Reset modal state
       setSelectedRemovalRequest(null);
       setAdminNotes('');
-      alert(`Removal request has been successfully ${action}d!`);
+      showAlert('Success', `Removal request has been successfully ${action}d!`);
     } catch (err) {
       setActionStatus(err.message);
     } finally {
       setSubmittingAction(false);
     }
+  };
+
+  // Stall Addition - Archive
+  const handleArchiveAddition = (id) => {
+    showConfirm(
+      'Archive Request',
+      'Are you sure you want to archive this stall addition request?',
+      async () => {
+        try {
+          const res = await fetch(`/api/admin/stall-requests/${id}/archive`, {
+            method: 'PUT',
+            headers: {
+              Authorization: `Bearer ${getToken()}`,
+            },
+          });
+          if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+          
+          showAlert('Success', 'Stall addition request archived successfully.');
+          setSelectedStallRequest(null);
+          fetchStallAdditions();
+          fetchHeaderCounts();
+        } catch (err) {
+          console.error('Failed to archive addition request:', err);
+          showAlert('Error', 'Failed to archive request.');
+        }
+      }
+    );
+  };
+
+  // Stall Addition - Delete
+  const handleDeleteAddition = (id) => {
+    showConfirm(
+      'Delete Request',
+      'Are you sure you want to delete this request permanently?',
+      async () => {
+        try {
+          const res = await fetch(`/api/admin/stall-requests/${id}`, {
+            method: 'DELETE',
+            headers: {
+              Authorization: `Bearer ${getToken()}`,
+            },
+          });
+          if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+
+          showAlert('Success', 'Stall addition request deleted successfully.');
+          setSelectedStallRequest(null);
+          fetchStallAdditions();
+          fetchHeaderCounts();
+        } catch (err) {
+          console.error('Failed to delete addition request:', err);
+          showAlert('Error', 'Failed to delete request.');
+        }
+      }
+    );
+  };
+
+  // Stall Removal - Archive
+  const handleArchiveRemoval = (id) => {
+    showConfirm(
+      'Archive Request',
+      'Are you sure you want to archive this stall removal request?',
+      async () => {
+        try {
+          const res = await fetch(`/api/stall-removal-requests/admin/requests/${id}/archive`, {
+            method: 'PUT',
+            headers: {
+              Authorization: `Bearer ${getToken()}`,
+            },
+          });
+          if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+
+          showAlert('Success', 'Stall removal request archived successfully.');
+          setSelectedRemovalRequest(null);
+          fetchRemovalRequests();
+          fetchHeaderCounts();
+        } catch (err) {
+          console.error('Failed to archive removal request:', err);
+          showAlert('Error', 'Failed to archive request.');
+        }
+      }
+    );
+  };
+
+  // Stall Removal - Delete
+  const handleDeleteRemoval = (id) => {
+    showConfirm(
+      'Delete Request',
+      'Are you sure you want to delete this request permanently?',
+      async () => {
+        try {
+          const res = await fetch(`/api/stall-removal-requests/admin/requests/${id}`, {
+            method: 'DELETE',
+            headers: {
+              Authorization: `Bearer ${getToken()}`,
+            },
+          });
+          if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+
+          showAlert('Success', 'Stall removal request deleted permanently.');
+          setSelectedRemovalRequest(null);
+          fetchRemovalRequests();
+          fetchHeaderCounts();
+        } catch (err) {
+          console.error('Failed to delete removal request:', err);
+          showAlert('Error', 'Failed to delete request.');
+        }
+      }
+    );
+  };
+
+  // Stall Addition - Unarchive
+  const handleUnarchiveAddition = (id) => {
+    showConfirm(
+      'Unarchive Request',
+      'Are you sure you want to restore/unarchive this stall addition request?',
+      async () => {
+        try {
+          const res = await fetch(`/api/admin/stall-requests/${id}/unarchive`, {
+            method: 'PUT',
+            headers: {
+              Authorization: `Bearer ${getToken()}`,
+            },
+          });
+          if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+          
+          showAlert('Success', 'Stall addition request restored successfully.');
+          setSelectedStallRequest(null);
+          fetchStallAdditions();
+          fetchHeaderCounts();
+        } catch (err) {
+          console.error('Failed to unarchive addition request:', err);
+          showAlert('Error', 'Failed to restore request.');
+        }
+      }
+    );
+  };
+
+  // Stall Removal - Unarchive
+  const handleUnarchiveRemoval = (id) => {
+    showConfirm(
+      'Unarchive Request',
+      'Are you sure you want to restore/unarchive this stall removal request?',
+      async () => {
+        try {
+          const res = await fetch(`/api/stall-removal-requests/admin/requests/${id}/unarchive`, {
+            method: 'PUT',
+            headers: {
+              Authorization: `Bearer ${getToken()}`,
+            },
+          });
+          if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+
+          showAlert('Success', 'Stall removal request restored successfully.');
+          setSelectedRemovalRequest(null);
+          fetchRemovalRequests();
+          fetchHeaderCounts();
+        } catch (err) {
+          console.error('Failed to unarchive removal request:', err);
+          showAlert('Error', 'Failed to restore request.');
+        }
+      }
+    );
   };
 
   const handleLogout = () => {
@@ -213,6 +409,59 @@ export default function AdminRequests() {
             <div className="logout-modal-actions">
               <button className="logout-cancel-btn" onClick={() => setShowLogoutModal(false)}>Cancel</button>
               <button className="logout-confirm-btn" onClick={handleLogout}>Yes, Log Out</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Confirmation / Alert Modal */}
+      {confirmModal.isOpen && (
+        <div className="logout-overlay" onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}>
+          <div className="logout-modal" onClick={e => e.stopPropagation()}>
+            <div className="logout-modal-icon" style={{
+              background: confirmModal.title === 'Error' || confirmModal.title.includes('Delete') ? '#fee2e2' : '#f0fdf4',
+              color: confirmModal.title === 'Error' || confirmModal.title.includes('Delete') ? '#dc2626' : '#1a5c2a',
+            }}>
+              {confirmModal.title === 'Error' ? (
+                <Info size={24} />
+              ) : confirmModal.title.includes('Delete') ? (
+                <Trash2 size={24} />
+              ) : confirmModal.title.includes('Archive') ? (
+                <Archive size={24} />
+              ) : (
+                <Store size={24} />
+              )}
+            </div>
+            <h3 className="logout-modal-title">{confirmModal.title}</h3>
+            <p className="logout-modal-msg">{confirmModal.message}</p>
+            <div className="logout-modal-actions">
+              {confirmModal.isAlert ? (
+                <button 
+                  className="w-full py-3 rounded-xl bg-[#1a5c2a] hover:bg-[#154d23] text-white text-xs font-bold border-none cursor-pointer transition-all" 
+                  onClick={confirmModal.onConfirm}
+                >
+                  OK
+                </button>
+              ) : (
+                <>
+                  <button 
+                    className="flex-1 py-3 rounded-xl border border-gray-200 text-gray-500 text-xs font-bold hover:bg-gray-50 transition-colors bg-white cursor-pointer" 
+                    onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    className={`flex-1 py-3 rounded-xl text-white text-xs font-bold border-none cursor-pointer transition-all ${
+                      confirmModal.title.includes('Delete') 
+                        ? 'bg-red-650 hover:bg-red-750' 
+                        : 'bg-[#1a5c2a] hover:bg-[#154d23]'
+                    }`}
+                    onClick={confirmModal.onConfirm}
+                  >
+                    Yes, Proceed
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -361,10 +610,46 @@ export default function AdminRequests() {
                               Approve
                             </button>
                           </div>
+                        ) : additionTab === "Archived" ? (
+                          <div className="flex items-center gap-2">
+                            <span className={`apps-status-chip apps-status-${req.status.toLowerCase()}`}>
+                              {req.status === "approved" ? "✓ Approved" : "✗ Rejected"}
+                            </span>
+                            <button
+                              title="Restore Request"
+                              onClick={(e) => { e.stopPropagation(); handleUnarchiveAddition(req._id); }}
+                              className="p-1.5 text-gray-400 hover:text-green-650 rounded-lg hover:bg-green-50 transition-all border-none bg-transparent cursor-pointer"
+                            >
+                              <RotateCcw size={15} />
+                            </button>
+                            <button
+                              title="Delete Request"
+                              onClick={(e) => { e.stopPropagation(); handleDeleteAddition(req._id); }}
+                              className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-50 transition-all border-none bg-transparent cursor-pointer"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          </div>
                         ) : (
-                          <span className={`apps-status-chip apps-status-${req.status.toLowerCase()}`}>
-                            {req.status === "approved" ? "✓ Approved" : "✗ Rejected"}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className={`apps-status-chip apps-status-${req.status.toLowerCase()}`}>
+                              {req.status === "approved" ? "✓ Approved" : "✗ Rejected"}
+                            </span>
+                            <button
+                              title="Archive Request"
+                              onClick={(e) => { e.stopPropagation(); handleArchiveAddition(req._id); }}
+                              className="p-1.5 text-gray-400 hover:text-amber-600 rounded-lg hover:bg-amber-50 transition-all border-none bg-transparent cursor-pointer"
+                            >
+                              <Archive size={15} />
+                            </button>
+                            <button
+                              title="Delete Request"
+                              onClick={(e) => { e.stopPropagation(); handleDeleteAddition(req._id); }}
+                              className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-50 transition-all border-none bg-transparent cursor-pointer"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          </div>
                         )}
                       </div>
                     </div>
@@ -440,7 +725,7 @@ export default function AdminRequests() {
                         >
                           <div>
                             {/* Top Row */}
-                            <div className="flex justify-between items-start mb-3">
+                            <div className="flex justify-between items-center mb-3">
                               <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
                                 req.status === 'approved' 
                                   ? 'text-green-700 bg-green-50' 
@@ -450,7 +735,44 @@ export default function AdminRequests() {
                               }`}>
                                 {req.status}
                               </span>
-                              <span className="text-[10px] text-gray-400 font-semibold">{dateString}</span>
+                              <div className="flex items-center gap-1">
+                                {removalTab === 'Archived' ? (
+                                  <>
+                                    <button
+                                      title="Restore Request"
+                                      onClick={(e) => { e.stopPropagation(); handleUnarchiveRemoval(req._id); }}
+                                      className="p-1 text-gray-400 hover:text-green-600 rounded hover:bg-green-50 transition-all border-none bg-transparent cursor-pointer"
+                                    >
+                                      <RotateCcw size={13} />
+                                    </button>
+                                    <button
+                                      title="Delete Request"
+                                      onClick={(e) => { e.stopPropagation(); handleDeleteRemoval(req._id); }}
+                                      className="p-1 text-gray-400 hover:text-red-500 rounded hover:bg-red-50 transition-all border-none bg-transparent cursor-pointer"
+                                    >
+                                      <Trash2 size={13} />
+                                    </button>
+                                  </>
+                                ) : req.status !== 'pending' && (
+                                  <>
+                                    <button
+                                      title="Archive Request"
+                                      onClick={(e) => { e.stopPropagation(); handleArchiveRemoval(req._id); }}
+                                      className="p-1 text-gray-400 hover:text-amber-600 rounded hover:bg-amber-50 transition-all border-none bg-transparent cursor-pointer"
+                                    >
+                                      <Archive size={13} />
+                                    </button>
+                                    <button
+                                      title="Delete Request"
+                                      onClick={(e) => { e.stopPropagation(); handleDeleteRemoval(req._id); }}
+                                      className="p-1 text-gray-400 hover:text-red-500 rounded hover:bg-red-50 transition-all border-none bg-transparent cursor-pointer"
+                                    >
+                                      <Trash2 size={13} />
+                                    </button>
+                                  </>
+                                )}
+                                <span className="text-[10px] text-gray-400 font-semibold ml-1">{dateString}</span>
+                              </div>
                             </div>
 
                             {/* Location & Stall */}
@@ -594,6 +916,31 @@ export default function AdminRequests() {
               </div>
             )}
 
+            {/* Archive / Delete Actions */}
+            <div className="flex gap-2 mb-4">
+              {additionTab === 'Archived' ? (
+                <button
+                  className="flex-1 py-2.5 rounded-xl border border-gray-200 text-green-650 text-xs font-bold hover:bg-green-50 transition-colors flex items-center justify-center gap-1 cursor-pointer bg-white"
+                  onClick={() => handleUnarchiveAddition(selectedStallRequest._id)}
+                >
+                  <RotateCcw size={14} /> Restore
+                </button>
+              ) : (
+                <button
+                  className="flex-1 py-2.5 rounded-xl border border-gray-200 text-gray-500 text-xs font-bold hover:bg-gray-50 transition-colors flex items-center justify-center gap-1 cursor-pointer bg-white"
+                  onClick={() => handleArchiveAddition(selectedStallRequest._id)}
+                >
+                  <Archive size={14} /> Archive
+                </button>
+              )}
+              <button
+                className="flex-1 py-2.5 rounded-xl border border-red-200 text-red-650 text-xs font-bold hover:bg-red-50 transition-colors flex items-center justify-center gap-1 cursor-pointer bg-white"
+                onClick={() => handleDeleteAddition(selectedStallRequest._id)}
+              >
+                <Trash2 size={14} /> Delete
+              </button>
+            </div>
+
             <button className="stall-modal-close w-full py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200" onClick={() => setSelectedStallRequest(null)}>
               Close
             </button>
@@ -673,8 +1020,33 @@ export default function AdminRequests() {
               )}
             </div>
 
+            {/* Archive / Delete Actions */}
+            <div className="flex w-full gap-2">
+              {removalTab === 'Archived' ? (
+                <button 
+                  className="flex-1 py-2.5 rounded-xl border border-gray-200 text-green-600 text-xs font-bold hover:bg-green-50 transition-colors flex items-center justify-center gap-1 bg-white cursor-pointer"
+                  onClick={() => handleUnarchiveRemoval(selectedRemovalRequest._id)}
+                >
+                  <RotateCcw size={14} /> Restore Request
+                </button>
+              ) : (
+                <button 
+                  className="flex-1 py-2.5 rounded-xl border border-gray-200 text-gray-500 text-xs font-bold hover:bg-gray-50 transition-colors flex items-center justify-center gap-1 bg-white cursor-pointer"
+                  onClick={() => handleArchiveRemoval(selectedRemovalRequest._id)}
+                >
+                  <Archive size={14} /> Archive Request
+                </button>
+              )}
+              <button 
+                className="flex-1 py-2.5 rounded-xl border border-red-200 text-red-600 text-xs font-bold hover:bg-red-50 transition-colors flex items-center justify-center gap-1 bg-white cursor-pointer"
+                onClick={() => handleDeleteRemoval(selectedRemovalRequest._id)}
+              >
+                <Trash2 size={14} /> Delete Request
+              </button>
+            </div>
+
             {/* Modal Footer Buttons */}
-            <div className="flex w-full gap-3 mt-2">
+            <div className="flex w-full gap-3 mt-1 pt-2 border-t border-gray-100">
               <button 
                 className="flex-1 py-3 rounded-xl border border-gray-200 text-gray-500 text-xs font-bold hover:bg-gray-50 transition-colors"
                 onClick={() => setSelectedRemovalRequest(null)}
@@ -688,14 +1060,14 @@ export default function AdminRequests() {
                     disabled={submittingAction}
                     onClick={() => handleRemovalAction(selectedRemovalRequest._id, 'reject')}
                   >
-                    Reject Request
+                    Reject
                   </button>
                   <button 
                     className="flex-1 py-3 rounded-xl bg-[#1a5c2a] hover:bg-[#154d23] text-white text-xs font-bold transition-all disabled:opacity-50"
                     disabled={submittingAction}
                     onClick={() => handleRemovalAction(selectedRemovalRequest._id, 'approve')}
                   >
-                    Approve Request
+                    Approve
                   </button>
                 </>
               )}

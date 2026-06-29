@@ -73,6 +73,12 @@ router.get('/stalls', contractorController.getStalls);
 
 // Admin records endpoint (approved renter records)
 router.get('/records', contractorController.getRecords);
+router.get('/records/archived', contractorController.getAdminArchivedRecords);
+router.get('/admin/records/archived', contractorController.getAdminArchivedRecords);
+router.post('/records/:renterId/archive', contractorController.archiveRenter);
+router.post('/admin/records/:renterId/archive', contractorController.archiveRenter);
+router.post('/records/:renterId/unarchive', contractorController.unarchiveRenter);
+router.post('/admin/records/:renterId/unarchive', contractorController.unarchiveRenter);
 
 // Admin archive request handling
 router.get('/archive-requests', contractorController.getArchiveRequests);
