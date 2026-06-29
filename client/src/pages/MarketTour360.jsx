@@ -13,6 +13,7 @@ import {
   ArrowLeft,
   X,
   MapPin,
+  Map as MapIcon,
   Zap,
   Maximize2,
   Minimize2,
@@ -401,6 +402,7 @@ export default function MarketTour360() {
   const [stallDropdownOpen, setStallDropdownOpen] = useState(false)
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true)
+  const [showFloorMap, setShowFloorMap] = useState(true)
   // Route finder state for the expanded map
   const [routeFrom, setRouteFrom] = useState(null) // { secKey, stallId }
   const [routeTo, setRouteTo] = useState(null)     // { secKey, stallId }
@@ -822,13 +824,70 @@ export default function MarketTour360() {
       });
   }, []);
 
-  // Recreate hotspots when showBadges or destinationStall updates (NOT sectionsData —
-  // triggerSceneTransition already handles that to prevent double-calls)
+  const createGroundArrowTexture = (THREE) => {
+    const S = 256;
+    const canvas = document.createElement('canvas');
+    canvas.width = S; canvas.height = S;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, S, S);
+    const cx = S / 2;
+    const cy = S / 2;
+
+    // Draw the translucent white circle background
+    ctx.beginPath();
+    ctx.arc(cx, cy, 110, 0, 2 * Math.PI);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+    ctx.fill();
+
+    // Draw the solid white chevron inside
+    ctx.fillStyle = 'rgba(255, 255, 255, 1.0)';
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+    ctx.shadowBlur = 10;
+    ctx.shadowOffsetY = 4;
+    
+    ctx.beginPath();
+    // A nice thick arrowhead pointing forward (upwards on the canvas)
+    ctx.moveTo(cx, cy - 40);         // Top tip
+    ctx.lineTo(cx + 45, cy + 30);    // Bottom right
+    ctx.lineTo(cx, cy + 10);         // Inner bottom
+    ctx.lineTo(cx - 45, cy + 30);    // Bottom left
+    ctx.closePath();
+    ctx.fill();
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.needsUpdate = true;
+    return texture;
+  };
+
+  // (Re)build ground navigation arrows
+  const recreateHotspots = (scene, THREE) => {
+    if (!scene || !THREE) return;
+    hotspotMeshes.current.forEach((m) => {
+      scene.remove(m);
+      m.geometry?.dispose?.();
+      m.material?.dispose?.();
+    });
+    hotspotMeshes.current = [];
+    const tex = createGroundArrowTexture(THREE);
+
+    // Create a single 'smart cursor' forward chevron
+    const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthTest: false, depthWrite: false, opacity: 0 });
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(50, 50), mat);
+    mesh.renderOrder = 5;
+    mesh.visible = false;
+    mesh.userData = { type: 'smart_cursor', label: 'Forward' };
+    scene.add(mesh);
+    hotspotMeshes.current.push(mesh);
+
+    if (updateCameraRef.current) updateCameraRef.current();
+  };
+
+  // Rebuild the ground arrows whenever the active stall/section changes.
   useEffect(() => {
-    if (sceneRef.current && currentStall && window.THREE) {
-      
+    if (sceneRef.current && window.THREE) {
+      recreateHotspots(sceneRef.current, window.THREE);
     }
-  }, [showBadges, destinationStall]);
+  }, [showBadges, destinationStall, stallIndex, activeSectionKey]);
 
   const isInitialMount = useRef(true);
 
@@ -1118,9 +1177,9 @@ export default function MarketTour360() {
 
         if (hits.length > 0) {
           const uData = hits[0].object.userData
-          if (uData.type === 'next') {
+          if (uData.type === 'next' || uData.type === 'go_forward') {
             handleNextStall()
-          } else if (uData.type === 'prev') {
+          } else if (uData.type === 'prev' || uData.type === 'go_backward') {
             handlePrevStall()
 
           } else if (uData.type === 'info_button') {
@@ -1232,15 +1291,57 @@ export default function MarketTour360() {
         // Optimize: Only update compass state if the degree actually changed
         if (stateRef.current.lastCompassDeg !== compassDeg) {
           stateRef.current.lastCompassDeg = compassDeg;
-          setCompassAngle(compassDeg)
+          
+          // Bypass React state for smooth DOM rotation
+          const cone = document.getElementById('minimap-view-cone');
+          if (cone) {
+            const activeStall = stateRef.current.currentStall;
+            if (activeStall) {
+              const mkRaw = getRawCoordinates(activeStall, stateRef.current.activeSectionKey);
+              if (mkRaw) cone.setAttribute('transform', `rotate(${360 - compassDeg} ${mkRaw.x} ${mkRaw.y})`);
+            }
+          }
+          const compassWrapper = document.getElementById('compass-icon-wrapper');
+          if (compassWrapper) compassWrapper.style.transform = `rotate(${compassDeg}deg)`;
         }
 
+        // Smart Cursor: Position a single forward arrow that only appears
+        // if there is actually a valid neighbor in the direction the camera is facing.
+        const arrowMeshes = hotspotMeshes.current.filter((m) => m.userData.type === 'smart_cursor');
+        if (arrowMeshes.length) {
+          const yFloor = -110;
+          const tilt = 0.1;
+          const placeDist = 130;
+          
+          const cameraHeading = (360 - compassDeg) % 360; 
+          const stall = stateRef.current.currentStall;
+          const nodeId = stall ? getStallNodeId(stall.id, stateRef.current.activeSectionKey) : null;
 
+          arrowMeshes.forEach((mesh) => {
+            const aTheta = theta; // perfectly in front of the camera
+            
+            mesh.position.set(Math.cos(aTheta) * placeDist, yFloor, Math.sin(aTheta) * placeDist);
+            mesh.rotation.set(-Math.PI / 2 + tilt, 0, aTheta - Math.PI / 2);
+            
+            // Check if there is an available path in the direction we are looking
+            let hasPath = false;
+            if (nodeId) {
+               const bestNeighbor = findBestNeighbor(nodeId, cameraHeading, 45);
+               hasPath = !!bestNeighbor;
+            }
+            
+            mesh.material.opacity = 0.85;
+            mesh.visible = hasPath;
+          });
+        }
       } // end updateCamera
 
       // Expose updateCamera so triggerSceneTransition can call it outside this effect
       updateCameraRef.current = updateCamera;
       updateCamera()
+
+      // Build the floor navigation arrows for the initial scene.
+      recreateHotspots(scene, THREE)
 
       // Animation Loop
       function animate() {
@@ -1542,6 +1643,51 @@ export default function MarketTour360() {
           style={{ cursor, filter: privacyMode ? 'blur(6px) contrast(1.05)' : 'none', display: 'block' }}
         />
 
+        {/* ── FLOOR NAVIGATION MAP (mini-map overlay, bottom-left) ── */}
+        {uiVisible && (() => {
+          const mk = currentStall ? getRawCoordinates(currentStall, activeSectionKey) : null;
+          return (
+            <div className="absolute left-2 sm:left-4 bottom-24 sm:bottom-28 z-20 pointer-events-auto">
+              {showFloorMap ? (
+                <div className="bg-slate-100/90 backdrop-blur-md rounded-full shadow-[0_0_20px_rgba(0,0,0,0.3)] border-4 border-white overflow-hidden relative group" style={{ width: 140, height: 140 }}>
+                  <button onClick={() => setShowFloorMap(false)} className="absolute top-2 right-2 bg-black/40 hover:bg-black/70 text-white rounded-full p-1 transition-colors z-30" title="Hide map">
+                    <X size={12} />
+                  </button>
+                  <div className="w-full h-full">
+                    {(() => {
+                      const vbX = Math.max(0, Math.min(2305 - 600, mk ? mk.x - 300 : 0));
+                      const vbY = Math.max(0, Math.min(1824 - 600, mk ? mk.y - 300 : 0));
+                      return (
+                        <svg viewBox={`${vbX} ${vbY} 600 600`} width="100%" height="100%" style={{ display: 'block' }}>
+                          <image href={mapImage} x="-20" y="-15" width="2305" height="1824" preserveAspectRatio="none" style={{ pointerEvents: 'none', opacity: 0.85 }} />
+                          {mk && (
+                            <g>
+                              {/* View Cone */}
+                              <path id="minimap-view-cone" d={`M${mk.x} ${mk.y} L${mk.x - 100} ${mk.y - 200} A200 200 0 0 1 ${mk.x + 100} ${mk.y - 200} Z`} fill="rgba(34, 197, 94, 0.3)" transform={`rotate(${360 - (stateRef.current.lastCompassDeg || 0)} ${mk.x} ${mk.y})`} style={{ pointerEvents: 'none' }} />
+                              <circle cx={mk.x} cy={mk.y} r="90" fill="rgba(220,38,38,0.18)">
+                                <animate attributeName="r" values="70;120;70" dur="1.8s" repeatCount="indefinite" />
+                              </circle>
+                              <circle cx={mk.x} cy={mk.y} r="30" fill="#dc2626" stroke="#fff" strokeWidth="10" />
+                            </g>
+                          )}
+                        </svg>
+                      );
+                    })()}
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowFloorMap(true)}
+                  className="bg-white/90 backdrop-blur-md rounded-full shadow-2xl border border-black/10 w-11 h-11 flex items-center justify-center text-[#1a5c2a] hover:scale-105 transition-transform"
+                  title="Show floor map"
+                >
+                  <MapIcon size={18} />
+                </button>
+              )}
+            </div>
+          );
+        })()}
+
         {/* Floating SHOW CONTROLS Toggle Button (Visible ONLY when UI is hidden) */}
         {!uiVisible && (
           <div className="absolute top-4 right-4 z-40">
@@ -1651,8 +1797,9 @@ export default function MarketTour360() {
           {/* Compass Overlay Dial */}
           <div className={`w-10 h-10 sm:w-14 sm:h-14 mb-0 sm:mb-1 bg-white/90 backdrop-blur-md rounded-full flex items-center justify-center border border-black/10 shadow-2xl relative overflow-hidden transition-all duration-300 ${uiVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-75 pointer-events-none'}`}>
             <div
+              id="compass-icon-wrapper"
               className="w-10 h-10 flex items-center justify-center transition-transform duration-100"
-              style={{ transform: `rotate(${compassAngle}deg)` }}
+              style={{ transform: `rotate(${stateRef.current.lastCompassDeg || 0}deg)` }}
             >
               <CompassIcon size={24} className="text-[#1a5c2a]" />
             </div>
