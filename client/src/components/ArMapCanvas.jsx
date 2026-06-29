@@ -5,6 +5,7 @@ export default function ArMapCanvas({
   userX,
   userY,
   heading,
+  accuracyM,
   motionActive,
   stepCount,
   stallsList,
@@ -13,6 +14,9 @@ export default function ArMapCanvas({
   onMapClick,
   onSelectStall,
 }) {
+  // Localization spread → pixel radius (map is 0.025 m/px ⇒ ×40). Clamped so the
+  // accuracy halo stays readable.
+  const accRadiusPx = accuracyM != null ? Math.max(28, Math.min(260, accuracyM * 40)) : 0;
   return (
     <div className="ar-map-body" style={{ flex: 1, position: "relative", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", minHeight: 0, background: "#f4f4f5" }}>
       <div className="glass animate-slide-up" style={{ position: "absolute", top: 10, left: "50%", transform: "translateX(-50%)", padding: "6px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700, color: "var(--color-text)", boxShadow: "0 2px 8px rgba(0,0,0,0.15)", pointerEvents: "none", zIndex: 10, whiteSpace: "nowrap", maxWidth: "calc(100% - 24px)", overflow: "hidden", textOverflow: "ellipsis" }}>
@@ -27,6 +31,8 @@ export default function ArMapCanvas({
         {stallsList.map(s => {
           if (s.x === 1020 && s.y === 635) return null; // unmapped fallback — skip
           const isDest = s.id === selectedStallId;
+          const h = s.height || 64;
+          const rectY = -(h / 2);
           return (
             <g
               key={s.id}
@@ -37,13 +43,13 @@ export default function ArMapCanvas({
                 onSelectStall(s);
               }}
             >
-              <rect x="-78" y="-32" width="156" height="64" fill="transparent" />
+              <rect x="-78" y={rectY} width="156" height={h} fill="transparent" />
               {isDest && (
                 <>
-                  <rect x="-78" y="-32" width="156" height="64" rx="12" fill="rgba(232,98,26,0.28)" stroke="#e8621a" strokeWidth="5">
+                  <rect x="-78" y={rectY} width="156" height={h} rx="12" fill="rgba(232,98,26,0.28)" stroke="#e8621a" strokeWidth="5">
                     <animate attributeName="stroke-opacity" values="1;0.25;1" dur="1.4s" repeatCount="indefinite" />
                   </rect>
-                  <circle cx="0" cy="-32" r="11" fill="#e8621a" stroke="#fff" strokeWidth="3" />
+                  <circle cx="0" cy={rectY} r="11" fill="#e8621a" stroke="#fff" strokeWidth="3" />
                 </>
               )}
             </g>
@@ -62,8 +68,11 @@ export default function ArMapCanvas({
           </g>
         )}
 
-        {/* "You are here" marker — heading-aware cone + dot */}
+        {/* "You are here" marker — accuracy halo + heading-aware cone + dot */}
         <g transform={`translate(${userX},${userY})`} style={{ pointerEvents: "none" }}>
+          {accRadiusPx > 0 && (
+            <circle r={accRadiusPx} fill="rgba(26,92,42,0.10)" stroke="rgba(26,92,42,0.35)" strokeWidth="3" />
+          )}
           <path d="M0 0 L-70 -120 A140 140 0 0 1 70 -120 Z" fill="rgba(26,92,42,0.22)" transform={`rotate(${heading})`} style={{ transformOrigin: "0px 0px" }} />
           <g transform={`rotate(${heading})`}>
             <circle r="25" fill="var(--color-brand-green)" stroke="var(--color-surface)" strokeWidth="4" />
@@ -73,7 +82,7 @@ export default function ArMapCanvas({
       </svg>
       <div className="sim-badge" style={{ position: "absolute", bottom: 6, left: 6, background: "var(--color-brand-green)", color: "#fff", fontSize: 9, fontWeight: 700, padding: "3px 8px", borderRadius: 999, display: "flex", alignItems: "center", gap: 4, zIndex: 10 }}>
         <Compass size={10} className="animate-spin-slow" />
-        <span>{userX}, {userY} | {heading}°{motionActive ? ` | ${stepCount}` : ''}</span>
+        <span>{userX}, {userY} | {heading}°{accuracyM != null ? ` | ±${accuracyM}m` : ''}{motionActive ? ` | ${stepCount}` : ''}</span>
       </div>
     </div>
   );

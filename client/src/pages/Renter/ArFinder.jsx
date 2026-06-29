@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState, useMemo } from "react";
-import { ArrowLeft, Compass, Info, HelpCircle, Navigation, RotateCw, Check, X, Camera, CameraOff, Map, ChevronDown, ChevronUp, Locate, ChevronLeft, ChevronRight, Search, QrCode, MapPin, Clock, Tag, Store, Phone, Footprints } from "lucide-react";
+import { ArrowLeft, Compass, Info, HelpCircle, Navigation, RotateCw, Check, X, Camera, CameraOff, Map, ChevronDown, ChevronUp, Locate, ChevronLeft, ChevronRight, Search, MapPin, Clock, Tag, Store, Phone, Footprints } from "lucide-react";
 import mapImage from "../../images/map_aligned.jpg";
-import QrScanner from "../../components/QrScanner";
 import ArMapCanvas from "../../components/ArMapCanvas";
-import ArScannerOverlay from "../../components/ArScannerOverlay";
 import { cacheStallsData, getCachedStallsData } from "../../utils/apiCache";
 import { SVG_STALL_COORDS } from "../../utils/coords_dict";
 import { findRoute, snapToWalkable, METERS_PER_PIXEL } from "../../utils/marketGraph";
+import { Localizer } from "../../utils/localization";
+import { getAnchor } from "../../utils/floorModel";
 
 
 
@@ -70,9 +70,9 @@ const getCircleDisplayNumber = (rawId) => {
 
 const buildAllStalls = () => {
   const meatIds = [
-    '1', '1(u)', '1(u2)', '2', '2(u)', '2(u2)', '3', '3(u)', '3(u2)', '4', '4(u)', '4(u2)',
+    '1', '2', '3', '4',
     '5', 'empty', 'empty2', 'empty3',
-    '5(u)', '6', '7', '8', '9', '10', '8(u2)', '9(u2)', '10(u2)', '11', '12', '12(u)', '13', '13(u)', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24',
+    '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24',
     '51', '52', '53', '54', '55', '56'
   ];
   const fishIds = [
@@ -110,6 +110,26 @@ const buildAllStalls = () => {
   processCategory('meat', meatIds);
   processCategory('fish', fishIds);
   processCategory('veggies', veggieIds);
+
+  const cols = {};
+  list.forEach(s => {
+    if (!cols[s.x]) cols[s.x] = [];
+    cols[s.x].push(s);
+  });
+  Object.values(cols).forEach(col => col.sort((a, b) => a.y - b.y));
+  
+  list.forEach(s => {
+    const col = cols[s.x];
+    const idx = col.findIndex(c => c.id === s.id);
+    let height = 64;
+    if (idx < col.length - 1) {
+      const nextY = col[idx + 1].y;
+      const gap = nextY - s.y;
+      if (gap < 68) height = gap - 4;
+    }
+    s.height = height;
+  });
+
   return list;
 };
 
@@ -153,71 +173,9 @@ const HALLWAY_GROUPS = {
 const HALLWAYS = Object.values(HALLWAY_GROUPS).flat();
 const CATEGORY_EMOJI = { meat: "", fish: "", veggies: "", all: "" };
 
-// ── QR payload parsing ──────────────────────────────────────────────────────
-// Supported QR contents (all case-insensitive):
-//   MTP:STALL:meat-11        → identify a stall
-//   MTP:LOC:1050,1720        → set an exact "you are here" coordinate
-//   MTP:HERE:entrance        → set position to a named entrance/hallway
-//   https://…/tour?stall=…   → URL form (stall / loc / here query params)
-//   meat-11                  → bare stall id
-// Returns { kind: 'stall'|'loc'|'here', ref?, x?, y?, label? } or null.
-const parseQrPayload = (raw) => {
-  if (!raw) return null;
-  const text = String(raw).trim();
-  if (!text) return null;
-
-  // A stall ref may carry an optional "@<zone>" hint to disambiguate duplicate
-  // stall numbers across zones (e.g. "meat-1@F" → stall #1 in Zone F).
-  const splitZone = (val) => {
-    const zm = String(val).match(/^(.*?)@([A-Za-z])$/);
-    return zm ? { ref: zm[1].trim(), zone: zm[2].toUpperCase() } : { ref: String(val).trim() };
-  };
-
-  // URL form
-  if (/^https?:\/\//i.test(text)) {
-    try {
-      const u = new URL(text);
-      const s = u.searchParams.get("stall") || u.searchParams.get("s");
-      if (s) {
-        const z = u.searchParams.get("zone");
-        const parts = splitZone(s);
-        return { kind: "stall", ref: parts.ref, zone: parts.zone || (z ? z.toUpperCase() : undefined) };
-      }
-      const loc = u.searchParams.get("loc");
-      if (loc) {
-        const [x, y] = loc.split(/[,; ]+/).map(Number);
-        if (Number.isFinite(x) && Number.isFinite(y)) return { kind: "loc", x, y };
-      }
-      const here = u.searchParams.get("here");
-      if (here) return { kind: "here", ref: here };
-    } catch { /* not a parseable URL */ }
-  }
-
-  // MTP scheme — accepts ":" or "|" as separators
-  const m = text.match(/^MTP[:|]\s*([A-Za-z]+)[:|]\s*(.+)$/);
-  if (m) {
-    const type = m[1].toUpperCase();
-    const val = m[2].trim();
-    if (type === "STALL") { const p = splitZone(val); return { kind: "stall", ref: p.ref, zone: p.zone }; }
-    if (type === "HERE") return { kind: "here", ref: val };
-    if (type === "LOC") {
-      const [x, y] = val.split(/[,; ]+/).map(Number);
-      if (Number.isFinite(x) && Number.isFinite(y)) return { kind: "loc", x, y, label: "Scanned location" };
-    }
-  }
-
-  // Bare "<category>-<id>" form (may also carry an "@<zone>" hint)
-  if (/^(meat|fish|veggies)-/i.test(text)) {
-    const p = splitZone(text.toLowerCase());
-    return { kind: "stall", ref: p.ref, zone: p.zone };
-  }
-
-  // Fall back to treating the whole string as a loose stall reference
-  return { kind: "stall", ref: text };
-};
-
-// Resolve a stall reference (from a QR) to an actual stall in the active list.
-// `zoneHint` (e.g. "F") disambiguates duplicate stall numbers across zones.
+// Resolve a stall reference to an actual stall in the active list. `zoneHint`
+// (e.g. "F") disambiguates duplicate stall numbers across zones. Used by the
+// panorama → AR handoff to target the stall the user came from.
 const resolveStallFromRef = (ref, stallsList, zoneHint) => {
   if (!ref) return null;
   const norm = String(ref).trim().toLowerCase();
@@ -288,7 +246,8 @@ export default function ArFinder({ onBack, initialStall }) {
       // 1. Check exact stall number match
       const numMatch = q.match(/\b\d+\b/);
       if (numMatch) {
-        if (sNum !== numMatch[0]) {
+        const sNumDigits = sNum.replace(/\D/g, '');
+        if (sNumDigits !== numMatch[0]) {
           return 0; // Exclude non-exact matches when number is specified
         }
         score += 100;
@@ -511,6 +470,16 @@ export default function ArFinder({ onBack, initialStall }) {
   const [userX, setUserX] = useState(1050);
   const [userY, setUserY] = useState(1720);
   const [heading, setHeading] = useState(0);
+  const [accuracyM, setAccuracyM] = useState(null); // localization spread (± metres)
+
+  // ── Indoor localization (particle filter) ──────────────────────────────────
+  // Single estimator that fuses steps + compass + absolute QR/tap fixes and is
+  // constrained to the walkable navmesh. All position updates flow through it.
+  const localizerRef = useRef(null);
+  if (!localizerRef.current) localizerRef.current = new Localizer({ x: 1050, y: 1720, heading: 0 });
+  const headingBiasRef = useRef(0);  // compass bias removed by QR/anchor calibration
+  const rawHeadingRef = useRef(0);   // latest uncorrected compass reading
+
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState(null);
   // Start in simulated AR view; the user taps "Enable Camera" (a real user
@@ -525,13 +494,11 @@ export default function ArFinder({ onBack, initialStall }) {
   const [selectedStartId, setSelectedStartId] = useState("entrance");
   const [toastMsg, setToastMsg] = useState("");
   const [isMobile, setIsMobile] = useState(false);
+  const [recognizedStall, setRecognizedStall] = useState(null);
+  const [recognizedDetails, setRecognizedDetails] = useState(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const [showMapSheet, setShowMapSheet] = useState(false); // mobile: floor map slide-up
 
-  // ── QR scanning ──
-  const [showScanner, setShowScanner] = useState(false);
-  const [recognizedStall, setRecognizedStall] = useState(null);
-  const [recognizedDetails, setRecognizedDetails] = useState(null); // full DB record for the ⓘ panel
-  const [detailsOpen, setDetailsOpen] = useState(false);            // ⓘ details sheet open?
   const arrivedFromPanorama = useRef(false);
 
   const videoRef = useRef(null);
@@ -603,15 +570,13 @@ export default function ArFinder({ onBack, initialStall }) {
       if (isPeak && now - lastStepTime > STEP_COOLDOWN) {
         lastStepTime = now;
 
-        // Use averaged heading for stable direction
-        const buf = headingBufferRef.current;
-        const avgHeading = buf.length
-          ? buf.reduce((a, b) => a + b, 0) / buf.length
-          : headingRef.current;
-
-        const rad = (avgHeading * Math.PI) / 180;
-        setUserX(x => Math.max(30, Math.min(2270, x + Math.round(Math.sin(rad) * STEP_SIZE))));
-        setUserY(y => Math.max(30, Math.min(1790, y - Math.round(Math.cos(rad) * STEP_SIZE))));
+        // Feed the step into the particle filter using the calibrated, smoothed
+        // heading (headingRef already carries the bias-corrected compass value).
+        // The filter fuses it with map-matching and returns the corrected pose.
+        const est = localizerRef.current.onStep(STEP_SIZE, headingRef.current);
+        setUserX(Math.round(est.x));
+        setUserY(Math.round(est.y));
+        setAccuracyM(Math.round(est.spreadM * 10) / 10);
         setStepCount(c => c + 1);
       }
     };
@@ -662,10 +627,13 @@ export default function ArFinder({ onBack, initialStall }) {
             const dyMeters = latDiff * 111139;
             const dxMeters = lngDiff * 111139 * Math.cos(gpsAnchorRef.current.lat * Math.PI / 180);
             const scale = 50;
-            const newX = Math.round(gpsAnchorRef.current.mapX + dxMeters * scale);
-            const newY = Math.round(gpsAnchorRef.current.mapY + (-dyMeters * scale));
-            setUserX(Math.max(30, Math.min(2270, newX)));
-            setUserY(Math.max(30, Math.min(1790, newY)));
+            const newX = Math.max(30, Math.min(2270, Math.round(gpsAnchorRef.current.mapX + dxMeters * scale)));
+            const newY = Math.max(30, Math.min(1790, Math.round(gpsAnchorRef.current.mapY + (-dyMeters * scale))));
+            // Feed GPS to the filter as a LOW-confidence fix (wide spread); indoor
+            // GPS is unreliable, so it nudges rather than overrides the estimate.
+            localizerRef.current.reset({ x: newX, y: newY }, 45);
+            setUserX(newX);
+            setUserY(newY);
           }
           setGpsActive(true);
         },
@@ -724,11 +692,16 @@ export default function ArFinder({ onBack, initialStall }) {
     const handleOrientation = (e) => {
       let h = e.webkitCompassHeading ?? (360 - e.alpha);
       if (h !== undefined) {
-        // Rolling average over last 6 readings to smooth compass jitter
+        // Rolling average over last 15 readings to smooth compass jitter
         headingBufferRef.current.push(h);
         if (headingBufferRef.current.length > 15) headingBufferRef.current.shift();
         const avg = headingBufferRef.current.reduce((a, b) => a + b, 0) / headingBufferRef.current.length;
-        setHeading(Math.round(avg));
+        rawHeadingRef.current = avg;
+        // Apply the bias removed by the last QR/anchor calibration so "forward"
+        // reads true even when the magnetometer has a constant offset.
+        const corrected = (((avg + headingBiasRef.current) % 360) + 360) % 360;
+        setHeading(Math.round(corrected));
+        localizerRef.current.setHeading(corrected);
         setHasOrientation(true);
       }
     };
@@ -737,6 +710,24 @@ export default function ArFinder({ onBack, initialStall }) {
     return () => { stopCamera(); window.removeEventListener("deviceorientation", handleOrientation); };
   }, [cameraEnabled]);
   
+  // Absolute position fix — QR scan, map tap, start point, or checkpoint jump.
+  // Collapses the particle cloud onto the anchor (drift → ~0) and, when a heading
+  // hint is supplied, calibrates the compass bias so the cone reads true from here.
+  const fixPosition = (x, y, headingHint = null) => {
+    const cx = Math.max(30, Math.min(2270, x));
+    const cy = Math.max(30, Math.min(1790, y));
+    gpsAnchorRef.current = null;
+    localizerRef.current.reset({ x: cx, y: cy, heading: headingHint ?? undefined });
+    setUserX(Math.round(cx));
+    setUserY(Math.round(cy));
+    setAccuracyM(Math.round(localizerRef.current.estimate().spreadM * 10) / 10);
+    if (headingHint != null && hasOrientation) {
+      let bias = ((headingHint - rawHeadingRef.current) % 360 + 540) % 360 - 180;
+      headingBiasRef.current = bias;
+      setHeading(Math.round((((rawHeadingRef.current + bias) % 360) + 360) % 360));
+    }
+  };
+
   const advanceToNextCheckpoint = (e) => {
     if (e) e.stopPropagation();
     const path = findRoute({ x: userX, y: userY }, { x: currentStall.x, y: currentStall.y });
@@ -747,8 +738,7 @@ export default function ArFinder({ onBack, initialStall }) {
         nextIndex++;
       }
       const nextWP = path[nextIndex] || currentStall;
-      setUserX(nextWP.x);
-      setUserY(nextWP.y);
+      fixPosition(nextWP.x, nextWP.y);
       setToastMsg("Advanced to next checkpoint.");
     }
   };
@@ -765,10 +755,8 @@ export default function ArFinder({ onBack, initialStall }) {
     const cx = (e.clientX - rect.left - ox) / scale;
     const cy = (e.clientY - rect.top - oy) / scale;
     if (cx >= 0 && cx <= vw && cy >= 0 && cy <= vh) {
-      gpsAnchorRef.current = null;
       const snapped = snapToPathways(cx, cy);
-      setUserX(Math.round(snapped.x));
-      setUserY(Math.round(snapped.y));
+      fixPosition(snapped.x, snapped.y);
       setSelectedStartId("custom");
       setToastMsg("Start position updated on pathway.");
     }
@@ -838,76 +826,30 @@ export default function ArFinder({ onBack, initialStall }) {
   const targetProj = getArProj(currentStall.x, currentStall.y);
 
   const handleStepForward = () => {
-    const rad = (heading * Math.PI) / 180;
     const step = getStepSize(userYRef.current); // Apply zone-aware step size
-    setUserX(x => Math.max(30, Math.min(2270, x + Math.round(Math.sin(rad) * step))));
-    setUserY(y => Math.max(30, Math.min(1790, y - Math.round(Math.cos(rad) * step))));
+    const est = localizerRef.current.onStep(step, heading);
+    setUserX(Math.round(est.x));
+    setUserY(Math.round(est.y));
+    setAccuracyM(Math.round(est.spreadM * 10) / 10);
   };
   const handleRotateLeft = () => setHeading(h => (h - 15 + 360) % 360);
   const handleRotateRight = () => setHeading(h => (h + 15) % 360);
   const handleResetPosition = () => {
-    gpsAnchorRef.current = null;
-    setUserX(1050); setUserY(1720); setHeading(0);
+    headingBiasRef.current = 0;
+    fixPosition(1050, 1720);
+    setHeading(0);
     setSelectedStartId("entrance");
     setStepCount(0);
     setToastMsg("Location reset to Main Entrance.");
   };
   const handleSelectStartPoint = (point) => {
-    gpsAnchorRef.current = null;
-    setUserX(point.x); setUserY(point.y);
+    fixPosition(point.x, point.y, getAnchor(point.id)?.heading);
     setSelectedStartId(point.id);
     setToastMsg(`Location set to: ${point.label}`);
     setShowStartSelector(false);
   };
 
-  // ── QR scanning ──────────────────────────────────────────────────────────
-  // Pause the AR background camera before opening the scanner — many phones
-  // cannot hand the rear camera to two getUserMedia streams at once.
-  const openScanner = () => { stopCamera(); setShowScanner(true); };
-  const closeScanner = () => { setShowScanner(false); if (cameraEnabled) startCamera(); };
 
-  const handleQrDetected = (text) => {
-    setShowScanner(false);
-    if (cameraEnabled) startCamera();
-
-    const parsed = parseQrPayload(text);
-    if (!parsed) { setToastMsg("Unrecognized QR code."); return; }
-
-    if (parsed.kind === "loc") {
-      gpsAnchorRef.current = null;
-      setUserX(Math.max(30, Math.min(2270, parsed.x)));
-      setUserY(Math.max(30, Math.min(1790, parsed.y)));
-      setSelectedStartId("custom");
-      setToastMsg(parsed.label ? `You are at: ${parsed.label}` : "Location set from QR.");
-      return;
-    }
-
-    if (parsed.kind === "here") {
-      const h = HALLWAYS.find((x) => x.id === parsed.ref);
-      if (h) {
-        gpsAnchorRef.current = null;
-        setUserX(h.x); setUserY(h.y); setSelectedStartId(h.id);
-        setToastMsg(`You are at: ${h.label}`);
-        return;
-      }
-      // not a known location id — fall through and try to resolve it as a stall
-    }
-
-    const stall = resolveStallFromRef(parsed.ref, stallsList, parsed.zone);
-    if (!stall) { setToastMsg(`QR not recognized: "${String(text).slice(0, 24)}"`); return; }
-
-    // Connect QR scanning to start/current position: "you are here"
-    gpsAnchorRef.current = null;
-    setUserX(stall.x);
-    setUserY(stall.y);
-    setSelectedStartId("custom");
-    setToastMsg(`You are here: ${stall.label}`);
-
-    setRecognizedStall(stall);
-    setDetailsOpen(false);          // show the floating ⓘ marker first; tap it for full details
-    setRecognizedDetails(null);
-    fetchFullStallDetails(stall);
-  };
 
   // Pull the full DB record so the ⓘ panel can show products, hours, vendor, etc.
   const fetchFullStallDetails = async (stall) => {
@@ -933,9 +875,7 @@ export default function ArFinder({ onBack, initialStall }) {
   // "I'm here" — calibrate the user's position to the scanned stall.
   const setRecognizedAsLocation = () => {
     if (!recognizedStall) return;
-    gpsAnchorRef.current = null;
-    setUserX(recognizedStall.x);
-    setUserY(recognizedStall.y);
+    fixPosition(recognizedStall.x, recognizedStall.y, getAnchor(recognizedStall.id)?.heading);
     setSelectedStartId("custom");
     setToastMsg(`Location set — you're at ${recognizedStall.label}`);
     dismissRecognized();
@@ -950,8 +890,7 @@ export default function ArFinder({ onBack, initialStall }) {
     dismissRecognized();
   };
 
-  // Arriving from the panorama's "Open AR View": target the stall and bring up
-  // the QR scanner so the camera is ready to recognize it.
+  // Arriving from the panorama's "Open AR View": target the stall.
   useEffect(() => {
     if (!initialStall || arrivedFromPanorama.current) return;
     if (!stallsList || stallsList.length === 0) return;
@@ -962,12 +901,8 @@ export default function ArFinder({ onBack, initialStall }) {
     if (stall) {
       setSelectedCategory(stall.category);
       setSelectedStallId(stall.id);
-      setToastMsg(`Targeting ${stall.label} — scan its QR to confirm`);
+      setToastMsg(`Targeting ${stall.label}`);
     }
-    // Let the AR background camera finish acquiring before the scanner grabs the
-    // rear camera, so stopCamera() releases it cleanly (avoids a getUserMedia race).
-    const t = setTimeout(() => openScanner(), 400);
-    return () => clearTimeout(t);
   }, [initialStall, stallsList]);
 
   const requestCompassPermission = async () => {
@@ -990,10 +925,10 @@ export default function ArFinder({ onBack, initialStall }) {
       baseList = baseList.filter(s => s.category === selectedCategory);
     }
 
-    const localSearch = stallPickerSearch.trim().toLowerCase();
+    const localSearch = stallPickerSearch.trim().toLowerCase().replace('#', '');
     if (localSearch) {
       baseList = baseList.filter(s =>
-        s.label.toLowerCase().includes(localSearch) ||
+        s.label.toLowerCase().replace('#', '').includes(localSearch) ||
         s.zone.toLowerCase().includes(localSearch)
       );
     }
@@ -1011,7 +946,7 @@ export default function ArFinder({ onBack, initialStall }) {
   // Shared floor-map body — used by the desktop side panel and the mobile slide-up sheet.
   const floorMapBody = (
     <ArMapCanvas
-      userX={userX} userY={userY} heading={heading}
+      userX={userX} userY={userY} heading={heading} accuracyM={accuracyM}
       motionActive={motionActive} stepCount={stepCount}
       stallsList={stallsList} selectedStallId={selectedStallId}
       pathPoints={pathPoints}
@@ -1366,15 +1301,6 @@ export default function ArFinder({ onBack, initialStall }) {
           display: flex; align-items: center; gap: 4px; z-index: 10;
         }
 
-        .scanner-overlay {
-          position: absolute; inset: 0;
-          background: rgba(255,255,255,0.98); backdrop-filter: blur(10px);
-          z-index: 50; display: flex; flex-direction: column;
-          align-items: center; justify-content: flex-start;
-          padding: 16px; overflow-y: auto;
-          -webkit-overflow-scrolling: touch;
-          animation: fadeIn 0.15s ease;
-        }
 
         .step-badge {
           position: absolute; top: 10px; right: 56px;
@@ -1579,9 +1505,7 @@ export default function ArFinder({ onBack, initialStall }) {
         {isMobile && <div style={{ flex: 1 }} />}
 
         <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-          <button onClick={openScanner} className="hud-btn" style={{ background: "#e8621a", borderColor: "#e8621a" }} title="Scan a stall's QR code">
-            <QrCode size={15} />
-          </button>
+
           <button onClick={() => setCameraEnabled(c => !c)} className={`hud-btn${cameraEnabled ? " active" : ""}`}>
             {cameraEnabled ? <Camera size={15} /> : <CameraOff size={15} />}
           </button>
@@ -1647,7 +1571,7 @@ export default function ArFinder({ onBack, initialStall }) {
               <div className="ar-m-topbar">
                 <button className="ar-m-fab" onClick={onBack} aria-label="Back"><ArrowLeft size={20} /></button>
                 <span className="ar-m-title">Find a Stall</span>
-                <button className="ar-m-fab accent" onClick={openScanner} aria-label="Scan QR code"><QrCode size={18} /></button>
+
                 <button className={`ar-m-fab${cameraEnabled ? " on" : ""}`} onClick={() => setCameraEnabled(c => !c)} aria-label="Toggle camera">
                   {cameraEnabled ? <Camera size={18} /> : <CameraOff size={18} />}
                 </button>
@@ -2132,8 +2056,7 @@ export default function ArFinder({ onBack, initialStall }) {
         </div>
       )}
 
-      {/* ── QR SCANNER OVERLAY ── */}
-      <ArScannerOverlay showScanner={showScanner} onScan={handleQrDetected} onClose={closeScanner} />
+
 
       {/* ── RECOGNIZED: floating ⓘ marker (tap for details) ── */}
       {recognizedStall && !detailsOpen && (

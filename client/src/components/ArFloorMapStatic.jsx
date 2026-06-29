@@ -3,13 +3,32 @@ import { SVG_STALL_COORDS } from '../utils/coords_dict';
 
 export default function ArFloorMapStatic() {
   const stalls = useMemo(() => {
-    return Object.entries(SVG_STALL_COORDS).map(([key, coords]) => {
+    const stallList = Object.entries(SVG_STALL_COORDS).map(([key, coords]) => {
       const category = key.split('-')[0];
       const rawNum = key.split('-')[1];
       let displayNum = rawNum.replace(/\(u\d*\)/g, '');
       if (displayNum.startsWith('nostallnum')) displayNum = '';
       if (displayNum.startsWith('empty')) displayNum = '';
       return { id: key, category, displayNum, ...coords };
+    });
+
+    const cols = {};
+    stallList.forEach(s => {
+      if (!cols[s.x]) cols[s.x] = [];
+      cols[s.x].push(s);
+    });
+    Object.values(cols).forEach(col => col.sort((a, b) => a.y - b.y));
+
+    return stallList.map(s => {
+      const col = cols[s.x];
+      const idx = col.findIndex(c => c.id === s.id);
+      let height = 64;
+      if (idx < col.length - 1) {
+        const nextY = col[idx + 1].y;
+        const gap = nextY - s.y;
+        if (gap < 68) height = gap - 4;
+      }
+      return { ...s, height };
     });
   }, []);
 
@@ -67,11 +86,17 @@ export default function ArFloorMapStatic() {
           textColor = '#22c55e';
         }
 
+        const rectY = -(s.height / 2);
+        let fontSize = 28;
+        if (s.height < 30) fontSize = 16;
+        else if (s.height < 45) fontSize = 20;
+        const textY = (s.height < 30) ? 5 : 9;
+
         return (
           <g key={`static-${s.id}`} transform={`translate(${s.x},${s.y})`} style={{ pointerEvents: 'none' }}>
-             <rect x="-78" y="-32" width="156" height="64" fill={fill} stroke={stroke} strokeWidth="3" rx="6" />
+             <rect x="-78" y={rectY} width="156" height={s.height} fill={fill} stroke={stroke} strokeWidth="3" rx="6" />
              {s.displayNum && (
-               <text x="0" y="9" textAnchor="middle" fill={textColor} fontSize="28" fontWeight="bold" opacity="0.8">
+               <text x="0" y={textY} textAnchor="middle" fill={textColor} fontSize={fontSize} fontWeight="bold" opacity="0.8">
                  {s.displayNum}
                </text>
              )}

@@ -7,6 +7,7 @@ import { SVG_STALL_COORDS } from '../utils/coords_dict';
 import { STALL_MAP } from '../utils/stallMap';
 import { PANO_HEADINGS } from '../utils/panoHeadings';
 import { findRoute, ENTRANCE, METERS_PER_PIXEL } from '../utils/marketGraph'
+import { PANO_NODES, PANO_EDGES, getStallNodeId, findBestNeighbor } from '../utils/panoGraph';
 import ArFloorMapStatic from '../components/ArFloorMapStatic';
 import {
   ArrowLeft,
@@ -192,9 +193,7 @@ const SECTIONS = {
     bgTheme: 'from-red-500/20 to-transparent',
     accentColor: '#ef4444',
     stalls: generateStalls('meat', [
-      '1', '1(u)', '1(u2)', '2', '2(u)', '2(u2)', '3', '3(u)', '3(u2)', '4', '4(u)', '4(u2)',
-      '5', 'empty', 'empty2', 'empty3',
-      '5(u)', '6', '7', '8', '9', '10', '8(u)', '9(u)', '10(u)', '11', '12', '12(u)', '13', '13(u)', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24',
+      '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24',
       '51', '52', '53', '54', '55', '56'
     ])
   },
@@ -209,8 +208,7 @@ const SECTIONS = {
       '21', '22', '23', '24', '25', '26', '27', '28', '29', '30',
       '31', '32', '33', '34', '35', '36', '37', '38', '39', '40',
       '41', '42', '43', '44', '45', '46', '47', '48', '49', '50',
-      '57', '58', '59', '60', '61', '62', '63', '64', '65', '66', '67', '68', '69', '70', '71', '72', '73', '74', '75',
-      'nostallnum1', 'nostallnum2', 'nostallnum3', 'nostallnum4', 'nostallnum5'
+      '57', '58', '59', '60', '61', '62', '63', '64', '65', '66', '67', '68', '69', '70', '71', '72', '73', '74', '75'
     ])
   },
   veggies: {
@@ -421,6 +419,40 @@ export default function MarketTour360() {
   }, [currentStall, activeSectionKey]);
 
 
+  const getCleanDbStallNumber = (rawId) => {
+    return String(rawId)
+      .replace(/\(u\d*\)/gi, '')
+      .replace(/Stall\s*#/gi, '')
+      .replace('#', '')
+      .trim()
+      .toLowerCase()
+      .replace(/^0+(?=\d)/, '');
+  };
+
+  const getRawCoordinates = (stall, overrideCategory = null) => {
+    const cleanNum = getCleanDbStallNumber(stall.id);
+    const category = overrideCategory || stateRef.current.activeSectionKey;
+    const zoneLetter = String(stall.zone || '').replace('Zone ', '').toUpperCase();
+    const isBottomZone = ['E', 'F', 'G', 'H'].includes(zoneLetter);
+    const yOffset = 0;
+
+    let x = 1020;
+    let y = 635 + yOffset;
+
+    const rawKey = `${category}-${stall.id}`;
+    const cleanKey = `${category}-${cleanNum}`;
+
+    if (SVG_STALL_COORDS[rawKey]) {
+      x = SVG_STALL_COORDS[rawKey].x;
+      y = SVG_STALL_COORDS[rawKey].y + yOffset;
+    } else if (SVG_STALL_COORDS[cleanKey]) {
+      x = SVG_STALL_COORDS[cleanKey].x;
+      y = SVG_STALL_COORDS[cleanKey].y + yOffset;
+    }
+
+    return { x, y };
+  };
+
   // Walk simulation effect
   useEffect(() => {
     let timer;
@@ -615,7 +647,7 @@ export default function MarketTour360() {
   };
 
   // Hand off from the panorama to the AR view, targeting the given stall.
-  // ArFinder reads this router state to focus the stall and open the QR scanner.
+  // ArFinder reads this router state to focus the stall.
   const handleOpenArView = (targetStall) => {
     if (!targetStall) return;
     const secKey = targetStall.category || activeSectionKey;
@@ -664,6 +696,8 @@ export default function MarketTour360() {
   const sceneRef = useRef(null)
   const cameraRef = useRef(null)
   const materialRef = useRef(null)
+  const fadeMaterialRef = useRef(null) // front sphere that cross-fades the old pano out
+  const transitionRaf = useRef(null)   // active cross-fade animation handle
   const frameRef = useRef(null)
   const isDragging = useRef(false)
   const [cursor, setCursor] = useState('grab')
@@ -903,6 +937,18 @@ export default function MarketTour360() {
     const applyTexture = (tex) => {
       if (latestRequestedPath.current !== texturePath) return;
 
+      const cam = cameraRef.current;
+      const fadeMat = fadeMaterialRef.current;
+
+      // Hold the OUTGOING panorama on the front fade-sphere at full opacity, then
+      // swap the main sphere to the INCOMING panorama underneath it.
+      const oldTex = materialRef.current.map;
+      if (fadeMat && oldTex && oldTex !== tex) {
+        fadeMat.map = oldTex;
+        fadeMat.opacity = 1;
+        fadeMat.needsUpdate = true;
+      }
+
       materialRef.current.map = tex;
       materialRef.current.needsUpdate = true;
 
@@ -910,14 +956,33 @@ export default function MarketTour360() {
         // Full reset — only for map teleports / section jumps
         spherical.current.phi = Math.PI / 2;
         spherical.current.theta = 0;
-        if (cameraRef.current) {
-          cameraRef.current.fov = 70;
-          cameraRef.current.position.set(0, 0, 0.001);
-          cameraRef.current.updateProjectionMatrix();
-        }
+        if (cam) cam.position.set(0, 0, 0.001);
       }
+      const targetFov = preserveCamera && cam ? cam.fov : 70;
       // Always re-run updateCamera so chevrons reposition for the new stall
       if (updateCameraRef.current) updateCameraRef.current();
+
+      // Cross-fade the old pano out + a subtle zoom-in "dolly" that reads as
+      // stepping forward into the new scene (Street-View-style glide).
+      if (transitionRaf.current) cancelAnimationFrame(transitionRaf.current);
+      const DURATION = 480;
+      const startFov = targetFov + 7;
+      const start = performance.now();
+      if (cam) { cam.fov = startFov; cam.updateProjectionMatrix(); }
+      const tick = (now) => {
+        const t = Math.min(1, (now - start) / DURATION);
+        const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; // easeInOutQuad
+        if (fadeMat) fadeMat.opacity = 1 - ease;
+        if (cam) { cam.fov = startFov + (targetFov - startFov) * ease; cam.updateProjectionMatrix(); }
+        if (t < 1) {
+          transitionRaf.current = requestAnimationFrame(tick);
+        } else {
+          if (fadeMat) { fadeMat.opacity = 0; fadeMat.map = null; fadeMat.needsUpdate = true; }
+          transitionRaf.current = null;
+        }
+      };
+      transitionRaf.current = requestAnimationFrame(tick);
+      setTimeout(() => setTransitioning(false), DURATION + 50);
     };
 
     const cached = textureCache.current.get(texturePath);
@@ -931,7 +996,10 @@ export default function MarketTour360() {
           applyTexture(tex);
         },
         null,
-        (err) => console.error('Failed to load panorama', err)
+        (err) => {
+          console.error('Failed to load panorama', err);
+          setTransitioning(false);
+        }
       );
     }
   }
@@ -994,8 +1062,18 @@ export default function MarketTour360() {
       const sphere = new THREE.Mesh(geometry, material)
       scene.add(sphere)
 
-      // Draw initial hotspots
-      
+      // Cross-fade sphere — a slightly smaller inverted sphere rendered in FRONT
+      // of the main one. On navigation it briefly holds the OLD panorama at full
+      // opacity, then fades to transparent, so the view dissolves between stalls
+      // (Street-View style) instead of hard-cutting.
+      const fadeGeometry = new THREE.SphereGeometry(490, 64, 40)
+      fadeGeometry.scale(-1, 1, 1)
+      const fadeMaterial = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })
+      fadeMaterialRef.current = fadeMaterial
+      const fadeSphere = new THREE.Mesh(fadeGeometry, fadeMaterial)
+      fadeSphere.renderOrder = 1
+      scene.add(fadeSphere)
+
 
       // Raycaster for interactions
       const raycaster = new THREE.Raycaster()
@@ -1017,8 +1095,107 @@ export default function MarketTour360() {
       })
 
       function onPointerDown(e) {
-        // Raycaster logic was removed
+        const rect = renderer.domElement.getBoundingClientRect()
+        const touch = (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0])
+        const clientX = touch ? touch.clientX : e.clientX
+        const clientY = touch ? touch.clientY : e.clientY
+
+        // Separate thresholds: touch fingers drift more than mouse clicks
+        const isTouch = !!touch;
+        const dragDist = Math.sqrt((clientX - clickStartX) ** 2 + (clientY - clickStartY) ** 2)
+        if (dragDist > (isTouch ? 20 : 8)) return;
+
+        mouse.x = ((clientX - rect.left) / rect.width) * 2 - 1
+        mouse.y = -((clientY - rect.top) / rect.height) * 2 + 1
+
+        raycaster.setFromCamera(mouse, camera)
+        const hits = raycaster.intersectObjects(hotspotMeshes.current)
+
+        if (hits.length > 0) {
+          const uData = hits[0].object.userData
+          if (uData.type === 'next') {
+            handleNextStall()
+          } else if (uData.type === 'prev') {
+            handlePrevStall()
+
+          } else if (uData.type === 'info_button') {
+            const { sectionKey, stall } = uData;
+            if (stall) {
+              const freshSectionsData = stateRef.current.sectionsData;
+              const stalls = freshSectionsData[sectionKey].stalls;
+              const targetIdx = stalls.findIndex(s => s.id === stall.id);
+              if (targetIdx !== -1) {
+                setActiveSectionKey(sectionKey);
+                setStallIndex(targetIdx);
+                setDetailsCollapsed(false);
+
+                const cleanZone = String(stall.zone || '').replace('Zone ', '').toUpperCase();
+                fetchStallDetailsFromDb(stall.id, cleanZone).then((dbDetails) => {
+                  if (dbDetails) {
+                    setSectionsData((prev) => {
+                      const updated = { ...prev };
+                      updated[sectionKey].stalls[targetIdx] = {
+                        ...updated[sectionKey].stalls[targetIdx],
+                        vendorName: dbDetails.vendorName || dbDetails.tenant?.name || 'Vibrant Local Vendor',
+                        productType: dbDetails.productType || 'General Produce',
+                        operatingHours: dbDetails.operatingHours || '4:00 AM - 6:00 PM',
+                        phoneNumber: dbDetails.phoneNumber || 'N/A',
+                        status: dbDetails.status ? (dbDetails.status.charAt(0).toUpperCase() + dbDetails.status.slice(1)) : 'Available',
+                        price: dbDetails.monthlyRate ? `₱${dbDetails.monthlyRate.toLocaleString()}` : updated[sectionKey].stalls[targetIdx].price,
+                        size: dbDetails.size || 12
+                      };
+                      return updated;
+                    });
+                  }
+                });
+              }
+            }
+          }
+        }
       }
+
+      function onPointerMove(e) {
+        const rect = renderer.domElement.getBoundingClientRect()
+        const touch = (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0])
+        const clientX = touch ? touch.clientX : e.clientX
+        const clientY = touch ? touch.clientY : e.clientY
+
+        // Track screen mouse positions for tooltips
+        setMousePos({ x: clientX, y: clientY })
+
+        mouse.x = ((clientX - rect.left) / rect.width) * 2 - 1
+        mouse.y = -((clientY - rect.top) / rect.height) * 2 + 1
+
+        raycaster.setFromCamera(mouse, camera)
+        const hits = raycaster.intersectObjects(hotspotMeshes.current)
+
+        if (hits.length > 0) {
+          const hit = hits[0]
+
+          let dynamicLabel = hit.object.userData.label;
+          if (hit.object.userData.type === 'next' || hit.object.userData.type === 'prev') {
+            const cameraDirection = new THREE.Vector3()
+            cameraRef.current.getWorldDirection(cameraDirection)
+            const arrowDirection = new THREE.Vector3().copy(hit.object.position).normalize()
+            const dot = cameraDirection.dot(arrowDirection)
+            dynamicLabel = dot > 0 ? 'Forward' : 'Backward'
+          } else if (hit.object.userData.type === 'info_button') {
+            dynamicLabel = `View Details for ${hit.object.userData.stall.name}`;
+          }
+
+          setHoveredHotspot({
+            ...hit.object.userData,
+            dynamicLabel
+          })
+          setCursor('pointer')
+        } else {
+
+          setHoveredHotspot(null)
+          setCursor('grab')
+        }
+      }
+
+      window.addEventListener('mousemove', onPointerMove)
 
       // Camera Look-At Logic
       let northOffset = 0;
@@ -1029,11 +1206,19 @@ export default function MarketTour360() {
         const z = Math.sin(phi) * Math.sin(theta)
         camera.lookAt(x, y, z)
 
-        // Heading the panorama faces at theta = 0, resolved from the PHOTO (so a
-        // reused photo always yields the same cone) rather than the display column.
+        // Heading the panorama faces at theta = 0, resolved from the PHOTO.
         northOffset = 0;
+        
+        const stall = stateRef.current.currentStall;
+        const currentActiveSec = stateRef.current.activeSectionKey;
 
-        // Calibration removed
+        if (stall) {
+          const nodeId = getStallNodeId(stall.id, currentActiveSec);
+          const node = PANO_NODES[nodeId];
+          if (node && node.northOffset !== undefined) {
+            northOffset = node.northOffset;
+          }
+        }
 
         // Sync compass rotation (0 deg = North)
         const deg = -Math.round((theta * 180) / Math.PI) + northOffset;
@@ -1044,6 +1229,8 @@ export default function MarketTour360() {
           stateRef.current.lastCompassDeg = compassDeg;
           setCompassAngle(compassDeg)
         }
+
+
       } // end updateCamera
 
       // Expose updateCamera so triggerSceneTransition can call it outside this effect
@@ -1059,15 +1246,7 @@ export default function MarketTour360() {
           updateCamera()
         }
 
-        // Pulse ground chevrons
-        const time = Date.now() * 0.004;
-        (hotspotMeshes.current ?? []).forEach((m) => {
-          if (m.userData.type === 'nav_chevron') {
-            const baseOpacity = m.userData.isHovered ? 0.95 : 0.6;
-            const pulse = m.userData.isHovered ? 0 : Math.sin(time + m.position.x * 0.05) * 0.15;
-            m.material.opacity = baseOpacity + pulse;
-          }
-        });
+
 
         renderer.render(scene, camera)
       }
@@ -1105,13 +1284,74 @@ export default function MarketTour360() {
         updateCamera()
       }
 
+      function handleSpatialTap(clientX, clientY) {
+        if (transitioning) return;
+        
+        const W = mountRef.current.clientWidth;
+        const fov = 70;
+        const screenX = clientX / W;
+        const angleOffset = (screenX - 0.5) * fov;
+        const currentCompass = stateRef.current.lastCompassDeg;
+        
+        // currentCompass is the rotation of the UI needle (which goes counter-clockwise as you turn right).
+        // We must invert it to get the TRUE camera heading (which goes clockwise).
+        const cameraHeading = (360 - currentCompass) % 360;
+        
+        // Tap on right side of screen = positive offset = further clockwise.
+        let tapCompassAngle = (cameraHeading + angleOffset + 360) % 360;
+        
+        console.log(`[handleSpatialTap] Tap at screenX=${screenX.toFixed(2)}, offset=${angleOffset.toFixed(2)}, compassNeedle=${currentCompass}, trueHeading=${cameraHeading}, tapAngle=${tapCompassAngle.toFixed(2)}`);
+
+        const currentActiveSec = stateRef.current.activeSectionKey;
+        const stall = stateRef.current.currentStall;
+        
+        if (!stall) return;
+
+        const currentNodeId = getStallNodeId(stall.id, currentActiveSec);
+        const bestNeighborData = findBestNeighbor(currentNodeId, tapCompassAngle, 45);
+
+        if (bestNeighborData) {
+          const { neighborId, angleDiff } = bestNeighborData;
+          console.log(`[handleSpatialTap] JUMPING TO: ${neighborId} (score=${angleDiff.toFixed(2)})`);
+          
+          const neighborNode = PANO_NODES[neighborId];
+          
+          let nextStall = null;
+          let nextSec = null;
+          
+          if (neighborNode.type === 'stall') {
+            nextStall = { id: neighborNode.stallId, name: `Stall ${neighborNode.stallId}` };
+            nextSec = neighborNode.category;
+            // Note: ideally we fetch the real stall object from sectionsData, but triggerSceneTransition mostly uses .id
+            const realStall = stateRef.current.sectionsData[nextSec]?.stalls?.find(s => s.id === neighborNode.stallId);
+            if (realStall) nextStall = realStall;
+          }
+          
+          if (nextStall) {
+            if (nextSec !== currentActiveSec) {
+              setActiveSectionKey(nextSec);
+            }
+            
+            const realIdx = stateRef.current.sectionsData[nextSec]?.stalls?.findIndex(s => s.id === nextStall.id);
+            if (realIdx !== undefined && realIdx !== -1) {
+              setStallIndex(realIdx);
+            }
+
+            // Navigate properly
+            triggerSceneTransition(nextStall, nextSec, true);
+          }
+        } else {
+          console.log(`[handleSpatialTap] NO MATCH FOUND. Ignored tap to prevent random jumps.`);
+        }
+      }
+
       function onMouseUp(e) {
         isDragging.current = false
         setCursor('grab')
         if (e) {
           const dx = Math.abs(e.clientX - clickStartX)
           const dy = Math.abs(e.clientY - clickStartY)
-          if (dx < 10 && dy < 10) handleNextStall()
+          if (dx < 10 && dy < 10) handleSpatialTap(e.clientX, e.clientY)
         }
       }
 
@@ -1141,12 +1381,13 @@ export default function MarketTour360() {
         setCursor('grab')
         
         if (e && e.changedTouches && e.changedTouches.length > 0) {
-          const dx = Math.abs(e.changedTouches[0].clientX - clickStartX)
-          const dy = Math.abs(e.changedTouches[0].clientY - clickStartY)
-          if (dx < 10 && dy < 10) handleNextStall()
+          const touch = e.changedTouches[0];
+          const dx = Math.abs(touch.clientX - clickStartX)
+          const dy = Math.abs(touch.clientY - clickStartY)
+          if (dx < 10 && dy < 10) handleSpatialTap(touch.clientX, touch.clientY)
         } else {
-          // If the browser doesn't populate changedTouches properly, fallback to simple tap check
-          handleNextStall()
+          // Fallback
+          handleSpatialTap(mountRef.current.clientWidth / 2, mountRef.current.clientHeight / 2)
         }
       }
 
@@ -1156,6 +1397,9 @@ export default function MarketTour360() {
       renderer.domElement.addEventListener('touchstart', onTouchStart, { passive: true })
       renderer.domElement.addEventListener('touchmove', onTouchMove, { passive: true })
       renderer.domElement.addEventListener('touchend', onTouchEnd)
+      
+      renderer.domElement.addEventListener('click', onPointerDown)
+      renderer.domElement.addEventListener('touchend', onPointerDown)
 
       // Cleanup
       renderer.domElement._cleanup = () => {
@@ -1173,6 +1417,7 @@ export default function MarketTour360() {
     return () => {
       cancelled = true
       if (frameRef.current) cancelAnimationFrame(frameRef.current)
+      if (transitionRaf.current) cancelAnimationFrame(transitionRaf.current)
       if (rendererRef.current) {
         if (rendererRef.current.domElement._cleanup) rendererRef.current.domElement._cleanup()
         rendererRef.current.domElement.remove()
@@ -1837,7 +2082,7 @@ export default function MarketTour360() {
                   <span>Route Me</span>
                 </button>
 
-                {/* Open AR View Button — hands off to the live AR + QR scanner */}
+                {/* Open AR View Button — hands off to the live AR */}
                 <button
                   onClick={() => handleOpenArView(selectedStall)}
                   className="w-full mt-2 py-3 px-4 rounded-xl bg-[#1a5c2a] hover:bg-[#15491f] text-white font-black text-xs transition-all flex items-center justify-center gap-2 shadow-lg active:scale-95 cursor-pointer"

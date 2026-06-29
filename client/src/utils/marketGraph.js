@@ -20,7 +20,7 @@
 //   • A route is therefore a clean orthogonal path: exit the stall sideways into
 //     its aisle, walk the aisle, cross on a pathway, walk the next aisle, arrive.
 
-import { SVG_STALL_COORDS } from './coords_dict';
+import { SVG_STALL_COORDS } from './coords_dict.js';
 
 const _coords = Object.values(SVG_STALL_COORDS);
 

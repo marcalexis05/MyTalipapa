@@ -1,8 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
-import { ChevronRight, Store, QrCode, Printer, X, Plus } from "lucide-react";
-import { QRCodeSVG } from "qrcode.react";
+import { ChevronRight, Store, X, Plus } from "lucide-react";
 import { useCurrentUser } from '../../utils/auth';
 
 import NotificationBell from '../../components/NotificationBell';
@@ -30,19 +29,11 @@ const FLOOR_META = {
 
 const STATUS_LABEL = { available: "Available", occupied: "Occupied", pending: "Pending" };
 
-// Map the DB section names to the front-end category used by the AR scanner.
+// Map the DB section names to the front-end category used by the AR views.
 const SECTION_TO_CATEGORY = { Meat: "meat", Fishes: "fish", Vegetables: "veggies" };
 const sectionToCategory = (section) => SECTION_TO_CATEGORY[section] || String(section || "").toLowerCase();
 
-// Build the QR payload a stall sticker should encode. The "@<zone>" suffix
-// disambiguates duplicate stall numbers that appear in more than one zone.
-// The renter AR scanner (ArFinder) parses this exact format.
-const buildStallQrPayload = (stall) => {
-  const cat = sectionToCategory(stall.section);
-  const num = String(stall.stallNumber || "").trim();
-  const zone = String(stall.zone || "").replace(/zone\s*/i, "").trim().toUpperCase();
-  return `MTP:STALL:${cat}-${num}${zone ? `@${zone}` : ""}`;
-};
+
 
 // Sort stalls: by numeric/alphanumeric stallNumber
 function sortStalls(list) {
@@ -76,23 +67,7 @@ export default function AdminStalls() {
   const [formSubmitting, setFormSubmitting] = useState(false);
   const [togglingStatus, setTogglingStatus] = useState(false);
 
-  // Stalls queued for QR printing (single stall or the whole filtered view).
-  const [printList, setPrintList] = useState([]);
 
-  // When a print batch is queued, give the QR SVGs a moment to render, then
-  // open the browser print dialog; clear the batch once printing finishes.
-  useEffect(() => {
-    if (printList.length === 0) return;
-    const clear = () => setPrintList([]);
-    window.addEventListener("afterprint", clear);
-    const t = setTimeout(() => window.print(), 200);
-    const fallback = setTimeout(clear, 60000);
-    return () => {
-      clearTimeout(t);
-      clearTimeout(fallback);
-      window.removeEventListener("afterprint", clear);
-    };
-  }, [printList]);
 
   const [stalls, setStalls] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -443,14 +418,7 @@ export default function AdminStalls() {
                   >
                     <Plus size={14} /> Add Stall
                   </button>
-                  <button
-                    className="stalls-qr-btn"
-                    onClick={() => setPrintList(displayStalls)}
-                    disabled={displayStalls.length === 0}
-                    title="Generate & print QR codes for the listed stalls"
-                  >
-                    <QrCode size={14} /> Print QR ({displayStalls.length})
-                  </button>
+
                   <div className="stalls-filter-wrap">
                   <button className="stalls-filter-btn" onClick={() => setFilterOpen(o => !o)}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -600,71 +568,19 @@ export default function AdminStalls() {
               <p className="stall-modal-avail">This stall is available for rent.</p>
             )}
 
-            {/* Per-stall QR code — printed and posted at the stall for AR recognition */}
-            <div className="stall-qr-block">
-              <div className="stall-qr-label"><QrCode size={13} /> Stall QR Code</div>
-              <div className="stall-qr-svg">
-                <QRCodeSVG value={buildStallQrPayload(selectedStall)} size={132} level="M" marginSize={2} />
-              </div>
-              <code className="stall-qr-payload">{buildStallQrPayload(selectedStall)}</code>
-              <button className="stall-qr-print-btn" onClick={() => setPrintList([selectedStall])}>
-                <Printer size={14} /> Print this QR
-              </button>
-            </div>
+
 
             <button className="stall-modal-close" onClick={() => setSelectedStall(null)}>Close</button>
           </div>
         </div>
       )}
 
-      {/* ── QR PRINT SHEET (portaled to <body>; visible only when printing) ── */}
-      {printList.length > 0 && createPortal(
-        <div className="qr-print-portal">
-          <div className="qr-print-title">MyTalipapa — Stall QR Codes ({printList.length})</div>
-          <div className="qr-print-grid">
-            {printList.map((s) => (
-              <div className="qr-print-card" key={s._id || `${s.section}-${s.zone}-${s.stallNumber}`}>
-                <QRCodeSVG value={buildStallQrPayload(s)} size={150} level="M" marginSize={2} />
-                <div className="qr-print-num">Stall #{s.stallNumber}</div>
-                <div className="qr-print-meta">{s.section} · Zone {s.zone}</div>
-                <div className="qr-print-payload">{buildStallQrPayload(s)}</div>
-              </div>
-            ))}
-          </div>
-        </div>,
-        document.body
-      )}
+
 
       <style>{`
         .stalls-main { padding-bottom: 80px; }
 
-        /* ── Per-stall QR (detail modal) ── */
-        .stall-qr-block { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 8px; background: #f9fafb; border: 1px dashed #d1d5db; border-radius: var(--r-md); padding: 14px; margin-top: 6px; }
-        .stall-qr-label { display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: #6b7280; }
-        .stall-qr-svg { background: #fff; padding: 8px; border-radius: 8px; border: 1px solid #e5e7eb; line-height: 0; }
-        .stall-qr-payload { font-size: 10px; color: #6b7280; font-weight: 600; word-break: break-all; text-align: center; }
-        .stall-qr-print-btn { display: inline-flex; align-items: center; gap: 6px; background: #1a5c2a; color: #fff; border: none; border-radius: var(--r-sm); padding: 8px 14px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: 'Inter', sans-serif; }
-        .stall-qr-print-btn:hover { background: #15803d; }
-
-        /* ── Print QR action button ── */
         .stalls-actions-wrap { display: flex; align-items: center; gap: 8px; }
-        .stalls-qr-btn { display: flex; align-items: center; gap: 6px; background: var(--color-surface); border: 1.5px solid var(--color-border); border-radius: var(--r-sm); padding: 7px 12px; font-size: 12px; font-weight: 700; color: var(--color-text-mid); cursor: pointer; font-family: 'Inter', sans-serif; transition: all 0.2s; white-space: nowrap; }
-        .stalls-qr-btn:hover:not(:disabled) { border-color: var(--color-brand-green); color: var(--color-brand-green); }
-        .stalls-qr-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-        /* ── QR print sheet (screen-hidden; shown only in print) ── */
-        .qr-print-portal { display: none; }
-        @media print {
-          body * { visibility: hidden !important; }
-          .qr-print-portal, .qr-print-portal * { visibility: visible !important; }
-          .qr-print-portal { display: block !important; position: absolute; left: 0; top: 0; width: 100%; padding: 16px; background: #fff; }
-          .qr-print-title { font-size: 16px; font-weight: 800; margin-bottom: 14px; text-align: center; }
-          .qr-print-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-          .qr-print-card { border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px 8px; text-align: center; break-inside: avoid; display: flex; flex-direction: column; align-items: center; gap: 4px; }
-          .qr-print-num { font-size: 14px; font-weight: 800; margin-top: 4px; }
-          .qr-print-meta { font-size: 11px; color: #475569; }
-          .qr-print-payload { font-size: 8px; color: #94a3b8; word-break: break-all; }
-        }
         .stalls-title-block { margin-bottom: 2px; }
         .stalls-page-title { font-size: 20px; font-weight: 800; color: var(--color-text); margin: 0 0 4px; letter-spacing: -0.3px; }
         .stalls-page-sub { font-size: 12px; color: var(--color-text-muted); margin: 0; font-weight: 500; }

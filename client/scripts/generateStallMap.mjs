@@ -2,10 +2,11 @@
 
 import fs from 'fs';
 import path from 'path';
-import { pathToFileURL } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 
-// Resolve project root (projectRoot points to the root of the repo containing the 'client' folder)
-const __dirname = path.resolve('client/scripts');
+// Resolve project root
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, '..');
 // Paths relative to the project root
 const exportDir = path.join(projectRoot, 'public', 'export360');

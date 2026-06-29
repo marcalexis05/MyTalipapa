@@ -206,14 +206,6 @@ export default function Register() {
     };
   });
 
-  useEffect(() => {
-    if (location.state && location.state.step) {
-      setTimer(60);
-      setIsRegistered(true);
-      setOtpDigits(['', '', '', '']);
-    }
-  }, []);
-
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -228,6 +220,15 @@ export default function Register() {
     return !!(location?.state && location?.state?.step);
   });
   const [showTermsModal, setShowTermsModal] = useState(false);
+
+  useEffect(() => {
+    if (location.state && location.state.step) {
+      setTimer(60);
+      setIsRegistered(true);
+      setOtpDigits(['', '', '', '']);
+    }
+  }, [location.state]);
+
 
   useEffect(() => {
     let interval = null;

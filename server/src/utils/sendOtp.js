@@ -182,7 +182,7 @@ async function sendEmailOtp(email, otp, type = 'verify', fullName = '') {
     return { success: true, mocked: false };
   } catch (error) {
     console.error('Failed to send SMTP email:', error);
-    throw error;
+    return { success: false, error: error.message };
   }
 }
 
