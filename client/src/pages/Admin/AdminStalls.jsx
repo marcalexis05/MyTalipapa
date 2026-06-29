@@ -1,11 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-<<<<<<< ours
 import { ChevronRight, Store, X, Plus } from "lucide-react";
-=======
-import { ChevronRight, Store, QrCode, X, Plus } from "lucide-react";
-import { QRCodeSVG } from "qrcode.react";
->>>>>>> theirs
 import { useCurrentUser } from '../../utils/auth';
 
 import NotificationBell from '../../components/NotificationBell';

@@ -421,7 +421,7 @@ export default function ArFinder({ onBack, initialStall }) {
           const coords = getStallCoords(dbStall.stallNumber, category, dbStall.zone);
           const displayName = `Stall #${dbStall.stallNumber}`;
           finalStallsList.push({
-            id: `${category}-${dbStall.stallNumber}`,
+            id: `${category}-${zoneLetter}-${dbStall.stallNumber}`,
             label: `${displayName} (${category.charAt(0).toUpperCase() + category.slice(1)})`,
             section: category === 'meat' ? 'Meat Section' : category === 'fish' ? 'Fish Section' : 'Vegetables Section',
             zone: dbStall.zone || `Zone ${zoneLetter}`,
