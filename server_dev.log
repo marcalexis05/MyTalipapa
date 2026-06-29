@@ -17,6 +17,283 @@ MongoDB connected
 [32m[nodemon] starting `node src/index.js`[39m
 Server listening on port 5000
 MongoDB connected
+
+----------------------------------------
+🚨 FRONTEND ERROR: Uncaught ReferenceError: InfoPage is not defined
+ReferenceError: InfoPage is not defined
+    at App (http://localhost:5199/src/App.jsx?t=1782764949386:112:37)
+    at Object.react_stack_bottom_frame (http://localhost:5199/node_modules/.vite/deps/react-dom_client.js?v=b63cd02f:12868:12)
+    at renderWithHooks (http://localhost:5199/node_modules/.vite/deps/react-dom_client.js?v=b63cd02f:4213:19)
+    at updateFunctionComponent (http://localhost:5199/node_modules/.vite/deps/react-dom_client.js?v=b63cd02f:5569:16)
+    at beginWork (http://localhost:5199/node_modules/.vite/deps/react-dom_client.js?v=b63cd02f:6140:20)
+    at runWithFiberInDEV (http://localhost:5199/node_modules/.vite/deps/react-dom_client.js?v=b63cd02f:851:66)
+    at performUnitOfWork (http://localhost:5199/node_modules/.vite/deps/react-dom_client.js?v=b63cd02f:8429:92)
+    at workLoopSync (http://localhost:5199/node_modules/.vite/deps/react-dom_client.js?v=b63cd02f:8325:37)
+    at renderRootSync (http://localhost:5199/node_modules/.vite/deps/react-dom_client.js?v=b63cd02f:8309:6)
+    at performWorkOnRoot (http://localhost:5199/node_modules/.vite/deps/react-dom_client.js?v=b63cd02f:7994:27)
+----------------------------------------
+
+Fetch profile error: JsonWebTokenError: jwt malformed
+    at module.exports [as verify] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\jsonwebtoken\verify.js:70:17)
+    at C:\Users\Val\Desktop\MyTalipapa\server\src\routes\auth.js:539:25
+    at Layer.handle [as handle_request] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\layer.js:95:5)
+    at next (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\route.js:149:13)
+    at Route.dispatch (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\route.js:119:3)
+    at Layer.handle [as handle_request] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\layer.js:95:5)
+    at C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:284:15
+    at Function.process_params (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:346:12)
+    at next (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:280:10)
+    at Function.handle (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:175:3)
+Fetch profile error: JsonWebTokenError: jwt malformed
+    at module.exports [as verify] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\jsonwebtoken\verify.js:70:17)
+    at C:\Users\Val\Desktop\MyTalipapa\server\src\routes\auth.js:539:25
+    at Layer.handle [as handle_request] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\layer.js:95:5)
+    at next (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\route.js:149:13)
+    at Route.dispatch (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\route.js:119:3)
+    at Layer.handle [as handle_request] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\layer.js:95:5)
+    at C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:284:15
+    at Function.process_params (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:346:12)
+    at next (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:280:10)
+    at Function.handle (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:175:3)
+getNotifications error: JsonWebTokenError: jwt malformed
+    at module.exports [as verify] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\jsonwebtoken\verify.js:70:17)
+    at exports.getNotifications (C:\Users\Val\Desktop\MyTalipapa\server\src\controllers\contractorController.js:833:25)
+    at Layer.handle [as handle_request] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\layer.js:95:5)
+    at next (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\route.js:149:13)
+    at Route.dispatch (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\route.js:119:3)
+    at Layer.handle [as handle_request] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\layer.js:95:5)
+    at C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:284:15
+    at Function.process_params (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:346:12)
+    at next (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:280:10)
+    at Function.handle (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:175:3)
+getNotifications error: JsonWebTokenError: jwt malformed
+    at module.exports [as verify] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\jsonwebtoken\verify.js:70:17)
+    at exports.getNotifications (C:\Users\Val\Desktop\MyTalipapa\server\src\controllers\contractorController.js:833:25)
+    at Layer.handle [as handle_request] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\layer.js:95:5)
+    at next (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\route.js:149:13)
+    at Route.dispatch (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\route.js:119:3)
+    at Layer.handle [as handle_request] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\layer.js:95:5)
+    at C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:284:15
+    at Function.process_params (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:346:12)
+    at next (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:280:10)
+    at Function.handle (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:175:3)
+getNotifications error: JsonWebTokenError: jwt malformed
+    at module.exports [as verify] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\jsonwebtoken\verify.js:70:17)
+    at exports.getNotifications (C:\Users\Val\Desktop\MyTalipapa\server\src\controllers\contractorController.js:833:25)
+    at Layer.handle [as handle_request] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\layer.js:95:5)
+    at next (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\route.js:149:13)
+    at Route.dispatch (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\route.js:119:3)
+    at Layer.handle [as handle_request] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\layer.js:95:5)
+    at C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:284:15
+    at Function.process_params (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:346:12)
+    at next (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:280:10)
+    at Function.handle (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:175:3)
+getNotifications error: JsonWebTokenError: jwt malformed
+    at module.exports [as verify] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\jsonwebtoken\verify.js:70:17)
+    at exports.getNotifications (C:\Users\Val\Desktop\MyTalipapa\server\src\controllers\contractorController.js:833:25)
+    at Layer.handle [as handle_request] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\layer.js:95:5)
+    at next (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\route.js:149:13)
+    at Route.dispatch (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\route.js:119:3)
+    at Layer.handle [as handle_request] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\layer.js:95:5)
+    at C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:284:15
+    at Function.process_params (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:346:12)
+    at next (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:280:10)
+    at Function.handle (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:175:3)
+getNotifications error: JsonWebTokenError: jwt malformed
+    at module.exports [as verify] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\jsonwebtoken\verify.js:70:17)
+    at exports.getNotifications (C:\Users\Val\Desktop\MyTalipapa\server\src\controllers\contractorController.js:833:25)
+    at Layer.handle [as handle_request] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\layer.js:95:5)
+    at next (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\route.js:149:13)
+    at Route.dispatch (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\route.js:119:3)
+    at Layer.handle [as handle_request] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\layer.js:95:5)
+    at C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:284:15
+    at Function.process_params (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:346:12)
+    at next (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:280:10)
+    at Function.handle (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:175:3)
+getNotifications error: JsonWebTokenError: jwt malformed
+    at module.exports [as verify] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\jsonwebtoken\verify.js:70:17)
+    at exports.getNotifications (C:\Users\Val\Desktop\MyTalipapa\server\src\controllers\contractorController.js:833:25)
+    at Layer.handle [as handle_request] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\layer.js:95:5)
+    at next (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\route.js:149:13)
+    at Route.dispatch (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\route.js:119:3)
+    at Layer.handle [as handle_request] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\layer.js:95:5)
+    at C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:284:15
+    at Function.process_params (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:346:12)
+    at next (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:280:10)
+    at Function.handle (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:175:3)
+getNotifications error: JsonWebTokenError: jwt malformed
+    at module.exports [as verify] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\jsonwebtoken\verify.js:70:17)
+    at exports.getNotifications (C:\Users\Val\Desktop\MyTalipapa\server\src\controllers\contractorController.js:833:25)
+    at Layer.handle [as handle_request] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\layer.js:95:5)
+    at next (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\route.js:149:13)
+    at Route.dispatch (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\route.js:119:3)
+    at Layer.handle [as handle_request] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\layer.js:95:5)
+    at C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:284:15
+    at Function.process_params (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:346:12)
+    at next (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:280:10)
+    at Function.handle (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:175:3)
+getNotifications error: JsonWebTokenError: jwt malformed
+    at module.exports [as verify] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\jsonwebtoken\verify.js:70:17)
+    at exports.getNotifications (C:\Users\Val\Desktop\MyTalipapa\server\src\controllers\contractorController.js:833:25)
+    at Layer.handle [as handle_request] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\layer.js:95:5)
+    at next (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\route.js:149:13)
+    at Route.dispatch (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\route.js:119:3)
+    at Layer.handle [as handle_request] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\layer.js:95:5)
+    at C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:284:15
+    at Function.process_params (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:346:12)
+    at next (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:280:10)
+    at Function.handle (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:175:3)
+getNotifications error: JsonWebTokenError: jwt malformed
+    at module.exports [as verify] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\jsonwebtoken\verify.js:70:17)
+    at exports.getNotifications (C:\Users\Val\Desktop\MyTalipapa\server\src\controllers\contractorController.js:833:25)
+    at Layer.handle [as handle_request] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\layer.js:95:5)
+    at next (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\route.js:149:13)
+    at Route.dispatch (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\route.js:119:3)
+    at Layer.handle [as handle_request] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\layer.js:95:5)
+    at C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:284:15
+    at Function.process_params (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:346:12)
+    at next (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:280:10)
+    at Function.handle (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:175:3)
+getNotifications error: JsonWebTokenError: jwt malformed
+    at module.exports [as verify] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\jsonwebtoken\verify.js:70:17)
+    at exports.getNotifications (C:\Users\Val\Desktop\MyTalipapa\server\src\controllers\contractorController.js:833:25)
+    at Layer.handle [as handle_request] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\layer.js:95:5)
+    at next (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\route.js:149:13)
+    at Route.dispatch (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\route.js:119:3)
+    at Layer.handle [as handle_request] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\layer.js:95:5)
+    at C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:284:15
+    at Function.process_params (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:346:12)
+    at next (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:280:10)
+    at Function.handle (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:175:3)
+getNotifications error: JsonWebTokenError: jwt malformed
+    at module.exports [as verify] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\jsonwebtoken\verify.js:70:17)
+    at exports.getNotifications (C:\Users\Val\Desktop\MyTalipapa\server\src\controllers\contractorController.js:833:25)
+    at Layer.handle [as handle_request] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\layer.js:95:5)
+    at next (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\route.js:149:13)
+    at Route.dispatch (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\route.js:119:3)
+    at Layer.handle [as handle_request] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\layer.js:95:5)
+    at C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:284:15
+    at Function.process_params (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:346:12)
+    at next (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:280:10)
+    at Function.handle (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:175:3)
+getNotifications error: JsonWebTokenError: jwt malformed
+    at module.exports [as verify] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\jsonwebtoken\verify.js:70:17)
+    at exports.getNotifications (C:\Users\Val\Desktop\MyTalipapa\server\src\controllers\contractorController.js:833:25)
+    at Layer.handle [as handle_request] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\layer.js:95:5)
+    at next (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\route.js:149:13)
+    at Route.dispatch (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\route.js:119:3)
+    at Layer.handle [as handle_request] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\layer.js:95:5)
+    at C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:284:15
+    at Function.process_params (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:346:12)
+    at next (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:280:10)
+    at Function.handle (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:175:3)
+getNotifications error: JsonWebTokenError: jwt malformed
+    at module.exports [as verify] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\jsonwebtoken\verify.js:70:17)
+    at exports.getNotifications (C:\Users\Val\Desktop\MyTalipapa\server\src\controllers\contractorController.js:833:25)
+    at Layer.handle [as handle_request] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\layer.js:95:5)
+    at next (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\route.js:149:13)
+    at Route.dispatch (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\route.js:119:3)
+    at Layer.handle [as handle_request] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\layer.js:95:5)
+    at C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:284:15
+    at Function.process_params (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:346:12)
+    at next (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:280:10)
+    at Function.handle (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:175:3)
+getNotifications error: JsonWebTokenError: jwt malformed
+    at module.exports [as verify] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\jsonwebtoken\verify.js:70:17)
+    at exports.getNotifications (C:\Users\Val\Desktop\MyTalipapa\server\src\controllers\contractorController.js:833:25)
+    at Layer.handle [as handle_request] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\layer.js:95:5)
+    at next (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\route.js:149:13)
+    at Route.dispatch (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\route.js:119:3)
+    at Layer.handle [as handle_request] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\layer.js:95:5)
+    at C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:284:15
+    at Function.process_params (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:346:12)
+    at next (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:280:10)
+    at Function.handle (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:175:3)
+getNotifications error: JsonWebTokenError: jwt malformed
+    at module.exports [as verify] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\jsonwebtoken\verify.js:70:17)
+    at exports.getNotifications (C:\Users\Val\Desktop\MyTalipapa\server\src\controllers\contractorController.js:833:25)
+    at Layer.handle [as handle_request] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\layer.js:95:5)
+    at next (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\route.js:149:13)
+    at Route.dispatch (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\route.js:119:3)
+    at Layer.handle [as handle_request] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\layer.js:95:5)
+    at C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:284:15
+    at Function.process_params (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:346:12)
+    at next (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:280:10)
+    at Function.handle (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:175:3)
+getNotifications error: JsonWebTokenError: jwt malformed
+    at module.exports [as verify] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\jsonwebtoken\verify.js:70:17)
+    at exports.getNotifications (C:\Users\Val\Desktop\MyTalipapa\server\src\controllers\contractorController.js:833:25)
+    at Layer.handle [as handle_request] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\layer.js:95:5)
+    at next (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\route.js:149:13)
+    at Route.dispatch (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\route.js:119:3)
+    at Layer.handle [as handle_request] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\layer.js:95:5)
+    at C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:284:15
+    at Function.process_params (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:346:12)
+    at next (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:280:10)
+    at Function.handle (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:175:3)
+getNotifications error: JsonWebTokenError: jwt malformed
+    at module.exports [as verify] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\jsonwebtoken\verify.js:70:17)
+    at exports.getNotifications (C:\Users\Val\Desktop\MyTalipapa\server\src\controllers\contractorController.js:833:25)
+    at Layer.handle [as handle_request] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\layer.js:95:5)
+    at next (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\route.js:149:13)
+    at Route.dispatch (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\route.js:119:3)
+    at Layer.handle [as handle_request] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\layer.js:95:5)
+    at C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:284:15
+    at Function.process_params (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:346:12)
+    at next (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:280:10)
+    at Function.handle (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:175:3)
+Fetch profile error: JsonWebTokenError: jwt malformed
+    at module.exports [as verify] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\jsonwebtoken\verify.js:70:17)
+    at C:\Users\Val\Desktop\MyTalipapa\server\src\routes\auth.js:539:25
+    at Layer.handle [as handle_request] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\layer.js:95:5)
+    at next (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\route.js:149:13)
+    at Route.dispatch (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\route.js:119:3)
+    at Layer.handle [as handle_request] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\layer.js:95:5)
+    at C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:284:15
+    at Function.process_params (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:346:12)
+    at next (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:280:10)
+    at Function.handle (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:175:3)
+getNotifications error: JsonWebTokenError: jwt malformed
+    at module.exports [as verify] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\jsonwebtoken\verify.js:70:17)
+    at exports.getNotifications (C:\Users\Val\Desktop\MyTalipapa\server\src\controllers\contractorController.js:833:25)
+    at Layer.handle [as handle_request] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\layer.js:95:5)
+    at next (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\route.js:149:13)
+    at Route.dispatch (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\route.js:119:3)
+    at Layer.handle [as handle_request] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\layer.js:95:5)
+    at C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:284:15
+    at Function.process_params (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:346:12)
+    at next (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:280:10)
+    at Function.handle (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:175:3)
+Fetch profile error: JsonWebTokenError: jwt malformed
+    at module.exports [as verify] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\jsonwebtoken\verify.js:70:17)
+    at C:\Users\Val\Desktop\MyTalipapa\server\src\routes\auth.js:539:25
+    at Layer.handle [as handle_request] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\layer.js:95:5)
+    at next (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\route.js:149:13)
+    at Route.dispatch (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\route.js:119:3)
+    at Layer.handle [as handle_request] (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\layer.js:95:5)
+    at C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:284:15
+    at Function.process_params (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:346:12)
+    at next (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:280:10)
+    at Function.handle (C:\Users\Val\Desktop\MyTalipapa\server\node_modules\express\lib\router\index.js:175:3)
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+Server listening on port 5000
+MongoDB connected
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+Server listening on port 5000
+MongoDB connected
+[Login attempt] Email: admin@mytalipapa.com, Role requested: undefined, User found: Yes
+[Login attempt] User role: admin, User status: approved
+[Login attempt] Password matches User.passwordHash: false
+[Login attempt] Email: admin@mytalipapa.com, Role requested: undefined, User found: Yes
+[Login attempt] User role: admin, User status: approved
+[Login attempt] Password matches User.passwordHash: false
+[Login attempt] Email: admin@mytalipapa.com, Role requested: undefined, User found: Yes
+[Login attempt] User role: admin, User status: approved
+[Login attempt] Password matches User.passwordHash: true
+[32m[nodemon] restarting due to changes...[39m
 [32m[nodemon] restarting due to changes...[39m
 [32m[nodemon] starting `node src/index.js`[39m
 Server listening on port 5000
@@ -26,9 +303,6 @@ MongoDB connected
 Server listening on port 5000
 MongoDB connected
 [32m[nodemon] restarting due to changes...[39m
-[32m[nodemon] starting `node src/index.js`[39m
-Server listening on port 5000
-MongoDB connected
 [32m[nodemon] restarting due to changes...[39m
 [32m[nodemon] starting `node src/index.js`[39m
 Server listening on port 5000
@@ -38,9 +312,6 @@ MongoDB connected
 Server listening on port 5000
 MongoDB connected
 [32m[nodemon] restarting due to changes...[39m
-[32m[nodemon] starting `node src/index.js`[39m
-Server listening on port 5000
-MongoDB connected
 [32m[nodemon] restarting due to changes...[39m
 [32m[nodemon] starting `node src/index.js`[39m
 Server listening on port 5000
@@ -50,25 +321,6 @@ MongoDB connected
 Server listening on port 5000
 MongoDB connected
 [32m[nodemon] restarting due to changes...[39m
-[32m[nodemon] starting `node src/index.js`[39m
-Server listening on port 5000
-MongoDB connected
-[32m[nodemon] restarting due to changes...[39m
-[32m[nodemon] starting `node src/index.js`[39m
-Server listening on port 5000
-MongoDB connected
-[32m[nodemon] restarting due to changes...[39m
-[32m[nodemon] starting `node src/index.js`[39m
-Server listening on port 5000
-MongoDB connected
-[32m[nodemon] restarting due to changes...[39m
-[32m[nodemon] starting `node src/index.js`[39m
-Server listening on port 5000
-MongoDB connected
-[32m[nodemon] restarting due to changes...[39m
-[32m[nodemon] starting `node src/index.js`[39m
-Server listening on port 5000
-MongoDB connected
 [32m[nodemon] restarting due to changes...[39m
 [32m[nodemon] starting `node src/index.js`[39m
 Server listening on port 5000

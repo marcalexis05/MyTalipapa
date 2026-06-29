@@ -1649,7 +1649,7 @@ export default function MarketTour360() {
           return (
             <div className="absolute left-2 sm:left-4 bottom-24 sm:bottom-28 z-20 pointer-events-auto">
               {showFloorMap ? (
-                <div className="bg-slate-100/90 backdrop-blur-md rounded-full shadow-[0_0_20px_rgba(0,0,0,0.3)] border-4 border-white overflow-hidden relative group" style={{ width: 140, height: 140 }}>
+                <div className="bg-slate-100/90 backdrop-blur-md rounded-full shadow-[0_0_20px_rgba(0,0,0,0.3)] border-4 border-white overflow-hidden relative group w-40 h-40 sm:w-52 sm:h-52 md:w-64 md:h-64">
                   <button onClick={() => setShowFloorMap(false)} className="absolute top-2 right-2 bg-black/40 hover:bg-black/70 text-white rounded-full p-1 transition-colors z-30" title="Hide map">
                     <X size={12} />
                   </button>
