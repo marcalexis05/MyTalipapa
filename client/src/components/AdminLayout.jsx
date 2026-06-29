@@ -9,7 +9,8 @@ import {
   LogOut,
   MessageSquare,
   ClipboardList,
-  ScrollText
+  ScrollText,
+  Trash2
 } from 'lucide-react'
 
 const NAV_ITEMS = [
@@ -20,6 +21,7 @@ const NAV_ITEMS = [
   { id: 'nav-requests', label: 'Requests', path: '/admin/requests', Icon: ClipboardList },
   { id: 'nav-records', label: 'Records', path: '/admin/records', Icon: History },
   { id: 'nav-messages', label: 'Messages', path: '/admin/messages', Icon: MessageSquare },
+  { id: 'nav-trash', label: 'Archived', path: '/admin/trash', Icon: Trash2 },
   { id: 'nav-profile', label: 'Profile', path: '/admin/profile', Icon: User },
 ]
 

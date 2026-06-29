@@ -352,7 +352,12 @@ export default function MarketTour360() {
     };
     setVh();
     window.addEventListener('resize', setVh);
-    return () => window.removeEventListener('resize', setVh);
+    return () => {
+      window.removeEventListener('resize', setVh);
+      // Clean up the global CSS var so the tour's viewport sizing does not
+      // linger on other modules after leaving the 360 tour.
+      document.documentElement.style.removeProperty('--vh');
+    };
   }, []);
   const activeSection = sectionsData[activeSectionKey]
 
@@ -1484,7 +1489,7 @@ export default function MarketTour360() {
         {/* Nav items */}
         <nav className="flex-1 py-4 px-2 space-y-0.5">
           {[
-            { id: 'home', label: 'Home', icon: <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg>, action: () => { const token = localStorage.getItem('authToken'); navigate(token ? '/renter/dashboard' : '/'); } },
+            { id: 'home', label: 'Home', icon: <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg>, action: () => { const token = localStorage.getItem('authToken'); let role = null; try { role = JSON.parse(localStorage.getItem('user'))?.role; } catch { /* ignore */ } navigate(!token ? '/' : (role === 'admin' || role === 'Admin') ? '/admin/dashboard' : '/renter/dashboard'); } },
             { id: 'navigate', label: '360° Tour', icon: <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><polygon points="3 11 22 2 13 21 11 13 3 11" /></svg>, action: null },
             { id: 'ar-finder', label: 'AR Stall Finder', icon: <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" /></svg>, action: () => handleOpenArView(currentStall) },
             { id: 'stalls', label: 'Stalls', icon: <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M3 3h18v4H3zM3 10h18M3 17h18M3 14h18" /></svg>, action: () => navigate('/renter/stalls') },
@@ -1578,6 +1583,17 @@ export default function MarketTour360() {
           <div className="flex items-center gap-3 pointer-events-auto">
             <button
               onClick={() => {
+                let userRole = null;
+                try {
+                  const user = JSON.parse(localStorage.getItem('user'));
+                  if (user) userRole = user.role;
+                } catch (e) {}
+
+                if (userRole === 'admin' || userRole === 'Admin') {
+                  navigate('/admin/dashboard');
+                  return;
+                }
+
                 if (location.pathname.startsWith('/renter')) {
                   navigate('/renter/ar-finder');
                 } else {

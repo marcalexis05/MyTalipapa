@@ -16,6 +16,7 @@ const LogoutIcon = () => (
 );
 
 const SECTION_META = {
+  All: { label: "All", color: "#374151", bg: "#f3f4f6", border: "#d1d5db" },
   Meat: { label: "Meat", color: "#b91c1c", bg: "#fee2e2", border: "#fca5a5" },
   Fishes: { label: "Fishes", color: "#0369a1", bg: "#e0f2fe", border: "#7dd3fc" },
   Vegetables: { label: "Vegetables", color: "#15803d", bg: "#dcfce7", border: "#86efac" },
@@ -106,11 +107,13 @@ export default function AdminStalls() {
     });
     // Sort in preferred order
     const order = ["Fishes", "Meat", "Vegetables"];
-    return keys.sort((a, b) => {
+    keys.sort((a, b) => {
       const ia = order.indexOf(a);
       const ib = order.indexOf(b);
       return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
     });
+    // "All" tab first so every stall can be viewed at once.
+    return ["All", ...keys];
   }, [stalls]);
 
   // Set default section once data loads
@@ -120,15 +123,11 @@ export default function AdminStalls() {
     }
   }, [sectionKeys, activeSection]);
 
-  // All unique zones for the active section
+  // All unique zones for the active section ("All" spans every section)
   const zoneKeys = useMemo(() => {
     if (!activeSection) return [];
-    const zones = [...new Set(
-      stalls
-        .filter(s => s.section === activeSection)
-        .map(s => s.zone)
-        .filter(Boolean)
-    )];
+    const source = activeSection === "All" ? stalls : stalls.filter(s => s.section === activeSection);
+    const zones = [...new Set(source.map(s => s.zone).filter(Boolean))];
     // Sort alphabetically A-H
     return zones.sort();
   }, [stalls, activeSection]);
@@ -146,7 +145,7 @@ export default function AdminStalls() {
   // Section stall counts
   const sectionCounts = useMemo(() => {
     return sectionKeys.reduce((acc, sec) => {
-      acc[sec] = stalls.filter(s => s.section === sec).length;
+      acc[sec] = sec === "All" ? stalls.length : stalls.filter(s => s.section === sec).length;
       return acc;
     }, {});
   }, [stalls, sectionKeys]);
@@ -154,7 +153,7 @@ export default function AdminStalls() {
   // Filtered + sorted stalls for the active section + zone
   const displayStalls = useMemo(() => {
     if (!activeSection) return [];
-    let list = stalls.filter(s => s.section === activeSection);
+    let list = activeSection === "All" ? [...stalls] : stalls.filter(s => s.section === activeSection);
     if (activeZone && activeZone !== 'all') {
       list = list.filter(s => s.zone === activeZone);
     }
@@ -485,12 +484,12 @@ export default function AdminStalls() {
                       <span className="floor-tab-icon"></span>
                       All Zones
                       <span className="floor-tab-count">
-                        {stalls.filter(s => s.section === activeSection).length}
+                        {activeSection === "All" ? stalls.length : stalls.filter(s => s.section === activeSection).length}
                       </span>
                     </button>
                     {zoneKeys.map(zone => {
                       const zoneCount = stalls.filter(
-                        s => s.section === activeSection && s.zone === zone
+                        s => (activeSection === "All" || s.section === activeSection) && s.zone === zone
                       ).length;
                       return (
                         <button

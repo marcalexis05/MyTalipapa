@@ -54,7 +54,7 @@ router.put('/announcements/:id', async (req, res) => {
 // Delete an announcement
 router.delete('/announcements/:id', async (req, res) => {
   try {
-    const deleted = await Announcement.findByIdAndDelete(req.params.id);
+    const deleted = await Announcement.findByIdAndUpdate(req.params.id, { isDeleted: true, deletedAt: new Date() }, { new: true });
     if (!deleted) return res.status(404).json({ error: 'Announcement not found' });
     res.json({ message: 'Announcement deleted successfully' });
   } catch (error) {

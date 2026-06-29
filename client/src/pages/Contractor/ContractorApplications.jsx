@@ -31,6 +31,7 @@ export default function ContractorApplication() {
   const [animating, setAnimating] = useState({});
   const [rejectTarget, setRejectTarget] = useState(null); // app being rejected (reason prompt)
   const [rejectReason, setRejectReason] = useState("");
+  const [editingId, setEditingId] = useState(null); // decided app whose decision is being changed
 
   const filteredApps = applications.filter(
     a => a.status?.toLowerCase() === tab.toLowerCase()
@@ -85,6 +86,7 @@ export default function ContractorApplication() {
             : a
         )
       );
+      setEditingId(null); // close the edit controls after a successful re-decision
     } catch (err) {
       console.error('Failed to update application:', err);
       alert('Action failed. Please try again.');
@@ -194,12 +196,46 @@ export default function ContractorApplication() {
                 </button>
               </div>
             </>
+          ) : editingId === app.id ? (
+            <>
+              <button className="apps-view-btn" onClick={() => setSelectedApp(app)}>View Details</button>
+              <div className="app-actions">
+                <button
+                  className="btn-reject"
+                  disabled={processingId === app.id}
+                  onClick={() => { setRejectReason(""); setRejectTarget(app); }}
+                  aria-label="Reject"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+                <button
+                  className="btn-approve"
+                  disabled={processingId === app.id}
+                  onClick={() => handleAction(app.id, "approve")}
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  Approve
+                </button>
+                <button className="apps-view-btn" onClick={() => setEditingId(null)}>Cancel</button>
+              </div>
+            </>
           ) : (
             <div className="apps-status-row">
               <button className="apps-view-btn" onClick={() => setSelectedApp(app)}>View Details</button>
               <span className={`apps-status-chip apps-status-${app.status?.toLowerCase()}`}>
                 {app.status?.toLowerCase() === "approved" ? "✓ Approved" : "✗ Rejected"}
               </span>
+              <button
+                className="apps-view-btn"
+                onClick={() => setEditingId(app.id)}
+                title="Change this decision if it was made by mistake"
+              >
+                Edit
+              </button>
             </div>
           )}
         </div>

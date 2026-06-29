@@ -9,9 +9,9 @@ const User = require('../models/User');
 // ── GET /api/renter/stalls ──
 router.get('/stalls', async (req, res) => {
   try {
-    const stalls = await Stall.find({
-      managedBy: { $exists: true, $nin: [null, ''] }
-    }).sort({ stallNumber: 1 });
+    // Return ALL stalls (previously this only returned stalls with a managedBy
+    // contractor, which hid every unmanaged stall from the renter view).
+    const stalls = await Stall.find({}).sort({ stallNumber: 1 });
 
     // Find all users who are contractors to map their emails to names
     const User = require('../models/User');
@@ -157,83 +157,143 @@ router.get('/applications', async (req, res) => {
 });
 
 // ── GET /api/renter/active-lease ──
+// Returns ALL stalls leased by this renter plus aggregate figures (total
+// stalls, outstanding balance / "utang", and the soonest due date). Previously
+// this used findOne and only ever surfaced a single lease.
 router.get('/active-lease', async (req, res) => {
   try {
     const { email } = req.query;
     if (!email) {
       return res.status(400).json({ error: 'Email parameter is required.' });
     }
+    const lcEmail = email.toLowerCase();
 
-    // Find a stall occupied by the tenant with this email
-    const stall = await Stall.findOne({
+    // Every stall occupied by this tenant.
+    const stalls = await Stall.find({
       status: 'occupied',
-      'tenant.email': email.toLowerCase()
-    });
+      'tenant.email': lcEmail
+    }).sort({ stallNumber: 1 });
 
-    if (!stall) {
+    if (!stalls.length) {
       return res.json(null);
     }
 
-    // Find renter's approved application to get payment history
-    const app = await Application.findOne({
-      email: email.toLowerCase(),
-      status: 'approved'
+    // Renter's approved applications (used to locate payment history per stall).
+    const apps = await Application.find({ email: lcEmail, status: 'approved' });
+    const appIds = apps.map(a => a._id);
+    // Map a stall to its application (by stallId, else by preferredStall number).
+    const appByStallId = {};
+    const appByStallNumber = {};
+    apps.forEach(a => {
+      if (a.stallId) appByStallId[String(a.stallId)] = a;
+      if (a.preferredStall) appByStallNumber[String(a.preferredStall)] = a;
     });
 
-    let lastPaidDate = null;
-    if (app) {
-      const payments = await Payment.find({ renter: app._id }).sort({ date: -1 });
-      const lastPaid = payments.find(p => p.status === 'paid');
-      if (lastPaid) {
-        lastPaidDate = lastPaid.date;
-      }
-    }
-
-    // Base date for next payment due calculation: last paid date or leaseStart date
-    const baseDate = lastPaidDate || stall.tenant.leaseStart || stall.createdAt || new Date();
-    const nextDueDate = new Date(baseDate);
-    nextDueDate.setMonth(nextDueDate.getMonth() + 1); // validity is exactly 1 month from previous payment
-
-    const formattedNextDue = nextDueDate.toLocaleDateString('en-US', {
-      month: 'short', day: 'numeric', year: 'numeric',
-    });
+    const fmt = (d) => d
+      ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      : '—';
 
     const now = new Date();
-    let status = 'Active';
+    let earliestDue = null;
 
-    // Calculate dynamic status based on payment validity window
-    const diffMs = now - nextDueDate;
-    const diffDays = diffMs / (1000 * 60 * 60 * 24);
+    const leases = [];
+    for (const stall of stalls) {
+      const app = appByStallId[String(stall._id)]
+        || appByStallNumber[String(stall.stallNumber)]
+        || null;
 
-    if (diffDays > 30) {
-      status = 'long_overdue';
-    } else if (diffDays > 0) {
-      status = 'late_payment';
-    } else {
-      status = 'active';
+      let lastPaidDate = null;
+      if (app) {
+        const payments = await Payment.find({ renter: app._id }).sort({ date: -1 });
+        const lastPaid = payments.find(p => p.status === 'paid');
+        if (lastPaid) lastPaidDate = lastPaid.date;
+      }
+
+      const baseDate = lastPaidDate || stall.tenant.leaseStart || stall.createdAt || new Date();
+      const nextDueDate = new Date(baseDate);
+      nextDueDate.setMonth(nextDueDate.getMonth() + 1); // 1 month from last payment
+      if (!earliestDue || nextDueDate < earliestDue) earliestDue = nextDueDate;
+
+      const diffDays = (now - nextDueDate) / (1000 * 60 * 60 * 24);
+      let status = 'active';
+      if (diffDays > 30) status = 'long_overdue';
+      else if (diffDays > 0) status = 'late_payment';
+
+      leases.push({
+        id: stall._id.toString(),
+        stallNumber: String(stall.stallNumber).startsWith('#') ? stall.stallNumber : `#${stall.stallNumber}`,
+        section: stall.section,
+        monthlyRate: stall.monthlyRate ? `₱${stall.monthlyRate.toLocaleString()}` : '—',
+        monthlyRateValue: stall.monthlyRate || 0,
+        status,
+        nextDue: fmt(nextDueDate),
+        leaseStart: fmt(stall.tenant.leaseStart),
+        leaseEnd: stall.tenant.leaseEnd ? fmt(stall.tenant.leaseEnd) : 'No Expiry',
+      });
+    }
+
+    // Outstanding balance ("utang") = sum of unpaid payment records across all
+    // of the renter's applications.
+    let outstandingBalance = 0;
+    if (appIds.length) {
+      const unpaid = await Payment.find({ renter: { $in: appIds }, status: 'unpaid' });
+      outstandingBalance = unpaid.reduce((sum, p) => sum + (p.amount || 0), 0);
     }
 
     res.json({
-      id: stall._id.toString(),
-      stallNumber: stall.stallNumber.startsWith('#') ? stall.stallNumber : `#${stall.stallNumber}`,
-      section: stall.section,
-      monthlyRate: stall.monthlyRate ? `₱${stall.monthlyRate.toLocaleString()}` : '—',
-      status: status,
-      nextDue: formattedNextDue,
-      leaseStart: stall.tenant.leaseStart
-        ? new Date(stall.tenant.leaseStart).toLocaleDateString('en-US', {
-          month: 'short', day: 'numeric', year: 'numeric',
-        })
-        : '—',
-      leaseEnd: stall.tenant.leaseEnd
-        ? new Date(stall.tenant.leaseEnd).toLocaleDateString('en-US', {
-          month: 'short', day: 'numeric', year: 'numeric',
-        })
-        : 'No Expiry',
+      leases,
+      totalStalls: leases.length,
+      outstandingBalance,
+      outstandingBalanceFormatted: `₱${outstandingBalance.toLocaleString()}`,
+      nextDue: earliestDue ? fmt(earliestDue) : '—',
+      // Back-compat: expose the first lease's fields at the top level so any
+      // older consumer still renders something sensible.
+      ...leases[0],
     });
   } catch (err) {
     console.error('Renter getActiveLease error:', err);
     res.status(500).json({ error: 'Failed to fetch active lease' });
+  }
+});
+
+// ── GET /api/renter/payments ──
+// Payment history for the renter so they can track/verify recorded payments.
+router.get('/payments', async (req, res) => {
+  try {
+    const { email } = req.query;
+    if (!email) {
+      return res.status(400).json({ error: 'Email parameter is required.' });
+    }
+    const lcEmail = email.toLowerCase();
+
+    const apps = await Application.find({ email: lcEmail });
+    if (!apps.length) return res.json([]);
+
+    // Map application -> stall label for display.
+    const appMap = {};
+    apps.forEach(a => { appMap[String(a._id)] = a; });
+    const appIds = apps.map(a => a._id);
+
+    const payments = await Payment.find({ renter: { $in: appIds } }).sort({ date: -1 });
+
+    const mapped = payments.map(p => {
+      const app = appMap[String(p.renter)];
+      return {
+        id: p._id.toString(),
+        amount: p.amount || 0,
+        amountFormatted: `₱${(p.amount || 0).toLocaleString()}`,
+        status: p.status,
+        date: p.date ? new Date(p.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—',
+        rawDate: p.date,
+        stall: app && app.preferredStall ? `#${String(app.preferredStall).replace('#', '')}` : '—',
+        stallLabel: app ? app.stallLabel : '',
+      };
+    });
+
+    res.json(mapped);
+  } catch (err) {
+    console.error('Renter getPayments error:', err);
+    res.status(500).json({ error: 'Failed to fetch payment history' });
   }
 });
 

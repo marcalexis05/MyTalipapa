@@ -19,6 +19,8 @@ import AdminStalls from './pages/Admin/AdminStalls'
 import AdminContracts from './pages/Admin/AdminContracts'
 import AdminSecurity from './pages/Admin/AdminSecurity'
 import AdminMessages from './pages/Admin/AdminMessages'
+import AdminTrash from './pages/Admin/AdminTrash'
+import InfoPage from './pages/InfoPage'
 import ContractorSecurity from './pages/Contractor/ContractorSecurity'
 import RenterLayout from './pages/Renter/Renterlayout'
 import MarketTour360 from './pages/MarketTour360'
@@ -41,6 +43,9 @@ export default function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/set-new-password" element={<SetNewPassword />} />
+        <Route path="/help" element={<InfoPage type="help" />} />
+        <Route path="/privacy" element={<InfoPage type="privacy" />} />
+        <Route path="/terms" element={<InfoPage type="terms" />} />
 
         {/* Contractor Routes */}
         <Route element={<ContractorLayout />}>
@@ -66,6 +71,7 @@ export default function App() {
           <Route path="/admin/stalls" element={<AdminStalls />} />
           <Route path="/admin/contracts" element={<AdminContracts />} />
           <Route path="/admin/requests" element={<AdminRequests />} />
+          <Route path="/admin/trash" element={<AdminTrash />} />
           <Route path="/admin/*" element={<AdminDashboard />} />
         </Route>
 

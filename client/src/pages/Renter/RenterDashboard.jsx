@@ -177,6 +177,7 @@ export default function RenterDashboard({ onNavigate, onOpenStall }) {
 
   const [applications, setApplications] = useState([])
   const [activeStall, setActiveStall] = useState(null)
+  const [payments, setPayments] = useState([])
   const [loading, setLoading] = useState(true)
   const [announcements, setAnnouncements] = useState([])
   const [showAllAnnouncements, setShowAllAnnouncements] = useState(false)
@@ -229,10 +230,15 @@ export default function RenterDashboard({ onNavigate, onOpenStall }) {
       return res.json()
     })
 
-    Promise.all([fetchApps, fetchLease, fetchProfile, fetchAnnouncements])
-      .then(([appsData, leaseData, profileData, announcementsData]) => {
+    const fetchPayments = fetch(`/api/renter/payments${emailParam}`)
+      .then(res => res.ok ? res.json() : [])
+      .catch(() => [])
+
+    Promise.all([fetchApps, fetchLease, fetchProfile, fetchAnnouncements, fetchPayments])
+      .then(([appsData, leaseData, profileData, announcementsData, paymentsData]) => {
         setApplications(appsData)
         setActiveStall(leaseData)
+        setPayments(Array.isArray(paymentsData) ? paymentsData : [])
         setAnnouncements(announcementsData)
         if (profileData) {
           setCurrentUser(profileData)
@@ -401,44 +407,94 @@ export default function RenterDashboard({ onNavigate, onOpenStall }) {
                   <p className="text-[10px] text-gray-400">Current tenancy information</p>
                 </div>
               </div>
-              {activeStall && (
+              {activeStall && activeStall.totalStalls > 0 && (
                 <span className="dash-status-badge px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-800 uppercase tracking-wide">
-                  {activeStall.status}
+                  {activeStall.totalStalls} {activeStall.totalStalls === 1 ? 'Stall' : 'Stalls'}
                 </span>
               )}
             </div>
-            {activeStall ? (
+            {activeStall && (activeStall.leases?.length || activeStall.stallNumber) ? (
               <>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {/* Summary: total stalls, next due date, outstanding balance (utang) */}
+                <div className="grid grid-cols-3 gap-3 mb-4">
                   {[
-                    { label: 'Stall No.', value: activeStall.stallNumber, cls: 'text-base font-extrabold text-gray-800', delay: '0.38s' },
-                    { label: 'Section', value: activeStall.section, cls: 'text-xs font-extrabold text-gray-800 truncate', delay: '0.43s' },
-                    { label: 'Monthly Rent', value: activeStall.monthlyRate, cls: 'text-base font-extrabold text-green-800', delay: '0.48s' },
-                    { label: 'Expiry', value: activeStall.leaseEnd, cls: 'text-xs font-extrabold text-red-500', delay: '0.53s' },
+                    { label: 'Stalls Rented', value: activeStall.totalStalls ?? (activeStall.leases?.length || 1), cls: 'text-base font-extrabold text-gray-800' },
+                    { label: 'Next Due', value: activeStall.nextDue || '—', cls: 'text-xs font-extrabold text-gray-800' },
+                    { label: 'Balance (Utang)', value: activeStall.outstandingBalanceFormatted || '₱0', cls: `text-base font-extrabold ${(activeStall.outstandingBalance || 0) > 0 ? 'text-red-500' : 'text-green-800'}` },
                   ].map(cell => (
-                    <div
-                      key={cell.label}
-                      className="bg-gray-50 rounded-xl p-3 transition-all hover:bg-gray-100"
-                      style={{ animation: `fadeSlideUp 0.4s ease ${cell.delay} both` }}
-                    >
+                    <div key={cell.label} className="bg-gray-50 rounded-xl p-3">
                       <p className="text-[9px] text-gray-400 font-semibold uppercase tracking-wider mb-1">{cell.label}</p>
                       <p className={cell.cls}>{cell.value}</p>
                     </div>
                   ))}
                 </div>
-                <div className="mt-4 pt-4 border-t border-gray-50">
-                  <div className="flex justify-between text-xs text-gray-400 mb-1.5">
-                    <span className="font-semibold">Lease Progress</span>
-                    <span>Started {activeStall.leaseStart}</span>
-                  </div>
-                  <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
-                    <div className="dash-progress-bar h-full rounded-full bg-[#1a5c2a]" style={{ width: '100%' }} />
-                  </div>
+
+                {/* Each rented stall */}
+                <div className="space-y-2.5">
+                  {(activeStall.leases?.length ? activeStall.leases : [activeStall]).map((lease, idx) => (
+                    <div
+                      key={lease.id || idx}
+                      className="border border-gray-100 rounded-xl p-3 flex items-center justify-between gap-3"
+                      style={{ animation: `fadeSlideUp 0.4s ease ${0.38 + idx * 0.05}s both` }}
+                    >
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-extrabold text-gray-800">{lease.stallNumber}</span>
+                          <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-green-100 text-green-800 uppercase tracking-wide">
+                            {lease.status}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-gray-400 truncate">{lease.section}</p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="text-sm font-extrabold text-green-800">{lease.monthlyRate}</p>
+                        <p className="text-[10px] text-gray-400">Due {lease.nextDue}</p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </>
             ) : (
               <div className="text-center py-6 text-xs text-gray-400 font-semibold" style={{ animation: 'fadeIn 0.4s ease both' }}>
                 You do not have an active stall lease yet.
+              </div>
+            )}
+          </div>
+
+          {/* ── PAYMENT HISTORY ── */}
+          <div className="dash-card bg-white rounded-2xl p-5 shadow-sm border border-gray-100" style={{ animationDelay: '0.4s' }}>
+            <div className="flex items-center gap-2 mb-4">
+              <div className="p-1.5 rounded-xl bg-orange-50 text-orange-600">
+                <Clock size={16} />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-gray-800">Payment History</h3>
+                <p className="text-[10px] text-gray-400">Track and verify your recorded payments</p>
+              </div>
+            </div>
+            {payments.length > 0 ? (
+              <div className="divide-y divide-gray-50">
+                {payments.map((p, idx) => (
+                  <div
+                    key={p.id || idx}
+                    className="flex items-center justify-between py-2.5"
+                    style={{ animation: `fadeSlideUp 0.4s ease ${0.1 + idx * 0.04}s both` }}
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-gray-800">{p.amountFormatted}</p>
+                      <p className="text-[11px] text-gray-400">{p.stall !== '—' ? `Stall ${p.stall} · ` : ''}{p.date}</p>
+                    </div>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide ${
+                      p.status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
+                    }`}>
+                      {p.status === 'paid' ? '✓ Paid' : 'Unpaid'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-6 text-xs text-gray-400 font-semibold">
+                No payment records yet.
               </div>
             )}
           </div>

@@ -403,6 +403,13 @@ export default function Login() {
             </div>
           )}
 
+        {/* Footer Links */}
+        <div className="mt-8 flex justify-center gap-6 text-xs text-white/70 font-semibold drop-shadow-md">
+          <Link to="/help" className="hover:text-white hover:underline transition-colors">Help</Link>
+          <Link to="/privacy" className="hover:text-white hover:underline transition-colors">Privacy</Link>
+          <Link to="/terms" className="hover:text-white hover:underline transition-colors">Terms</Link>
+        </div>
+
         </div>
       </div>
     </>

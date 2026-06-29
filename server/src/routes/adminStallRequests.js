@@ -100,7 +100,7 @@ router.get('/archived', async (req, res) => {
 // DELETE request (permanently remove)
 router.delete('/:id', async (req, res) => {
   try {
-    const deleted = await StallRequest.findByIdAndDelete(req.params.id);
+    const deleted = await StallRequest.findByIdAndUpdate(req.params.id, { isDeleted: true, deletedAt: new Date() }, { new: true });
     if (!deleted) return res.status(404).json({ error: 'Request not found' });
     res.json({ message: 'Request deleted successfully' });
   } catch (err) {

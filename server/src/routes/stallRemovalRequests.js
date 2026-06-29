@@ -266,7 +266,7 @@ router.put('/admin/requests/:requestId/reject', verifyAdmin, async (req, res) =>
 router.delete('/admin/requests/:requestId', verifyAdmin, async (req, res) => {
   const { requestId } = req.params;
   try {
-    const deleted = await StallRemovalRequest.findByIdAndDelete(requestId);
+    const deleted = await StallRemovalRequest.findByIdAndUpdate(requestId, { isDeleted: true, deletedAt: new Date() }, { new: true });
     if (!deleted) {
       return res.status(404).json({ error: 'Removal request not found' });
     }

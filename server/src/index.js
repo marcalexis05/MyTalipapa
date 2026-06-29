@@ -4,6 +4,8 @@ dotenv.config();
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
+const softDeletePlugin = require('./utils/softDeletePlugin');
+mongoose.plugin(softDeletePlugin);
 const authRoutes = require('./routes/auth');
 const contractorRoutes = require('./routes/contractor');
 const renterRoutes = require('./routes/renter');
@@ -33,6 +35,7 @@ const adminRoutes = require('./routes/admin');
 
 app.use('/api', authRoutes);
 app.use('/api/admin', adminRoutes);         // ✅ admin routes
+app.use('/api/admin/trash', require('./routes/adminTrash')); // soft-delete / restore
 app.use('/api/admin/stall-requests', require('./routes/adminStallRequests'));
 app.use('/api/contractor/stall-requests', require('./routes/contractorStallRequests'));
 app.use('/api/stall-removal-requests', require('./routes/stallRemovalRequests'));

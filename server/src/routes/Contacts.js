@@ -52,7 +52,7 @@ router.patch('/admin/contact-messages/:id', async (req, res) => {
 // Delete a message
 router.delete('/admin/contact-messages/:id', async (req, res) => {
   try {
-    const message = await ContactMessage.findByIdAndDelete(req.params.id);
+    const message = await ContactMessage.findByIdAndUpdate(req.params.id, { isDeleted: true, deletedAt: new Date() }, { new: true });
     if (!message) {
       return res.status(404).json({ error: 'Message not found' });
     }
