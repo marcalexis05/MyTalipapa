@@ -286,7 +286,7 @@ export default function RenterLayout() {
   })
 
   return (
-    <div className="flex h-screen bg-[#f5f5f0] font-sans overflow-hidden">
+    <div className="renter-theme flex h-screen bg-[#f5f5f0] font-sans overflow-hidden">
       <Sidebar
         items={filteredNavItems}
         active={activeTab}

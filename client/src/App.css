@@ -1616,3 +1616,42 @@
     font-size: 44px;
   }
 }
+
+/* Force light theme variables in admin, contractor, and renter panels */
+.admin-theme,
+.contractor-theme,
+.renter-theme {
+  --color-brand-green:       #1a5c2a;
+  --color-brand-green-light: #f0fdf4;
+  --color-green-mid:         #15512a;
+  
+  --color-red:               #dc2626;
+  --color-red-dark:          #b91c1c;
+  --color-red-light:         #fef2f2;
+  --color-red-border:        #fecaca;
+  
+  --color-orange:            #f97316;
+  --color-orange-dark:       #ea580c;
+  
+  --color-blue:              #2563eb;
+  --color-amber:             #d97706;
+
+  /* Neutrals */
+  --color-bg:                #f5f2ec;
+  --color-surface:           #ffffff;
+  --color-border:            #e8e4dc;
+  --color-border-soft:       #f0ece4;
+  --color-text:              #111827;
+  --color-text-mid:          #374151;
+  --color-text-muted:        #6b7280;
+  --color-text-faint:        #9ca3af;
+  --focus-ring: 0 0 0 3px rgba(26, 92, 42, 0.35);
+}
+
+.admin-theme .glass,
+.contractor-theme .glass,
+.renter-theme .glass {
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+

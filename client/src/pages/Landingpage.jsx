@@ -284,7 +284,7 @@ export default function Landingpage() {
   });
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-green-50/20 via-white to-gray-50 text-gray-800" style={{ overflowX: 'hidden' }}>
+    <div className="min-h-screen bg-gradient-to-b from-green-50 via-white to-gray-50 text-gray-800" style={{ overflowX: 'hidden' }}>
 
       <style>{`
         button, a, [role="button"], .cursor-pointer {

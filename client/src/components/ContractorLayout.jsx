@@ -62,7 +62,7 @@ export default function ContractorLayout({ children }) {
   const activeNavItem = NAV_ITEMS.find(item => location.pathname.startsWith(item.path))?.id || ''
 
   return (
-    <div className="flex h-screen bg-[#f5f5f0] overflow-hidden w-full">
+    <div className="contractor-theme flex h-screen bg-[#f5f5f0] overflow-hidden w-full">
       {/* Desktop Sidebar */}
       <aside
         onMouseEnter={() => setCollapsed(false)}
