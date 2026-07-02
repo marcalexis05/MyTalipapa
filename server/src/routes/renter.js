@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Stall = require('../models/Stall');
 const Application = require('../models/Application');
+const ActivityLog = require('../models/ActivityLog');
 const Payment = require('../models/Payment');
 const User = require('../models/User');
 // Duplicate User import removed
@@ -381,6 +382,14 @@ router.post('/applications', async (req, res) => {
       });
     }
 
+    // Create activity log — always use human-readable stall number
+    const stallLabel = stall ? stall.stallNumber : cleanedStall;
+    await ActivityLog.create({
+      action: 'application_submitted',
+      details: `Renter ${fullName} submitted an application for Stall #${stallLabel}.`,
+      performedBy: fullName || email.toLowerCase(),
+    });
+
     res.status(201).json(newApp);
   } catch (err) {
     console.error('Renter createApplication error:', err);
@@ -437,6 +446,13 @@ router.post('/applications/:id/appeal', async (req, res) => {
       title: 'Application Appeal Submitted',
       message: `${app.fullName} has appealed and resubmitted their application for ${stallLabel}.${app.appealReason ? ` Reason: ${app.appealReason}` : ''}`,
       link: managed ? '/contractor/applications' : '/admin/applications',
+    });
+
+    // Create activity log
+    await ActivityLog.create({
+      action: 'application_submitted',
+      details: `Renter ${app.fullName} resubmitted/appealed their application for ${stallLabel}.`,
+      performedBy: app.fullName || app.email.toLowerCase(),
     });
 
     res.json({ message: 'Appeal submitted. Your application is pending review again.', application: app });

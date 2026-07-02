@@ -40,11 +40,11 @@ export default function ContractorApplication() {
   const user = getUser();
   const userEmail = user?.email || '';
 
-  // ── Fetch renter applications on mount ──────────────────────────
-  useEffect(() => {
+  // ── Fetch ALL renter applications (same as admin view) ──────────────────────────
+  const fetchApps = () => {
     if (!userEmail) return;
     setLoadingApps(true);
-    fetch(`/api/contractor/applications?email=${userEmail}`)
+    fetch('/api/admin/applications')
       .then(res => {
         if (!res.ok) throw new Error(`Server error: ${res.status}`);
         return res.json();
@@ -58,7 +58,9 @@ export default function ContractorApplication() {
         setError('Failed to load data. Please refresh.');
       })
       .finally(() => setLoadingApps(false));
-  }, [userEmail]);
+  };
+
+  useEffect(() => { fetchApps(); }, [userEmail]);
 
   const handleLogout = () => {
     navigate('/login');
@@ -72,7 +74,10 @@ export default function ContractorApplication() {
     try {
       const res = await fetch(`/api/contractor/applications/${id}/status`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${getToken()}`
+        },
         body: JSON.stringify({ action, rejectionReason }), // "approve" | "reject" (+ reason)
       });
 
@@ -183,6 +188,7 @@ export default function ContractorApplication() {
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
                   </svg>
+                  Reject
                 </button>
                 <button
                   className="btn-approve"
@@ -209,6 +215,7 @@ export default function ContractorApplication() {
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
                   </svg>
+                  Reject
                 </button>
                 <button
                   className="btn-approve"

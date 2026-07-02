@@ -1,6 +1,8 @@
 // contractorController.js
 const Stall = require('../models/Stall');
 const Application = require('../models/Application');
+const User = require('../models/User');
+const ActivityLog = require('../models/ActivityLog');
 
 // ── Helper: resolve stallNumber from application ──────────
 async function findStallByAppStallNumber(raw, intendedBusinessUse = '') {
@@ -134,7 +136,16 @@ exports.getApplications = async (req, res) => {
     const { email } = req.query;
     let query = { archived: { $ne: true } };
     if (email) {
-      query.contractorEmail = email.toLowerCase();
+      const lowerEmail = email.toLowerCase();
+      // Also find stalls currently managed by this contractor so we catch applications
+      // where contractorEmail was null at submission time (unmanaged stall at that point).
+      const managedStalls = await Stall.find({ managedBy: lowerEmail }, '_id');
+      const managedStallIds = managedStalls.map(s => s._id);
+
+      query.$or = [
+        { contractorEmail: lowerEmail },
+        ...(managedStallIds.length > 0 ? [{ stallId: { $in: managedStallIds } }] : []),
+      ];
     }
     const apps = await Application.find(query).sort({ appliedAt: -1 });
 
@@ -250,6 +261,36 @@ exports.updateApplicationStatus = async (req, res) => {
       },
       { new: true }
     );
+
+    // Determine who performed the action from authorization header
+    const jwt = require('jsonwebtoken');
+    const authHeader = req.headers.authorization;
+    let performedBy = 'Admin';
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.split(' ')[1];
+      try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'mytalipapa-secret-key-12345');
+        const user = await User.findById(decoded.id);
+        if (user) {
+          performedBy = user.full_name || user.email.toLowerCase();
+        }
+      } catch (err) {
+        console.warn('Failed to verify token in updateApplicationStatus:', err.message);
+      }
+    }
+    if (action === 'approve') {
+      await ActivityLog.create({
+        action: 'application_approved',
+        details: `Application for Stall #${stall ? stall.stallNumber : app.preferredStall} was approved.`,
+        performedBy: performedBy,
+      });
+    } else {
+      await ActivityLog.create({
+        action: 'application_rejected',
+        details: `Application for Stall #${stall ? stall.stallNumber : app.preferredStall} was rejected. Reason: ${cleanReason}`,
+        performedBy: performedBy,
+      });
+    }
 
     const Notification = require('../models/Notification');
     await Notification.create({
@@ -439,7 +480,6 @@ exports.updateContractorApplicationStatus = async (req, res) => {
       return res.status(404).json({ error: 'Application not found' });
     }
 
-    const User = require('../models/User');
     if (action === 'approve') {
       const userExists = await User.findOne({ email: app.email.toLowerCase() });
       const fName = app.firstName || app.fullName?.split(' ')[0] || '';
@@ -506,6 +546,36 @@ exports.updateContractorApplicationStatus = async (req, res) => {
     }
 
     await app.save();
+
+    // Determine who performed the action from authorization header
+    const jwt = require('jsonwebtoken');
+    const authHeader = req.headers.authorization;
+    let performedBy = 'Admin';
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.split(' ')[1];
+      try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'mytalipapa-secret-key-12345');
+        const user = await User.findById(decoded.id);
+        if (user) {
+          performedBy = user.full_name || user.email.toLowerCase();
+        }
+      } catch (err) {
+        console.warn('Failed to verify token in updateContractorApplicationStatus:', err.message);
+      }
+    }
+    if (action === 'approve') {
+      await ActivityLog.create({
+        action: 'application_approved',
+        details: `Contractor application for ${app.fullName} (${app.businessName}) was approved.`,
+        performedBy: performedBy,
+      });
+    } else {
+      await ActivityLog.create({
+        action: 'application_rejected',
+        details: `Contractor application for ${app.fullName} (${app.businessName}) was rejected. Reason: ${app.rejectionReason}`,
+        performedBy: performedBy,
+      });
+    }
 
     res.json({
       message: `Application successfully ${action}d`,

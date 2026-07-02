@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, ArrowLeft, ArrowRight, X, ShieldCheck, HelpCircle as HelpIcon, FileText } from 'lucide-react';
 
 const loginStyles = `
   @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
@@ -175,6 +175,46 @@ export default function Login() {
   const [showModal, setShowModal] = useState(false);
   const [modalEmail, setModalEmail] = useState('');
   const [modalPassword, setModalPassword] = useState('');
+  const [infoModal, setInfoModal] = useState(null); // 'help' | 'privacy' | 'terms' | null
+
+  const INFO_CONTENT = {
+    help: {
+      icon: HelpIcon,
+      title: 'Help & Support',
+      color: '#1a5c2a',
+      sections: [
+        { h: 'Signing in', p: 'Use the email and password you registered with. If you forgot your password, tap "Forgot password" on the login screen to reset it via email.' },
+        { h: 'Applying for a stall', p: 'Renters can browse available stalls under Market Stalls and submit a rental application. You will be notified once the managing contractor reviews it.' },
+        { h: 'Payments & balances', p: 'Your dashboard shows your rented stalls, next due date, and outstanding balance (utang). Payment History lets you verify every recorded payment.' },
+        { h: 'Still stuck?', p: 'Contact your market administrator or the contractor who manages your stall for assistance.' },
+      ],
+    },
+    privacy: {
+      icon: ShieldCheck,
+      title: 'Privacy Policy',
+      subtitle: 'Republic Act No. 10173 — Data Privacy Act of 2012',
+      color: '#1a5c2a',
+      sections: [
+        { h: 'What we collect', p: 'In accordance with RA 10173, we collect your personal details (full name, email, contact number, role) and platform activity (stall applications, assignments, payments) with your explicit consent.' },
+        { h: 'How we use it', p: 'Your data is processed lawfully and strictly used to operate market management features—including matching renters with stalls, notifying administrators, and keeping occupancy records.' },
+        { h: 'Security & Protection', p: 'We implement technical, physical, and organizational security measures to protect your personal information against unauthorized access, loss, or alteration, as required by RA 10173.' },
+        { h: 'Your Data Rights', p: 'Under the Data Privacy Act of 2012, you have the right to be informed, access your data, correct inaccuracies, or request erasure/archiving. Contact your administrator to exercise these rights.' },
+        { h: 'Data Retention', p: 'Records are retained as long as necessary for legitimate operations. Deactivated accounts are archived rather than permanently deleted to protect against accidental loss.' },
+        { h: 'Policy Updates', p: 'This policy may be updated in line with changes to RA 10173 or its implementing rules. Continued use of the platform after updates constitutes your acceptance.' },
+      ],
+    },
+    terms: {
+      icon: FileText,
+      title: 'Terms of Service',
+      color: '#1a5c2a',
+      sections: [
+        { h: 'Acceptable use', p: 'Use the platform only for legitimate market operations. Do not misuse accounts, submit false applications, or attempt to access records that are not yours.' },
+        { h: 'Accounts', p: 'You are responsible for keeping your login credentials secure. Roles (renter, contractor, admin) determine what you can access.' },
+        { h: 'Stall agreements', p: 'Rental approvals, payments, and move-outs are handled between renters, contractors, and administrators. MyTalipapa records these but does not replace any formal contract.' },
+        { h: 'Changes', p: 'These terms may be updated as the platform evolves. Continued use after changes constitutes acceptance.' },
+      ],
+    },
+  };
 
   async function handleLogin(e) {
     e.preventDefault();
@@ -405,10 +445,74 @@ export default function Login() {
 
         {/* Footer Links */}
         <div className="mt-8 flex justify-center gap-6 text-xs text-white/70 font-semibold drop-shadow-md">
-          <Link to="/help" className="hover:text-white hover:underline transition-colors">Help</Link>
-          <Link to="/privacy" className="hover:text-white hover:underline transition-colors">Privacy</Link>
-          <Link to="/terms" className="hover:text-white hover:underline transition-colors">Terms</Link>
+          <button type="button" onClick={() => setInfoModal('help')} className="footer-link hover:text-white transition-colors bg-transparent border-none cursor-pointer p-0">Help</button>
+          <button type="button" onClick={() => setInfoModal('privacy')} className="footer-link hover:text-white transition-colors bg-transparent border-none cursor-pointer p-0">Privacy</button>
+          <button type="button" onClick={() => setInfoModal('terms')} className="footer-link hover:text-white transition-colors bg-transparent border-none cursor-pointer p-0">Terms</button>
         </div>
+
+        {/* Info Modal (Help / Privacy / Terms) */}
+        {infoModal && (() => {
+          const d = INFO_CONTENT[infoModal];
+          const Icon = d.icon;
+          return (
+            <div
+              className="fixed inset-0 flex items-center justify-center bg-slate-900/70 backdrop-blur-sm z-50 p-4"
+              style={{ animation: 'fadeIn 0.2s ease both' }}
+              onClick={() => setInfoModal(null)}
+            >
+              <div
+                className="bg-white rounded-2xl shadow-2xl max-w-lg w-full border border-slate-100 flex flex-col max-h-[85vh]"
+                style={{ animation: 'fadeSlideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) both' }}
+                onClick={e => e.stopPropagation()}
+              >
+                {/* Modal Header */}
+                <div className="flex items-start justify-between p-6 pb-4 border-b border-slate-100">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(26,92,42,0.10)' }}>
+                      <Icon size={18} style={{ color: '#1a5c2a' }} />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold text-slate-800 leading-tight">{d.title}</h3>
+                      {d.subtitle && <p className="text-[10px] font-semibold text-slate-400 mt-0.5">{d.subtitle}</p>}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setInfoModal(null)}
+                    className="text-slate-400 hover:text-slate-600 transition-colors ml-2 shrink-0 p-1 rounded-lg hover:bg-slate-100"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+
+                {/* Modal Body */}
+                <div className="overflow-y-auto flex-1 px-6 py-5 space-y-4">
+                  {d.sections.map((s, i) => (
+                    <div key={i} className="flex gap-3">
+                      <div className="mt-0.5 w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-[10px] font-extrabold" style={{ backgroundColor: 'rgba(26,92,42,0.10)', color: '#1a5c2a' }}>{i + 1}</div>
+                      <div>
+                        <h4 className="text-xs font-bold text-slate-800 mb-0.5">{s.h}</h4>
+                        <p className="text-xs text-slate-500 leading-relaxed">{s.p}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Modal Footer */}
+                <div className="px-6 py-4 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setInfoModal(null)}
+                    className="w-full py-2.5 rounded-xl text-white font-bold text-xs transition-all duration-200"
+                    style={{ backgroundColor: '#1a5c2a', boxShadow: '0 4px 12px rgba(26,92,42,0.2)' }}
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         </div>
       </div>

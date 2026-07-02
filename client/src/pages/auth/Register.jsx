@@ -1454,9 +1454,9 @@ export default function Register() {
                   </section>
 
                   <section>
-                    <h4 className="font-bold text-slate-800 mb-1">3. Privacy and Personal Data</h4>
+                    <h4 className="font-bold text-slate-800 mb-1">3. Privacy and Personal Data (RA 10173)</h4>
                     <p>
-                      We respect your privacy. Personal details such as your full name, email address, contact details, and business name will be collected and processed securely. This data is solely used to verify your identity, send OTP notifications, manage lease applications, and maintain administrative oversight.
+                      In compliance with Republic Act No. 10173 (Data Privacy Act of 2012), we collect and process your personal information — including your full name, email address, contact details, and business name — solely to verify your identity, send OTP notifications, manage lease applications, and maintain administrative oversight. You have the right to access, correct, or request erasure of your data at any time by contacting the platform administrator.
                     </p>
                   </section>
 

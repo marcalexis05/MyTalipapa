@@ -90,7 +90,10 @@ export default function AdminApplication() {
     try {
       const res = await fetch(`/api/admin/applications/${id}/status`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${getToken()}`
+        },
         body: JSON.stringify({ action }),
       });
       if (!res.ok) throw new Error(`Server error: ${res.status}`);
@@ -120,7 +123,10 @@ export default function AdminApplication() {
     try {
       const res = await fetch(`/api/admin/contractor-applications/${id}/status`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${getToken()}`
+        },
         body: JSON.stringify({ action, rejectionReason }),
       });
       if (!res.ok) throw new Error(`Server error: ${res.status}`);
@@ -204,12 +210,41 @@ export default function AdminApplication() {
             </div>
           </div>
           <div className="apps-action-col">
-            <div className="apps-status-row">
-              <button className="apps-view-btn" onClick={() => setSelectedApp(app)}>View Details</button>
-              <span className={`apps-status-chip apps-status-${app.status}`}>
-                {app.status === "approved" ? "✓ Approved" : app.status === "rejected" ? "✗ Rejected" : "Pending"}
-              </span>
-            </div>
+            {tab === "Pending" ? (
+              <>
+                <button className="apps-view-btn" onClick={() => setSelectedApp(app)}>View Details</button>
+                <div className="app-actions">
+                  <button
+                    className="btn-reject"
+                    disabled={processingId === app.id}
+                    onClick={() => handleAction(app.id, 'reject')}
+                    aria-label="Reject"
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                    {processingId === app.id ? '…' : 'Reject'}
+                  </button>
+                  <button
+                    className="btn-approve"
+                    disabled={processingId === app.id}
+                    onClick={() => handleAction(app.id, 'approve')}
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                    {processingId === app.id ? '…' : 'Approve'}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="apps-status-row">
+                <button className="apps-view-btn" onClick={() => setSelectedApp(app)}>View Details</button>
+                <span className={`apps-status-chip apps-status-${app.status}`}>
+                  {app.status === "approved" ? "✓ Approved" : app.status === "rejected" ? "✗ Rejected" : "Pending"}
+                </span>
+              </div>
+            )}
           </div>
         </div>
       ));
@@ -464,7 +499,25 @@ export default function AdminApplication() {
                 </span>
               </div>
             </div>
-            <button className="stall-modal-close" onClick={() => setSelectedApp(null)}>Close</button>
+            {selectedApp.status === "pending" && (
+              <div className="flex gap-2 mt-2">
+                <button
+                  className="btn-reject flex-1 justify-center"
+                  disabled={processingId === selectedApp.id}
+                  onClick={() => { handleAction(selectedApp.id, 'reject'); setSelectedApp(null); }}
+                >
+                  ✗ Reject
+                </button>
+                <button
+                  className="btn-approve flex-1 justify-center"
+                  disabled={processingId === selectedApp.id}
+                  onClick={() => { handleAction(selectedApp.id, 'approve'); setSelectedApp(null); }}
+                >
+                  ✓ Approve
+                </button>
+              </div>
+            )}
+            <button className="stall-modal-close" style={{ background: selectedApp.status === 'pending' ? '#6b7280' : undefined }} onClick={() => setSelectedApp(null)}>Close</button>
           </div>
         </div>
       )}

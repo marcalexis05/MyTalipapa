@@ -8,7 +8,8 @@ import {
   User,
   LogOut,
   ClipboardList,
-  ScrollText
+  ScrollText,
+  Activity
 } from 'lucide-react'
 import { getUser } from '../utils/auth'
 
@@ -19,6 +20,7 @@ const NAV_ITEMS = [
   { id: 'nav-apps', label: 'Applications', path: '/contractor/applications', Icon: FileText },
   { id: 'nav-requests', label: 'My Requests', path: '/contractor/requests', Icon: ClipboardList },
   { id: 'nav-records', label: 'Records', path: '/contractor/records', Icon: History },
+  { id: 'nav-logs', label: 'Logs', path: '/contractor/logs', Icon: Activity },
   { id: 'nav-profile', label: 'Profile', path: '/contractor/profile', Icon: User },
 ]
 
@@ -67,8 +69,8 @@ export default function ContractorLayout({ children }) {
       <aside
         onMouseEnter={() => setCollapsed(false)}
         onMouseLeave={() => setCollapsed(true)}
-        className="hidden md:flex flex-col bg-white border-r border-gray-100 h-screen sticky top-0 transition-all duration-300 shrink-0 z-40"
-        style={{ width: collapsed ? '4rem' : '14rem' }}
+        className="hidden md:flex flex-col bg-white border-r border-gray-100 h-screen sticky top-0 transition-all duration-300 shrink-0 z-40 overflow-hidden"
+        style={{ width: collapsed ? '4rem' : '15rem' }}
       >
         <div className={`flex items-center gap-2 px-4 py-5 border-b border-gray-100 ${collapsed ? 'justify-center' : ''}`}>
           <div className="w-8 h-8 bg-[#1a5c2a] rounded-lg flex items-center justify-center shrink-0">
@@ -93,7 +95,7 @@ export default function ContractorLayout({ children }) {
               >
                 <Icon size={18} className={isActive ? 'text-[#1a5c2a]' : 'text-gray-400 group-hover:text-gray-600'} />
                 
-                {!collapsed && <span className="font-semibold text-sm">{label}</span>}
+                {!collapsed && <span className="font-semibold text-sm whitespace-nowrap overflow-hidden">{label}</span>}
                 
                 {id === 'nav-apps' && pendingCount > 0 && (
                   collapsed ? (

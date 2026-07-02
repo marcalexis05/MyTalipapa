@@ -10,7 +10,8 @@ import {
   MessageSquare,
   ClipboardList,
   ScrollText,
-  Trash2
+  Trash2,
+  Activity
 } from 'lucide-react'
 
 const NAV_ITEMS = [
@@ -20,6 +21,7 @@ const NAV_ITEMS = [
   { id: 'nav-apps', label: 'Applications', path: '/admin/applications', Icon: FileText },
   { id: 'nav-requests', label: 'Requests', path: '/admin/requests', Icon: ClipboardList },
   { id: 'nav-records', label: 'Records', path: '/admin/records', Icon: History },
+  { id: 'nav-logs', label: 'Logs', path: '/admin/logs', Icon: Activity },
   { id: 'nav-messages', label: 'Messages', path: '/admin/messages', Icon: MessageSquare },
   { id: 'nav-trash', label: 'Archived', path: '/admin/trash', Icon: Trash2 },
   { id: 'nav-profile', label: 'Profile', path: '/admin/profile', Icon: User },
@@ -103,8 +105,8 @@ export default function AdminLayout({ children }) {
       <aside
         onMouseEnter={() => setCollapsed(false)}
         onMouseLeave={() => setCollapsed(true)}
-        className="hidden md:flex flex-col bg-white border-r border-gray-100 h-screen sticky top-0 transition-all duration-300 shrink-0 z-40"
-        style={{ width: collapsed ? '4rem' : '14rem' }}
+        className="hidden md:flex flex-col bg-white border-r border-gray-100 h-screen sticky top-0 transition-all duration-300 shrink-0 z-40 overflow-hidden"
+        style={{ width: collapsed ? '4rem' : '15rem' }}
       >
         <div className={`flex items-center gap-2 px-4 py-5 border-b border-gray-100 ${collapsed ? 'justify-center' : ''}`}>
           <div className="w-8 h-8 bg-[#1a5c2a] rounded-lg flex items-center justify-center shrink-0">
@@ -129,7 +131,7 @@ export default function AdminLayout({ children }) {
               >
                 <Icon size={18} className={isActive ? 'text-[#1a5c2a]' : 'text-gray-400 group-hover:text-gray-600'} />
                 
-                {!collapsed && <span className="font-semibold text-sm">{label}</span>}
+                {!collapsed && <span className="font-semibold text-sm whitespace-nowrap overflow-hidden">{label}</span>}
                 
                 {id === 'nav-apps' && pendingAppsCount > 0 && (
                   collapsed ? (

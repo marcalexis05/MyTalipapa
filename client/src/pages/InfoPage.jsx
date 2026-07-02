@@ -14,13 +14,13 @@ const CONTENT = {
     ],
   },
   privacy: {
-    title: 'Privacy Policy',
-    intro: 'We respect your privacy. This summary explains what MyTalipapa collects and how it is used.',
+    title: 'Privacy Policy (Data Privacy Act of 2012)',
+    intro: 'In compliance with Republic Act No. 10173, also known as the Data Privacy Act of 2012, this policy details our commitment to protecting your personal information.',
     sections: [
-      { h: 'What we collect', p: 'Account details you provide (name, email, contact number, role) and activity within the app such as applications, stall assignments, and payment records.' },
-      { h: 'How we use it', p: 'To operate the market management features — matching renters to stalls, notifying contractors and admins, and keeping accurate occupancy and payment records.' },
-      { h: 'Data retention', p: 'Records are never permanently deleted; removed items are archived and can be restored by an administrator. This protects against accidental loss.' },
-      { h: 'Your choices', p: 'You may request that your account be archived. Archived accounts can no longer sign in. Contact your administrator for data requests.' },
+      { h: 'What we collect', p: 'In accordance with RA 10173, we collect your personal details (full name, email, contact number, role) and platform activity (stall applications, assignments, payments) with your explicit consent.' },
+      { h: 'How we use it', p: 'Your data is processed lawfully and strictly used to operate market management features—including matching renters with stalls, notifying administrators, and keeping occupancy records.' },
+      { h: 'Security & Protection', p: 'We implement technical, physical, and organizational security measures to protect your personal information against unauthorized access, loss, or alteration.' },
+      { h: 'Your Data Rights', p: 'Under the Data Privacy Act of 2012, you have the right to access, update, or request the erasure/archiving of your data. Contact your administrator to exercise these rights.' },
     ],
   },
   terms: {

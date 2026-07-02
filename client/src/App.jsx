@@ -21,11 +21,13 @@ import AdminSecurity from './pages/Admin/AdminSecurity'
 import AdminMessages from './pages/Admin/AdminMessages'
 import AdminTrash from './pages/Admin/AdminTrash'
 import InfoPage from './pages/InfoPage'
+import AdminLogs from './pages/Admin/AdminLogs'
 import ContractorSecurity from './pages/Contractor/ContractorSecurity'
 import RenterLayout from './pages/Renter/Renterlayout'
 import MarketTour360 from './pages/MarketTour360'
 import AdminRequests from './pages/Admin/AdminRequests'
 import ContractorRequests from './pages/Contractor/ContractorRequests'
+import ContractorLogs from './pages/Contractor/ContractorLogs'
 import AdminLayout from './components/AdminLayout'
 import ContractorLayout from './components/ContractorLayout';
 import PalengkeMap from './components/PalengkeMap';
@@ -57,6 +59,7 @@ export default function App() {
           <Route path="/contractor/stalls" element={<ContractorStalls />} />
           <Route path="/contractor/contracts" element={<ContractorContracts />} />
           <Route path="/contractor/requests" element={<ContractorRequests />} />
+          <Route path="/contractor/logs" element={<ContractorLogs />} />
           <Route path="/contractor/*" element={<ContractorDashboard />} />
         </Route>
 
@@ -71,6 +74,7 @@ export default function App() {
           <Route path="/admin/stalls" element={<AdminStalls />} />
           <Route path="/admin/contracts" element={<AdminContracts />} />
           <Route path="/admin/requests" element={<AdminRequests />} />
+          <Route path="/admin/logs" element={<AdminLogs />} />
           <Route path="/admin/trash" element={<AdminTrash />} />
           <Route path="/admin/*" element={<AdminDashboard />} />
         </Route>

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronRight, Store } from 'lucide-react'
-import { useCurrentUser, getUser } from '../../utils/auth'
+import { useCurrentUser, getUser, getToken } from '../../utils/auth'
 import marketImage from '../../images/market_live_view.png'
 import tour360Preview from '../../images/tour360_preview.png'
 import ContractorLockScreen from './ContractorLockScreen'
@@ -225,10 +225,10 @@ export default function ContractorDashboard() {
       .catch(() => setLoadingStalls(false))
   }
 
-  // Fetch applications — only pending ones for dashboard
+  // Fetch all applications — same as admin so contractor sees all pending
   const fetchApplications = () => {
     setLoadingApps(true)
-    fetch(`/api/contractor/applications?email=${userEmail}`)
+    fetch('/api/admin/applications')
       .then(r => r.json())
       .then(data => { setApplications(data); setLoadingApps(false) })
       .catch(() => setLoadingApps(false))
@@ -295,7 +295,10 @@ export default function ContractorDashboard() {
     try {
       const res = await fetch(`/api/contractor/applications/${id}/status`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${getToken()}`
+        },
         body: JSON.stringify({ action }), // "approve" | "reject"
       })
       if (!res.ok) throw new Error('Failed')
@@ -461,28 +464,6 @@ export default function ContractorDashboard() {
                           </p>
                         )}
                         <span className="app-type" style={{ color: app.typeColor }}>{app.type}</span>
-                      </div>
-                      <div className="app-actions">
-                        <button
-                          className="btn-reject"
-                          disabled={processingId === app.id}
-                          onClick={() => handleAction(app.id, 'reject')}
-                        >
-                          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                          </svg>
-                          {processingId === app.id ? '…' : 'Reject'}
-                        </button>
-                        <button
-                          className="btn-approve"
-                          disabled={processingId === app.id}
-                          onClick={() => handleAction(app.id, 'approve')}
-                        >
-                          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                            <polyline points="20 6 9 17 4 12"/>
-                          </svg>
-                          {processingId === app.id ? '…' : 'Approve'}
-                        </button>
                       </div>
                     </div>
                   ))

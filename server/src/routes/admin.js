@@ -95,4 +95,57 @@ router.post('/walk-in-renter', contractorController.createWalkInRenter);
 router.post('/stalls', contractorController.addStall);
 router.put('/stalls/:id/status', contractorController.toggleStallStatus);
 
+// Activity Logs endpoint (Restricted to Admin account only)
+const jwt = require('jsonwebtoken');
+const ActivityLog = require('../models/ActivityLog');
+
+const verifyAdmin = (req, res, next) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) return res.status(401).json({ error: 'Unauthorized' });
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'mytalipapa-secret-key-12345');
+    if (decoded.role !== 'admin') {
+      return res.status(403).json({ error: 'Admin access only' });
+    }
+    req.admin = decoded;
+    next();
+  } catch (err) {
+    return res.status(401).json({ error: 'Invalid token' });
+  }
+};
+
+router.get('/activity-logs', verifyAdmin, async (req, res) => {
+  try {
+    const User = require('../models/User');
+    const logs = await ActivityLog.find({}).sort({ createdAt: -1 });
+
+    // Build a lookup map: email -> full_name for any performedBy that looks like an email
+    const emailsToLookup = [...new Set(
+      logs
+        .map(l => l.performedBy)
+        .filter(p => p && p.includes('@'))
+    )];
+
+    const userMap = {};
+    if (emailsToLookup.length > 0) {
+      const users = await User.find(
+        { email: { $in: emailsToLookup } },
+        'email full_name'
+      );
+      users.forEach(u => { userMap[u.email.toLowerCase()] = u.full_name; });
+    }
+
+    const enriched = logs.map(log => {
+      const pb = log.performedBy || '';
+      const fullName = pb.includes('@') ? (userMap[pb.toLowerCase()] || pb) : pb;
+      return { ...log.toObject(), performedBy: fullName };
+    });
+
+    res.json(enriched);
+  } catch (err) {
+    console.error('Error fetching activity logs:', err);
+    res.status(500).json({ error: 'Failed to fetch activity logs' });
+  }
+});
+
 module.exports = router;

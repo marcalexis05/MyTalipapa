@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ChevronRight, Store } from 'lucide-react'
-import { useCurrentUser } from '../../utils/auth'
+import { ChevronRight, Store, FileText, CheckCircle2, XCircle, Clock, Activity } from 'lucide-react'
+import { useCurrentUser, getToken } from '../../utils/auth'
 import marketImage from '../../images/market_live_view.png'
 import tour360Preview from '../../images/tour360_preview.png'
 
@@ -39,6 +39,19 @@ function OccupancyRing({ percent }) {
   )
 }
 
+const formatLogTime = (dateStr) => {
+  if (!dateStr) return '';
+  const d = new Date(dateStr)
+  return d.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true
+  })
+}
+
 export default function AdminDashboard() {
   const navigate = useNavigate()
   const [showLogoutModal, setShowLogoutModal] = useState(false)
@@ -51,6 +64,31 @@ export default function AdminDashboard() {
   const [applications, setApplications] = useState([])
   const [loadingStalls, setLoadingStalls] = useState(false)
   const [loadingApps, setLoadingApps] = useState(false)
+  const [activityLogs, setActivityLogs] = useState([])
+  const [loadingLogs, setLoadingLogs] = useState(false)
+
+  // Fetch activity logs
+  const fetchActivityLogs = () => {
+    setLoadingLogs(true)
+    const token = localStorage.getItem('authToken')
+    return fetch('/api/admin/activity-logs', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
+      .then(r => {
+        if (!r.ok) throw new Error('Failed to fetch activity logs')
+        return r.json()
+      })
+      .then(data => {
+        setActivityLogs(Array.isArray(data) ? data : [])
+        setLoadingLogs(false)
+      })
+      .catch((err) => {
+        console.error(err)
+        setLoadingLogs(false)
+      })
+  }
 
   // Fetch stalls
   const fetchStalls = () => {
@@ -181,7 +219,7 @@ const handleDeleteAnnouncement = async (id) => {
 }
   useEffect(() => {
     // Load all dashboard data in parallel (no visual overlay)
-    Promise.all([fetchAnnouncements(), fetchStalls(), fetchApplications()]);
+    Promise.all([fetchAnnouncements(), fetchStalls(), fetchApplications(), fetchActivityLogs()]);
   }, []);
 
   // Total monthly revenue from occupied stalls with a monthlyRate
@@ -218,12 +256,15 @@ const handleDeleteAnnouncement = async (id) => {
     try {
       const res = await fetch(`/api/admin/applications/${id}/status`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${getToken()}`
+        },
         body: JSON.stringify({ action }), // "approve" | "reject"
       })
       if (!res.ok) throw new Error('Failed')
-      // Refresh both stalls and applications so all stats update live
-      await Promise.all([fetchStalls(), fetchApplications()])
+      // Refresh stalls, applications, and activity logs so all stats update live
+      await Promise.all([fetchStalls(), fetchApplications(), fetchActivityLogs()])
     } catch (err) {
       console.error('Failed to update application:', err)
       alert('Action failed. Please try again.')
@@ -609,6 +650,89 @@ const handleDeleteAnnouncement = async (id) => {
     )}
   </div>
 </section>
+
+        {/* Recent Activity (last 5) — full audit at /admin/logs */}
+        <section className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm mt-6">
+          <div className="flex items-center justify-between border-b border-gray-100 pb-4 mb-4">
+            <div className="text-left">
+              <h3 className="text-lg font-bold text-gray-900">Recent Activity</h3>
+              <p className="text-xs text-gray-400">Latest application events &amp; admin decisions</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-[#1a5c2a] animate-pulse" />
+                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Live</span>
+              </div>
+              <button
+                onClick={() => navigate('/admin/logs')}
+                className="px-3 py-1.5 text-xs font-bold text-[#1a5c2a] border border-[#1a5c2a]/30 rounded-xl hover:bg-[#edf5ed] transition-colors"
+              >
+                View All →
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            {loadingLogs ? (
+              <div className="text-center py-6 text-xs text-gray-400">Loading activity…</div>
+            ) : activityLogs.length === 0 ? (
+              <div className="text-center py-8 bg-gray-50 border border-dashed border-gray-200 rounded-2xl">
+                <Activity size={24} className="mx-auto text-gray-300 mb-2" />
+                <p className="text-xs text-gray-400 font-semibold">No activity yet</p>
+                <p className="text-[10px] text-gray-300 mt-1">Logs will appear when applications are submitted or reviewed</p>
+              </div>
+            ) : (
+              activityLogs.slice(0, 5).map(log => {
+                let IconComponent = Activity
+                let iconBg = 'bg-gray-100'
+                let iconColor = 'text-gray-500'
+                let badge = 'bg-gray-100 text-gray-500'
+                let badgeLabel = 'Activity'
+
+                if (log.action === 'application_submitted') {
+                  IconComponent = FileText; iconBg = 'bg-blue-50'; iconColor = 'text-blue-600'
+                  badge = 'bg-blue-100 text-blue-700'; badgeLabel = 'Submitted'
+                } else if (log.action === 'application_approved') {
+                  IconComponent = CheckCircle2; iconBg = 'bg-green-50'; iconColor = 'text-green-600'
+                  badge = 'bg-green-100 text-green-700'; badgeLabel = 'Approved'
+                } else if (log.action === 'application_rejected') {
+                  IconComponent = XCircle; iconBg = 'bg-red-50'; iconColor = 'text-red-600'
+                  badge = 'bg-red-100 text-red-700'; badgeLabel = 'Rejected'
+                }
+
+                return (
+                  <div key={log._id || log.id} className="flex items-start gap-3 p-3 rounded-2xl hover:bg-gray-50/70 transition-colors group">
+                    <div className={`p-2 rounded-xl shrink-0 ${iconBg} ${iconColor}`}>
+                      <IconComponent size={14} />
+                    </div>
+                    <div className="flex-1 min-w-0 text-left">
+                      <p className="text-xs font-semibold text-gray-800 leading-snug break-words">{log.details}</p>
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider ${badge}`}>{badgeLabel}</span>
+                        <span className="text-[9px] text-gray-400">by {log.performedBy}</span>
+                        <span className="text-[9px] text-gray-300">•</span>
+                        <span className="text-[9px] text-gray-400 flex items-center gap-1">
+                          <Clock size={9} />{formatLogTime(log.createdAt)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })
+            )}
+          </div>
+
+          {activityLogs.length > 5 && (
+            <div className="mt-4 pt-4 border-t border-gray-100 text-center">
+              <button
+                onClick={() => navigate('/admin/logs')}
+                className="text-xs font-bold text-[#1a5c2a] hover:underline"
+              >
+                View all {activityLogs.length} log entries →
+              </button>
+            </div>
+          )}
+        </section>
         </main>
       </div>
 
